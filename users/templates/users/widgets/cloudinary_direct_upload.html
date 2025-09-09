@@ -1,0 +1,122 @@
+{% load static %}
+
+<div class="cloudinary-photo-upload-container" id="photo-upload-{{ widget.attrs.id }}">
+    <!-- Current Photo Preview -->
+    <div class="photo-preview-section">
+        <div class="current-photo-wrapper">
+            {% if widget.attrs.data_current_photo %}
+                <img src="{{ widget.attrs.data_current_photo }}" 
+                     alt="Current profile photo" 
+                     class="current-photo"
+                     id="current-photo-{{ widget.attrs.id }}">
+            {% else %}
+                <div class="photo-placeholder" id="photo-placeholder-{{ widget.attrs.id }}">
+                    <i class="fas fa-user-circle"></i>
+                    <span>No photo uploaded</span>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Photo Management Controls -->
+        <div class="photo-controls">
+            <button type="button" 
+                    class="btn btn-primary btn-sm upload-btn" 
+                    id="upload-btn-{{ widget.attrs.id }}"
+                    data-field-id="{{ widget.attrs.id }}">
+                <i class="fas fa-camera"></i>
+                {% if widget.attrs.data_current_photo %}Change Photo{% else %}Upload Photo{% endif %}
+            </button>
+            
+            {% if widget.attrs.data_current_photo %}
+                <button type="button" 
+                        class="btn btn-outline-secondary btn-sm zoom-in-btn"
+                        data-photo-id="current-photo-{{ widget.attrs.id }}">
+                    <i class="fas fa-search-plus"></i>
+                </button>
+                
+                <button type="button" 
+                        class="btn btn-outline-secondary btn-sm zoom-out-btn"
+                        data-photo-id="current-photo-{{ widget.attrs.id }}">
+                    <i class="fas fa-search-minus"></i>
+                </button>
+                
+                <button type="button" 
+                        class="btn btn-outline-danger btn-sm delete-btn"
+                        id="delete-btn-{{ widget.attrs.id }}"
+                        data-field-id="{{ widget.attrs.id }}">
+                    <i class="fas fa-trash"></i> Remove
+                </button>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Upload Progress -->
+    <div class="upload-progress" id="upload-progress-{{ widget.attrs.id }}" style="display: none;">
+        <div class="progress">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                 role="progressbar" 
+                 style="width: 0%"
+                 id="progress-bar-{{ widget.attrs.id }}">
+                0%
+            </div>
+        </div>
+        <small class="text-muted">Uploading photo...</small>
+    </div>
+    
+    <!-- Hidden input to store Cloudinary data -->
+    <input type="hidden" 
+           name="{{ widget.name }}" 
+           id="{{ widget.attrs.id }}"
+           value="{{ widget.attrs.data_public_id }}"
+           data-cloudinary-field="true"
+           data-cloudinary-options='{{ widget.attrs.data_cloudinary_options|safe }}'
+           data-current-photo="{{ widget.attrs.data_current_photo }}"
+           data-public-id="{{ widget.attrs.data_public_id }}">
+    
+    <!-- Photo Edit Modal -->
+    <div class="modal fade" id="photo-edit-modal-{{ widget.attrs.id }}" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Profile Photo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="edit-canvas-container">
+                        <canvas id="edit-canvas-{{ widget.attrs.id }}"></canvas>
+                    </div>
+                    <div class="edit-controls mt-3">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">Zoom</label>
+                                <input type="range" 
+                                       class="form-range zoom-slider" 
+                                       min="1" 
+                                       max="3" 
+                                       step="0.1" 
+                                       value="1"
+                                       id="zoom-slider-{{ widget.attrs.id }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Rotation</label>
+                                <input type="range" 
+                                       class="form-range rotation-slider" 
+                                       min="-180" 
+                                       max="180" 
+                                       step="1" 
+                                       value="0"
+                                       id="rotation-slider-{{ widget.attrs.id }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="save-edit-{{ widget.attrs.id }}">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

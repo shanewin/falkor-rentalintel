@@ -1,0 +1,332 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Welcome to Doorway - Rental Management Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, #ffcc00 0%, #f39c12 100%);
+        padding: 50px 0;
+        margin-bottom: 50px;
+        color: #333;
+        min-height: 350px;
+        display: flex;
+        align-items: center;
+    }
+    
+    .hero-text {
+        text-align: left;
+        padding-right: 30px;
+    }
+    
+    .hero-text h1 {
+        font-size: 3.5rem;
+        font-weight: 700;
+        margin-bottom: 20px;
+        line-height: 1.2;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.3rem;
+        margin-bottom: 30px;
+        opacity: 0.9;
+        line-height: 1.4;
+    }
+    
+    .hero-logo {
+        max-width: 100%;
+        height: auto;
+        max-height: 220px;
+        width: auto;
+    }
+    
+    /* Mobile Responsive */
+    @media (max-width: 991px) {
+        .hero-section {
+            padding: 60px 0;
+            min-height: auto;
+        }
+        
+        .hero-text {
+            text-align: center;
+            padding-right: 0;
+            margin-bottom: 30px;
+        }
+        
+        .hero-text h1 {
+            font-size: 2.5rem;
+        }
+        
+        .hero-subtitle {
+            font-size: 1.1rem;
+        }
+        
+        .hero-logo {
+            max-height: 200px;
+        }
+    }
+    
+    .auth-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+    }
+    
+    .auth-options {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        margin-bottom: 50px;
+    }
+    
+    .login-section {
+        background: white;
+        border-radius: 15px;
+        padding: 40px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .register-section {
+        background: white;
+        border-radius: 15px;
+        padding: 40px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .section-title {
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: #333;
+        text-align: center;
+    }
+    
+    .login-form {
+        margin-bottom: 20px;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-control {
+        padding: 12px 15px;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        font-size: 1rem;
+    }
+    
+    .form-control:focus {
+        border-color: #ffcc00;
+        box-shadow: 0 0 0 0.2rem rgba(255, 204, 0, 0.25);
+    }
+    
+    .btn-login {
+        width: 100%;
+        padding: 12px;
+        background-color: #ffcc00;
+        border: none;
+        color: #333;
+        font-weight: 600;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        transition: all 0.3s;
+    }
+    
+    .btn-login:hover {
+        background-color: #e6b800;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255,204,0,0.3);
+    }
+    
+    .role-cards {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+    }
+    
+    .role-card {
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        text-decoration: none;
+        color: #495057;
+        transition: all 0.3s;
+        background: white;
+    }
+    
+    .role-card:hover {
+        border-color: #ffcc00;
+        background: #fffbf0;
+        color: #495057;
+        text-decoration: none;
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .role-icon {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+    }
+    
+    .role-card h4 {
+        margin-bottom: 5px;
+        font-weight: 600;
+    }
+    
+    .role-card p {
+        font-size: 0.9rem;
+        opacity: 0.8;
+        margin: 0;
+    }
+    
+    .broker-card { border-color: #ffcc00; }
+    .broker-card .role-icon { color: #ffcc00; }
+    
+    .applicant-card { border-color: #28a745; }
+    .applicant-card .role-icon { color: #28a745; }
+    
+    .staff-card { border-color: #6f42c1; }
+    .staff-card .role-icon { color: #6f42c1; }
+    
+    .owner-card { border-color: #fd7e14; }
+    .owner-card .role-icon { color: #fd7e14; }
+    
+    .features-section {
+        background: #f8f9fa;
+        padding: 60px 0;
+        margin-top: 50px;
+    }
+    
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 30px;
+        margin-top: 40px;
+    }
+    
+    .feature-card {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    }
+    
+    .feature-icon {
+        font-size: 3rem;
+        color: #ffcc00;
+        margin-bottom: 20px;
+    }
+    
+    .feature-card h3 {
+        margin-bottom: 15px;
+        color: #333;
+    }
+    
+    .feature-card p {
+        color: #666;
+        line-height: 1.6;
+    }
+    
+    @media (max-width: 768px) {
+        .auth-options {
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+        
+        .role-cards {
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .hero-section h1 {
+            font-size: 2.5rem;
+        }
+        
+        .hero-section p {
+            font-size: 1.1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <!-- Text Column (Left) -->
+            <div class="col-lg-6 order-2 order-lg-1">
+                <div class="hero-text">
+                    <h1>Welcome to Falkor</h1>
+                    <p class="hero-subtitle">The complete rental management platform for brokers, applicants, and property owners</p>
+                </div>
+            </div>
+            <!-- Logo Column (Right) -->
+            <div class="col-lg-6 order-1 order-lg-2 text-center">
+                <img src="{% static 'images/falkor-logo-bsquare-transparent-blacktext.png' %}" alt="Falkor Logo" class="hero-logo">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="auth-container">
+    <div class="auth-options">
+        <!-- Login Section -->
+        <div class="login-section">
+            <h2 class="section-title">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </h2>
+            
+            <form method="POST" action="{% url 'login' %}" class="login-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <input type="email" name="email" class="form-control" placeholder="Email Address" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" name="password" class="form-control" placeholder="Password" required>
+                </div>
+                <div class="form-check mb-3">
+                    <input type="checkbox" name="remember_me" class="form-check-input" id="remember">
+                    <label class="form-check-label" for="remember">
+                        Remember me
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-login">
+                    <i class="fas fa-sign-in-alt"></i> Sign In
+                </button>
+            </form>
+            
+            <div class="text-center">
+                <small class="text-muted">
+                    <a href="#" class="text-decoration-none">Forgot your password?</a>
+                </small>
+            </div>
+        </div>
+        
+        <!-- Registration Section -->
+        <div class="register-section">
+            <h2 class="section-title">
+                <i class="fas fa-user-plus"></i> Get Started
+            </h2>
+            
+            <p class="text-center text-muted mb-4">
+                Start your rental journey today
+            </p>
+            
+            <div class="text-center">
+                <a href="{% url 'register_applicant' %}" class="role-card applicant-card" style="display: inline-block; max-width: 300px;">
+                    <div class="role-icon">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <h4>Create Account</h4>
+                    <p>Find rentals & complete applications online</p>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

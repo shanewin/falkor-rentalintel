@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Your Rental Application</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #1a1a1a; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 8px 8px; }
+        .property-info { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffcc00; }
+        .cta-button { display: inline-block; background: #ffcc00; color: #1a1a1a; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 14px; }
+        .deadline { background: #fff3cd; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #ffc107; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ site_name }}</h1>
+        <p>Complete Your Rental Application</p>
+    </div>
+    
+    <div class="content">
+        <p>Hello {% if applicant.first_name %}{{ applicant.first_name }}{% else %}{{ applicant.email }}{% endif %},</p>
+        
+        <p>Your broker, <strong>{{ broker.get_full_name|default:broker.email }}</strong>, has created a rental application for you.</p>
+        
+        <div class="property-info">
+            <h3>Property Details:</h3>
+            <p><strong>{{ property_display }}</strong></p>
+            {% if application.apartment %}
+                <p><strong>Address:</strong> {{ application.apartment.building.street_address_1 }}, {{ application.apartment.building.city }}, {{ application.apartment.building.state }} {{ application.apartment.zip_code }}</p>
+                <p><strong>Rent:</strong> ${{ application.apartment.rent_price|floatformat:0 }}/month</p>
+            {% elif application.manual_building_address %}
+                <p><strong>Address:</strong> {{ application.manual_building_address }}</p>
+            {% endif %}
+            {% if application.application_fee_amount %}
+                <p><strong>Application Fee:</strong> ${{ application.application_fee_amount }}</p>
+            {% endif %}
+        </div>
+        
+        {% if application.required_documents %}
+        <div class="deadline">
+            <h4>Required Documents:</h4>
+            <ul>
+                {% for doc in application.required_documents %}
+                    <li>{{ doc }}</li>
+                {% endfor %}
+            </ul>
+            <p><em>Please have these documents ready before completing your application.</em></p>
+        </div>
+        {% endif %}
+        
+        <p>To complete your application, click the button below:</p>
+        
+        <div style="text-align: center;">
+            <a href="{{ completion_url }}" class="cta-button">Complete My Application</a>
+        </div>
+        
+        <p><strong>Important:</strong> This application link is secure and unique to you. Please do not share this link with others.</p>
+        
+        <p>If you have any questions about this property or the application process, please contact your broker directly.</p>
+        
+        <p>Thank you,<br>
+        The {{ site_name }} Team</p>
+    </div>
+    
+    <div class="footer">
+        <p>If you're having trouble with the button above, copy and paste this link into your browser:</p>
+        <p><a href="{{ completion_url }}">{{ completion_url }}</a></p>
+        <p>This email was sent to {{ applicant.email }}. This is an automated message, please do not reply.</p>
+    </div>
+</body>
+</html>

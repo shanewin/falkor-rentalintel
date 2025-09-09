@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% load crispy_forms_tags %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
+<!-- Cropper.js CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1>Edit Building</h1>
+                <p>Building: <strong>{{ building.name }}</strong></p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'buildings_list' %}" class="btn btn-outline-primary">
+                    Back to Buildings
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+
+    <!-- Tabs Navigation -->
+    <ul class="nav nav-tabs" id="buildingTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab">Building Info</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="images-tab" data-bs-toggle="tab" data-bs-target="#images" type="button" role="tab">Images</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="access-tab" data-bs-toggle="tab" data-bs-target="#access" type="button" role="tab">Access Points</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="specials-tab" data-bs-toggle="tab" data-bs-target="#specials" type="button" role="tab">Specials</button>
+        </li>
+    </ul>
+
+    <div class="tab-content mt-3" id="buildingTabsContent">
+        <!-- Building Info Tab -->
+        <div class="tab-pane fade show active" id="info" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Edit Building Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" class="doorway-form">
+                        {% csrf_token %}
+                        {% crispy building_form building_form.helper %}
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Images Tab -->
+        <div class="tab-pane fade show" id="images" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Upload Building Images</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" class="doorway-form">
+                        {% csrf_token %}
+                        {% crispy image_form image_form.helper %}
+                    </form>
+                </div>
+            </div>
+
+            <h5 class="mt-4">Uploaded Images:</h5>
+            <div class="d-flex flex-wrap">
+                {% for img in building.images.all %}
+                    <div class="m-2">
+                        <img src="{{ img.thumbnail_url }}" alt="Building Image" class="img-thumbnail">
+
+                    </div>
+                {% empty %}
+                    <p>No images uploaded yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Access Points Tab -->
+        <div class="tab-pane fade" id="access" role="tabpanel">
+            <h3 class="h6 fw-bold text-secondary py-2 mt-4 mb-3 border-bottom">Add Access Point</h3>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ access_form|crispy }}
+                <button type="submit" class="btn btn-primary" name="access_submit">Add Access Point</button>
+            </form>
+
+            <h5 class="mt-4">Existing Access Points:</h5>
+            <ul>
+                {% for access in building.access_points.all %}
+                    <li>{{ access.location }} – {{ access.get_access_type_display }}
+                        {% if access.thumbnail_url %}
+                            <img src="{{ access.thumbnail_url }}" alt="Access Point Image" class="img-thumbnail" width="100" height="100">
+                        {% endif %}
+                    </li>
+                {% empty %}
+                    <p>No access points added yet.</p>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Specials Tab -->
+        <div class="tab-pane fade" id="specials" role="tabpanel">
+            <h3 class="h6 fw-bold text-secondary py-2 mt-4 mb-3 border-bottom">Add Special</h3>
+            <form method="post">
+                {% csrf_token %}
+                {{ special_form|crispy }}
+                <button type="submit" class="btn btn-primary" name="special_submit">Add Special</button>
+            </form>
+
+            <h5 class="mt-4">Current Specials:</h5>
+            <ul>
+                {% for special in building.specials.all %}
+                    <li>{{ special.name }} – {{ special.get_special_type_display }}</li>
+                {% empty %}
+                    <p>No specials added yet.</p>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Cropper.js JavaScript -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<script src="{% static 'js/image-cropper.js' %}"></script>
+
+{% block extra_js %}
+<script src="{% static 'js/forms.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Setup image cropper for building images (16:9 aspect ratio for buildings)
+    setupImageCropper(
+        '[name="image"]',
+        null,
+        null,
+        {
+            aspectRatio: 16/9, // Landscape aspect ratio for building photos
+            modalTitle: 'Crop Building Image',
+            cropButtonText: 'Crop Image',
+            outputWidth: 800,
+            outputHeight: 450,
+            onUpload: function(file, imageSrc) {
+                console.log('Building image uploaded:', file.name);
+            }
+        }
+    );
+});
+</script>
+{% endblock %}
+{% endblock %}

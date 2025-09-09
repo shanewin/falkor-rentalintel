@@ -1,0 +1,23 @@
+{% load crispy_forms_tags %}
+
+<div class="form-group">
+    <label for="{{ field.id_for_label }}" class="form-label">
+        {{ field.label|safe }}
+        {% if field.field.required %}<span class="asteriskField">*</span>{% endif %}
+    </label>
+    <div class="input-group">
+        <input type="{{ field.field.widget.input_type }}" 
+               name="{{ field.html_name }}" 
+               id="{{ field.id_for_label }}"
+               class="{{ field.field.widget.attrs.class }}"
+               style="text-align: center;"
+               {% if field.value %}value="{{ field.value }}"{% endif %}
+               {% for attr, value in field.field.widget.attrs.items %}
+                   {% if attr != "class" %}{{ attr }}="{{ value }}"{% endif %}
+               {% endfor %}>
+        <span class="input-group-text">%</span>
+    </div>
+    {% if field.help_text %}
+        <small class="form-text text-muted">{{ field.help_text }}</small>
+    {% endif %}
+</div>

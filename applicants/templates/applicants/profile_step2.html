@@ -1,0 +1,931 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
+<!-- Cropper.js CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1>My Applicant Profile</h1>
+                <p>Fill out as much information as possible to receive more matches and make applying easier</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'applicant_dashboard' %}" class="btn btn-outline-primary">
+                    Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Progress Bar -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h6 class="mb-3">Profile Completion Progress ({{ completion_percentage }}% Complete)</h6>
+            <div class="progress mb-3" style="height: 6px;">
+                <div class="progress-bar" style="width: 66%; background-color: #ffcc00;"></div>
+            </div>
+            <div class="row text-center">
+                <div class="col-4">
+                    <a href="{% url 'profile_step1' %}" class="text-decoration-none">
+                        <div class="step text-muted">
+                            <div class="step-number bg-light text-muted">1</div>
+                            <small>Personal Info</small>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-4">
+                    <a href="{% url 'profile_step2' %}" class="text-decoration-none">
+                        <div class="step" style="color: #ffcc00;">
+                            <div class="step-number text-white" style="background-color: #000000;">2</div>
+                            <small>Housing Needs & Preferences</small>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-4">
+                    <a href="{% url 'profile_step3' %}" class="text-decoration-none">
+                        <div class="step text-muted">
+                            <div class="step-number bg-light text-muted">3</div>
+                            <small>Employment & Income</small>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Step 2: Housing Needs -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Step 2: Housing Needs and Preferences</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data" class="doorway-form">
+                {% csrf_token %}
+                {% crispy form form.helper %}
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Include SortableJS for drag and drop -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+<!-- Cropper.js JavaScript -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<script src="{% static 'js/image-cropper.js' %}"></script>
+
+<!-- Include forms.js -->
+<script src="{% static 'js/forms.js' %}"></script>
+
+<!-- Page-specific JavaScript -->
+<script>
+(function() {
+    // Wait for DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+    
+    function init() {
+        // Prevent double initialization
+        if (window.profileStep2Initialized) {
+            console.log('Profile Step 2 already initialized');
+            return;
+        }
+        window.profileStep2Initialized = true;
+        
+        console.log('Initializing Profile Step 2');
+        
+        // Initialize all components
+        initPets();
+        initNeighborhoods();
+        // Amenities will be added with new structure
+    }
+    
+    // ========== PETS FUNCTIONALITY ==========
+    function initPets() {
+        console.log('Initializing pets system');
+        
+        const petsCheckbox = document.getElementById('has_pets');
+        const petsContainer = document.getElementById('pets-container');
+        const addPetBtn = document.getElementById('add-pet-btn');
+        const petsListContainer = document.getElementById('pets-list-container');
+        
+        if (!petsCheckbox || !petsContainer) {
+            console.log('Pets elements not found');
+            return;
+        }
+        
+        let petCount = 0;
+        const maxPets = 5;
+        
+        // Load existing pets from Django context
+        const existingPets = [
+            {% for pet in existing_pets %}
+            {
+                name: '{{ pet.name|default:"" }}',
+                pet_type: '{{ pet.pet_type }}',
+                description: '{{ pet.description|default:"" }}',
+                photos: [
+                    {% for photo in pet.photos.all %}
+                    '{{ photo.image.url }}'{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ]
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+        
+        // Load existing pets if any
+        if (existingPets.length > 0) {
+            petsCheckbox.checked = true;
+            petsContainer.style.display = 'block';
+            
+            existingPets.forEach((petData, index) => {
+                petCount++;
+                const petHTML = createPetForm(petCount);
+                petsListContainer.insertAdjacentHTML('beforeend', petHTML);
+                
+                // Populate the form fields with existing data
+                setTimeout(() => {
+                    const nameInput = document.querySelector(`input[name="pet_name_${petCount}"]`);
+                    const typeSelect = document.querySelector(`select[name="pet_type_${petCount}"]`);
+                    const descInput = document.querySelector(`textarea[name="pet_description_${petCount}"]`);
+                    
+                    if (nameInput) nameInput.value = petData.name;
+                    if (typeSelect) typeSelect.value = petData.pet_type;
+                    if (descInput) descInput.value = petData.description;
+                    
+                    // Initialize Select2 for this pet
+                    initializePetSelect2(petCount);
+                    
+                    // Initialize photo croppers and load existing photos
+                    const currentPetCount = petCount;
+                    
+                    // Initialize croppers first
+                    initializePetPhotoCroppers(currentPetCount);
+                    
+                    // Then load existing photos - use longer delay to ensure croppers are ready
+                    if (petData.photos && petData.photos.length > 0) {
+                        petData.photos.forEach((photoUrl, photoIndex) => {
+                            if (photoIndex < 3) { // Max 3 photos per pet
+                                const photoNum = photoIndex + 1;
+                                
+                                // Load photo after cropper is initialized
+                                setTimeout(() => {
+                                    const inputId = `id_pet_photo_${currentPetCount}_${photoNum}`;
+                                    const fileInput = document.getElementById(inputId);
+                                    
+                                    // Try multiple times to ensure cropper is ready
+                                    let attempts = 0;
+                                    const maxAttempts = 10;
+                                    
+                                    const tryLoadImage = () => {
+                                        attempts++;
+                                        if (fileInput && fileInput.imageCropperInstance) {
+                                            fileInput.imageCropperInstance.loadExistingImage(photoUrl);
+                                            console.log(`Loaded pet ${currentPetCount} photo ${photoNum}`);
+                                        } else if (attempts < maxAttempts) {
+                                            setTimeout(tryLoadImage, 200);
+                                        }
+                                    };
+                                    
+                                    tryLoadImage();
+                                }, 500 + (photoIndex * 100)); // Stagger loading
+                            }
+                        });
+                    }
+                }, 100);
+            });
+            
+            // Update add button visibility
+            if (petCount >= maxPets) {
+                addPetBtn.style.display = 'none';
+            }
+        }
+        
+        // Handle pets checkbox
+        petsCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                petsContainer.style.display = 'block';
+                if (petCount === 0) {
+                    addPet();
+                }
+            } else {
+                petsContainer.style.display = 'none';
+                petsListContainer.innerHTML = '';
+                petCount = 0;
+                if (addPetBtn) addPetBtn.style.display = 'inline-block';
+            }
+        });
+        
+        // Handle add pet button
+        if (addPetBtn) {
+            addPetBtn.addEventListener('click', function() {
+                if (this.disabled) return;
+                this.disabled = true;
+                addPet();
+                setTimeout(() => { this.disabled = false; }, 500);
+            });
+        }
+        
+        // Add pet function
+        function addPet() {
+            if (petCount >= maxPets) return;
+            
+            petCount++;
+            const petHTML = createPetForm(petCount);
+            petsListContainer.insertAdjacentHTML('beforeend', petHTML);
+            
+            // Initialize pet photo croppers for this pet
+            initializePetPhotoCroppers(petCount);
+            
+            // Initialize Select2 for the new pet form
+            initializePetSelect2(petCount);
+            
+            if (petCount >= maxPets && addPetBtn) {
+                addPetBtn.style.display = 'none';
+            }
+        }
+        
+        // Make removePet function globally accessible
+        window.removePet = function(index) {
+            const petElement = document.getElementById('pet_' + index);
+            if (petElement) {
+                petElement.remove();
+                petCount--;
+                
+                // Show add button if we're below max
+                if (addPetBtn && petCount < maxPets) {
+                    addPetBtn.style.display = 'inline-block';
+                }
+                
+                // Renumber remaining pets
+                renumberPets();
+            }
+        }
+        
+        // Make renumberPets function accessible to removePet
+        function renumberPets() {
+            const petContainers = document.querySelectorAll('.pet-container');
+            petContainers.forEach((container, idx) => {
+                const newIndex = idx + 1;
+                const oldId = container.id;
+                container.id = 'pet_' + newIndex;
+                
+                // Update header text
+                const header = container.querySelector('.card-header h6');
+                if (header) {
+                    header.innerHTML = '<i class="fas fa-paw"></i> Pet ' + newIndex;
+                }
+                
+                // Update dismiss button if needed
+                const dismissBtn = container.querySelector('.btn-close');
+                if (dismissBtn) {
+                    if (newIndex === 1) {
+                        dismissBtn.remove();
+                    } else {
+                        dismissBtn.onclick = function() { removePet(newIndex); };
+                    }
+                }
+                
+                // Update form field names
+                container.querySelectorAll('input, select, textarea').forEach(field => {
+                    if (field.name) {
+                        field.name = field.name.replace(/_\d+$/, '_' + newIndex);
+                    }
+                });
+            });
+        }
+        
+        // Create pet form HTML
+        function createPetForm(index) {
+            const dismissButton = index > 1 ? 
+                '<button type="button" class="btn-close float-end" onclick="removePet(' + index + ')" aria-label="Remove Pet"></button>' : '';
+            
+            return '<div class="pet-container card mb-3" id="pet_' + index + '">' +
+                '<div class="card-header d-flex justify-content-between align-items-center">' +
+                    '<h6 class="mb-0"><i class="fas fa-paw"></i> Pet ' + index + '</h6>' +
+                    dismissButton +
+                '</div>' +
+                '<div class="card-body">' +
+                    '<div class="row">' +
+                        '<div class="col-md-6 mb-3">' +
+                            '<label class="form-label">Pet Name</label>' +
+                            '<input type="text" name="pet_name_' + index + '" class="form-control">' +
+                        '</div>' +
+                        '<div class="col-md-6 mb-3">' +
+                            '<label class="form-label">Pet Type</label>' +
+                            '<select name="pet_type_' + index + '" class="form-select select2" data-placeholder="Select pet type">' +
+                                '<option value="">Select type</option>' +
+                                '<option value="Dog">Dog</option>' +
+                                '<option value="Cat">Cat</option>' +
+                                '<option value="Bird">Bird</option>' +
+                                '<option value="Other">Other</option>' +
+                            '</select>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="mb-4">' +
+                        '<label class="form-label">Pet Photos (up to 3)</label>' +
+                        '<div class="pet-photos-container">' +
+                            '<div class="row" id="pet_photos_' + index + '">' +
+                                '<div class="col-md-4 mb-3">' +
+                                    '<div class="pet-photo-upload">' +
+                                        '<label class="form-label fw-bold">Photo 1</label>' +
+                                        '<div class="row align-items-center">' +
+                                            '<div class="col-auto">' +
+                                                '<div class="pet-photo-container-' + index + '-1 position-relative">' +
+                                                    '<div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" style="width: 160px; height: 120px;">' +
+                                                        '<i class="fas fa-paw fa-3x text-muted"></i>' +
+                                                    '</div>' +
+                                                '</div>' +
+                                            '</div>' +
+                                            '<div class="col">' +
+                                                '<p class="text-muted small mb-2">Upload a clear photo of your pet</p>' +
+                                                '<div class="d-flex gap-2 mb-2 image-cropper-buttons">' +
+                                                    '<button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById(\'id_pet_photo_' + index + '_1\').click()">' +
+                                                        '<i class="fas fa-camera"></i> Upload Photo' +
+                                                    '</button>' +
+                                                '</div>' +
+                                                '<input type="file" name="pet_photo_' + index + '_1" id="id_pet_photo_' + index + '_1" accept="image/*" style="display: none;" class="form-control">' +
+                                                '<input type="hidden" id="crop-data-pet-' + index + '-1" name="crop_data_pet_' + index + '_1" value="">' +
+                                            '</div>' +
+                                        '</div>' +
+                                    '</div>' +
+                                '</div>' +
+                                '<div class="col-md-4 mb-3">' +
+                                    '<div class="pet-photo-upload">' +
+                                        '<label class="form-label fw-bold">Photo 2 <small class="text-muted">(optional)</small></label>' +
+                                        '<div class="row align-items-center">' +
+                                            '<div class="col-auto">' +
+                                                '<div class="pet-photo-container-' + index + '-2 position-relative">' +
+                                                    '<div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" style="width: 160px; height: 120px;">' +
+                                                        '<i class="fas fa-paw fa-3x text-muted"></i>' +
+                                                    '</div>' +
+                                                '</div>' +
+                                            '</div>' +
+                                            '<div class="col">' +
+                                                '<p class="text-muted small mb-2">Upload another photo of your pet</p>' +
+                                                '<div class="d-flex gap-2 mb-2 image-cropper-buttons">' +
+                                                    '<button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById(\'id_pet_photo_' + index + '_2\').click()">' +
+                                                        '<i class="fas fa-camera"></i> Upload Photo' +
+                                                    '</button>' +
+                                                '</div>' +
+                                                '<input type="file" name="pet_photo_' + index + '_2" id="id_pet_photo_' + index + '_2" accept="image/*" style="display: none;" class="form-control">' +
+                                                '<input type="hidden" id="crop-data-pet-' + index + '-2" name="crop_data_pet_' + index + '_2" value="">' +
+                                            '</div>' +
+                                        '</div>' +
+                                    '</div>' +
+                                '</div>' +
+                                '<div class="col-md-4 mb-3">' +
+                                    '<div class="pet-photo-upload">' +
+                                        '<label class="form-label fw-bold">Photo 3 <small class="text-muted">(optional)</small></label>' +
+                                        '<div class="row align-items-center">' +
+                                            '<div class="col-auto">' +
+                                                '<div class="pet-photo-container-' + index + '-3 position-relative">' +
+                                                    '<div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" style="width: 160px; height: 120px;">' +
+                                                        '<i class="fas fa-paw fa-3x text-muted"></i>' +
+                                                    '</div>' +
+                                                '</div>' +
+                                            '</div>' +
+                                            '<div class="col">' +
+                                                '<p class="text-muted small mb-2">Upload a third photo of your pet</p>' +
+                                                '<div class="d-flex gap-2 mb-2 image-cropper-buttons">' +
+                                                    '<button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById(\'id_pet_photo_' + index + '_3\').click()">' +
+                                                        '<i class="fas fa-camera"></i> Upload Photo' +
+                                                    '</button>' +
+                                                '</div>' +
+                                                '<input type="file" name="pet_photo_' + index + '_3" id="id_pet_photo_' + index + '_3" accept="image/*" style="display: none;" class="form-control">' +
+                                                '<input type="hidden" id="crop-data-pet-' + index + '-3" name="crop_data_pet_' + index + '_3" value="">' +
+                                            '</div>' +
+                                        '</div>' +
+                                    '</div>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="mb-3">' +
+                        '<label class="form-label">Description</label>' +
+                        '<textarea name="pet_description_' + index + '" class="form-control" rows="2" placeholder="e.g. Weight: 45 lbs, Age: 3 years old, Breed: Golden Retriever, Temperament: Friendly and well-trained, Vaccinated: Yes, Spayed/Neutered: Yes"></textarea>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }
+        
+        // Initialize pet photo croppers for a specific pet
+        function initializePetPhotoCroppers(petIndex) {
+            // Wait a bit for the DOM to be ready
+            setTimeout(() => {
+                // Initialize croppers for all 3 photo slots of this pet
+                for (let photoNum = 1; photoNum <= 3; photoNum++) {
+                    const inputSelector = `#id_pet_photo_${petIndex}_${photoNum}`;
+                    const containerSelector = `.pet-photo-container-${petIndex}-${photoNum}`;
+                    const cropDataSelector = `#crop-data-pet-${petIndex}-${photoNum}`;
+                    
+                    // Check if elements exist before initializing
+                    const inputElement = document.querySelector(inputSelector);
+                    const containerElement = document.querySelector(containerSelector);
+                    
+                    if (inputElement && containerElement) {
+                        const cropper = window.setupImageCropper(inputSelector, containerSelector, cropDataSelector, {
+                            aspectRatio: 4/3, // Standard pet photo aspect ratio
+                            outputWidth: 600,
+                            outputHeight: 450,
+                            outputQuality: 0.9,
+                            modalTitle: `Crop Pet Photo ${photoNum}`,
+                            cropButtonText: 'Crop & Zoom',
+                            previewButtonText: 'View Full Size',
+                            isPetPhoto: true // Use pet photo specific styling
+                        });
+                        
+                        // Store the cropper instance on the input element
+                        if (cropper) {
+                            inputElement.imageCropperInstance = cropper;
+                        }
+                        
+                        console.log(`Initialized cropper for pet ${petIndex}, photo ${photoNum}`);
+                    }
+                }
+            }, 100);
+        }
+        
+        // Initialize Select2 for pet form dropdowns
+        function initializePetSelect2(petIndex) {
+            setTimeout(() => {
+                const petTypeSelect = document.querySelector(`select[name="pet_type_${petIndex}"]`);
+                if (petTypeSelect && typeof $ !== 'undefined' && $.fn.select2) {
+                    $(petTypeSelect).select2({
+                        theme: 'bootstrap-5',
+                        width: '100%',
+                        placeholder: 'Select pet type',
+                        allowClear: false
+                    });
+                }
+            }, 100);
+        }
+    }
+    
+    // ========== NEIGHBORHOODS FUNCTIONALITY ==========
+    function initNeighborhoods() {
+        console.log('Initializing neighborhoods system');
+        
+        const availableContainer = document.getElementById('available-neighborhoods');
+        const selectedContainer = document.getElementById('selected-neighborhoods');
+        const emptyMessage = document.getElementById('empty-message');
+        const inputsContainer = document.getElementById('neighborhood-preferences-inputs');
+        
+        if (!availableContainer || !selectedContainer) {
+            console.log('Neighborhood containers not found');
+            return;
+        }
+        
+        let selectedNeighborhoods = [];
+        
+        // Load existing preferences
+        {% if existing_ranked_preferences %}
+        {% for pref in existing_ranked_preferences %}
+        (function() {
+            var item = availableContainer.querySelector('[data-neighborhood-id="{{ pref.neighborhood.id }}"]');
+            if (item) item.style.display = 'none';
+            addNeighborhood('{{ pref.neighborhood.id }}', '{{ pref.neighborhood.name|escapejs }}');
+        })();
+        {% endfor %}
+        {% endif %}
+        
+        // Click handler for available neighborhoods
+        availableContainer.addEventListener('click', function(e) {
+            const item = e.target.closest('.neighborhood-item');
+            if (item && item.classList.contains('available') && item.style.display !== 'none') {
+                const id = item.dataset.neighborhoodId;
+                const name = item.querySelector('.neighborhood-name').textContent;
+                item.style.display = 'none';
+                addNeighborhood(id, name);
+            }
+        });
+        
+        // Click handler for removing neighborhoods
+        selectedContainer.addEventListener('click', function(e) {
+            if (e.target.classList.contains('fa-times')) {
+                const item = e.target.closest('.neighborhood-item');
+                if (item) {
+                    const id = item.dataset.neighborhoodId;
+                    removeNeighborhood(id);
+                }
+            }
+        });
+        
+        // Initialize SortableJS if available
+        if (typeof Sortable !== 'undefined') {
+            new Sortable(selectedContainer, {
+                animation: 150,
+                onEnd: updateInputs
+            });
+        }
+        
+        // Add neighborhood to selected
+        function addNeighborhood(id, name) {
+            selectedNeighborhoods.push({id: id, name: name});
+            if (emptyMessage) emptyMessage.style.display = 'none';
+            
+            const html = '<div class="neighborhood-item selected" data-neighborhood-id="' + id + '">' +
+                '<div class="d-flex align-items-center">' +
+                    '<span class="rank-number me-2">#' + selectedNeighborhoods.length + '</span>' +
+                    '<i class="fas fa-grip-lines drag-handle me-2"></i>' +
+                    '<span class="neighborhood-name flex-grow-1">' + name + '</span>' +
+                    '<i class="fas fa-times text-danger ms-2" style="cursor: pointer;"></i>' +
+                '</div>' +
+            '</div>';
+            
+            selectedContainer.insertAdjacentHTML('beforeend', html);
+            updateInputs();
+        }
+        
+        // Remove neighborhood from selected
+        function removeNeighborhood(id) {
+            selectedNeighborhoods = selectedNeighborhoods.filter(n => n.id != id);
+            
+            const availableItem = availableContainer.querySelector('[data-neighborhood-id="' + id + '"]');
+            if (availableItem) availableItem.style.display = 'block';
+            
+            const selectedItem = selectedContainer.querySelector('[data-neighborhood-id="' + id + '"]');
+            if (selectedItem) selectedItem.remove();
+            
+            if (selectedNeighborhoods.length === 0 && emptyMessage) {
+                emptyMessage.style.display = 'block';
+            }
+            
+            updateInputs();
+        }
+        
+        // Update hidden inputs and rankings
+        function updateInputs() {
+            const items = selectedContainer.querySelectorAll('.neighborhood-item');
+            inputsContainer.innerHTML = '';
+            
+            items.forEach(function(item, index) {
+                const rank = index + 1;
+                const id = item.dataset.neighborhoodId;
+                
+                // Update rank display
+                const rankEl = item.querySelector('.rank-number');
+                if (rankEl) rankEl.textContent = '#' + rank;
+                
+                // Create hidden input
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'neighborhood_rank_' + rank;
+                input.value = id;
+                inputsContainer.appendChild(input);
+            });
+        }
+    }
+    
+    // ========== AMENITIES FUNCTIONALITY ==========
+    // Amenities functionality removed - will be replaced with new structure
+})();
+</script>
+
+<!-- Include Amenities Slider JavaScript -->
+<script src="{% static 'applicants/js/amenities-slider.js' %}"></script>
+
+<!-- Load existing amenity preferences -->
+<script>
+// Wait for amenities sliders to be initialized, then load existing values
+document.addEventListener('DOMContentLoaded', function() {
+    // Small delay to ensure amenities sliders are initialized first
+    setTimeout(function() {
+        loadExistingAmenityPreferences();
+    }, 100);
+});
+
+function loadExistingAmenityPreferences() {
+    console.log('Loading existing amenity preferences...');
+    
+    // Load building amenity preferences
+    {% if existing_building_preferences %}
+    console.log('Loading building preferences:');
+    {% for pref in existing_building_preferences %}
+    (function() {
+        var slider = document.querySelector('input[data-amenity-id="{{ pref.amenity.id }}"][data-amenity-type="building"]');
+        if (slider) {
+            // Map database values back to slider values:
+            // DB: 2 (Nice to Have) -> Slider: 1
+            // DB: 3 (Important) -> Slider: 2
+            // DB: 4 (Must Have) -> Slider: 3
+            var dbToSliderMapping = {2: 1, 3: 2, 4: 3};
+            var dbValue = {{ pref.priority_level }};
+            var sliderValue = dbToSliderMapping[dbValue] || 0;
+            
+            slider.value = sliderValue;
+            slider.dataset.existingValue = sliderValue.toString();
+            
+            // Trigger the appearance update
+            var event = new Event('input');
+            slider.dispatchEvent(event);
+            
+            console.log('Loaded building amenity: {{ pref.amenity.name|escapejs }} = DB:' + dbValue + ' -> Slider:' + sliderValue);
+        } else {
+            console.warn('Could not find slider for building amenity: {{ pref.amenity.name|escapejs }}');
+        }
+    })();
+    {% endfor %}
+    {% endif %}
+    
+    // Load apartment amenity preferences
+    {% if existing_apartment_preferences %}
+    console.log('Loading apartment preferences:');
+    {% for pref in existing_apartment_preferences %}
+    (function() {
+        var slider = document.querySelector('input[data-amenity-id="{{ pref.amenity.id }}"][data-amenity-type="apartment"]');
+        if (slider) {
+            // Map database values back to slider values (same mapping)
+            var dbToSliderMapping = {2: 1, 3: 2, 4: 3};
+            var dbValue = {{ pref.priority_level }};
+            var sliderValue = dbToSliderMapping[dbValue] || 0;
+            
+            slider.value = sliderValue;
+            slider.dataset.existingValue = sliderValue.toString();
+            
+            // Trigger the appearance update
+            var event = new Event('input');
+            slider.dispatchEvent(event);
+            
+            console.log('Loaded apartment amenity: {{ pref.amenity.name|escapejs }} = DB:' + dbValue + ' -> Slider:' + sliderValue);
+        } else {
+            console.warn('Could not find slider for apartment amenity: {{ pref.amenity.name|escapejs }}');
+        }
+    })();
+    {% endfor %}
+    {% endif %}
+    
+    console.log('Finished loading existing amenity preferences');
+}
+</script>
+
+<style>
+/* Neighborhood item styles */
+.neighborhood-item {
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.neighborhood-item.available {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+}
+
+.neighborhood-item.available:hover {
+    background: #e9ecef;
+    border-color: #28a745;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.neighborhood-item.selected {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    cursor: default;
+}
+
+.neighborhood-item.selected:hover {
+    background: #fff1b3;
+}
+
+.neighborhood-list {
+    background: #fdfdfd;
+}
+
+.drag-handle {
+    cursor: move;
+    opacity: 0.5;
+}
+
+.drag-handle:hover {
+    opacity: 1;
+}
+
+.rank-number {
+    min-width: 30px;
+    text-align: center;
+    font-weight: bold;
+    color: #007bff;
+}
+
+/* Amenities Slider Styles */
+.amenities-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.amenity-slider-item {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    transition: all 0.3s ease;
+    background: #ffffff;
+}
+
+.amenity-slider-item.unset {
+    border-color: #e9ecef;
+    background: #f8f9fa;
+}
+
+.amenity-slider-item.nice-to-have {
+    border-color: #ffc107;
+    background: #fff8e1;
+}
+
+.amenity-slider-item.very-important {
+    border-color: #fd7e14;
+    background: #fff3e0;
+}
+
+.amenity-slider-item.must-have {
+    border-color: #dc3545;
+    background: #ffebee;
+}
+
+.amenity-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.amenity-name {
+    font-weight: 500;
+    font-size: 1rem;
+}
+
+.priority-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.amenity-slider-item.nice-to-have .priority-label {
+    color: #e65100;
+}
+
+.amenity-slider-item.very-important .priority-label {
+    color: #d84315;
+}
+
+.amenity-slider-item.must-have .priority-label {
+    color: #c62828;
+}
+
+.slider-container {
+    position: relative;
+}
+
+/* Slider Styling */
+.amenity-slider {
+    width: 100%;
+    height: 8px;
+    border-radius: 5px;
+    background: #ddd;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.amenity-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #ddd;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.amenity-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #ddd;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* Slider colors for different states */
+.amenity-slider.nice-to-have {
+    background: linear-gradient(to right, #ddd, #ffc107);
+}
+
+.amenity-slider.nice-to-have::-webkit-slider-thumb {
+    border-color: #ffc107;
+    background: #fff;
+    box-shadow: 0 0 0 1px #ffc107;
+}
+
+.amenity-slider.very-important {
+    background: linear-gradient(to right, #ffc107, #fd7e14);
+}
+
+.amenity-slider.very-important::-webkit-slider-thumb {
+    border-color: #fd7e14;
+    background: #fff;
+    box-shadow: 0 0 0 1px #fd7e14;
+}
+
+.amenity-slider.must-have {
+    background: linear-gradient(to right, #fd7e14, #dc3545);
+}
+
+.amenity-slider.must-have::-webkit-slider-thumb {
+    border-color: #dc3545;
+    background: #fff;
+    box-shadow: 0 0 0 1px #dc3545;
+}
+
+.slider-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 5px;
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+/* Priority Legend */
+.priority-legend {
+    border: 1px solid #dee2e6;
+}
+
+.legend-item {
+    text-align: center;
+}
+
+.legend-color {
+    width: 40px;
+    height: 20px;
+    border-radius: 10px;
+    margin: 0 auto 8px;
+}
+
+.nice-to-have-legend {
+    background: linear-gradient(to right, #fff8e1, #ffc107);
+    border: 1px solid #ffc107;
+}
+
+.very-important-legend {
+    background: linear-gradient(to right, #fff3e0, #fd7e14);
+    border: 1px solid #fd7e14;
+}
+
+.must-have-legend {
+    background: linear-gradient(to right, #ffebee, #dc3545);
+    border: 1px solid #dc3545;
+}
+
+.unset-legend {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .amenities-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .amenity-slider-item {
+        padding: 12px;
+    }
+    
+    .priority-legend .row {
+        gap: 10px;
+    }
+}
+
+</style>
+{% endblock %}

@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Register as Property Owner - Doorway{% endblock %}
+
+{% block extra_css %}
+<style>
+    .register-container {
+        max-width: 500px;
+        margin: 60px auto;
+        padding: 30px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+    .register-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .register-header img {
+        max-width: 180px;
+        margin-bottom: 20px;
+    }
+    .register-header h2 {
+        color: #333;
+        font-weight: 600;
+    }
+    .owner-badge {
+        display: inline-block;
+        background-color: #fd7e14;
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-weight: 500;
+        margin-bottom: 20px;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #555;
+        margin-bottom: 5px;
+    }
+    .btn-register {
+        width: 100%;
+        padding: 12px;
+        background-color: #fd7e14;
+        border: none;
+        color: white;
+        font-weight: 600;
+        border-radius: 5px;
+        transition: all 0.3s;
+    }
+    .btn-register:hover {
+        background-color: #e76707;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(253,126,20,0.3);
+    }
+    .login-link {
+        text-align: center;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+    }
+    .benefits-list {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .benefits-list h6 {
+        color: #333;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+    .benefits-list ul {
+        margin: 0;
+        padding-left: 20px;
+    }
+    .benefits-list li {
+        color: #666;
+        margin-bottom: 5px;
+    }
+    .access-note {
+        background-color: #f0f9ff;
+        border: 1px solid #bfdbfe;
+        padding: 10px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        color: #1e40af;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="register-container">
+    <div class="register-header">
+        <img src="{% static 'images/falkor-horizontal-transparent-blacktext.png' %}" alt="Falkor Logo">
+        <h2>Create Property Owner Account</h2>
+        <span class="owner-badge">
+            <i class="fas fa-building"></i> Owner Access
+        </span>
+    </div>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div class="access-note">
+        <strong>Note:</strong> Owner accounts require admin verification. You'll receive an email once your account is approved.
+    </div>
+    
+    <div class="benefits-list">
+        <h6>As a Property Owner, you can:</h6>
+        <ul>
+            <li>List and manage your properties</li>
+            <li>Review rental applications</li>
+            <li>Track occupancy and rent collection</li>
+            <li>Access tenant screening reports</li>
+            <li>Manage maintenance requests</li>
+        </ul>
+    </div>
+    
+    <form method="POST">
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors.0 }}
+            </div>
+        {% endif %}
+        
+        <div class="form-group">
+            <label for="{{ form.email.id_for_label }}" class="form-label">Business Email</label>
+            {{ form.email }}
+            {% if form.email.errors %}
+                <div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.password.id_for_label }}" class="form-label">Password</label>
+            {{ form.password }}
+            {% if form.password.errors %}
+                <div class="text-danger small mt-1">{{ form.password.errors.0 }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.password_confirm.id_for_label }}" class="form-label">Confirm Password</label>
+            {{ form.password_confirm }}
+            {% if form.password_confirm.errors %}
+                <div class="text-danger small mt-1">{{ form.password_confirm.errors.0 }}</div>
+            {% endif %}
+        </div>
+        
+        <button type="submit" class="btn btn-register">
+            <i class="fas fa-user-plus"></i> Create Owner Account
+        </button>
+    </form>
+    
+    <div class="login-link">
+        <p>Already have an account? <a href="{% url 'login' %}">Sign in here</a></p>
+        <p class="text-muted small mt-2">
+            Different role? <a href="{% url 'register_broker' %}">Broker</a> | <a href="{% url 'register_applicant' %}">Applicant</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

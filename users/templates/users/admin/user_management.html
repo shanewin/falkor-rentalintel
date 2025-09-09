@@ -1,0 +1,364 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}User Management - Doorway Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Match the consistent admin dashboard theme */
+    :root {
+        --brand-black: #1a1a1a;
+        --brand-yellow: #ffcc00;
+        --brand-yellow-light: #ffd633;
+        --brand-yellow-dark: #e6b800;
+        --accent-gray: #6c757d;
+        --accent-light: #f8f9fa;
+        --white: #ffffff;
+        --border-color: #dee2e6;
+        --text-dark: #212529;
+        --text-muted: #6c757d;
+        --shadow: 0 2px 4px rgba(0,0,0,0.1);
+        --shadow-hover: 0 4px 8px rgba(0,0,0,0.15);
+        --border-radius: 8px;
+        --transition: all 0.2s ease;
+    }
+    
+    /* Dashboard Header - Match admin dashboard style */
+    .dashboard-header {
+        background: var(--brand-black);
+        color: var(--white);
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+    }
+    .dashboard-header h1 {
+        font-size: 2rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    .dashboard-header p {
+        color: rgba(255, 255, 255, 0.8);
+        margin: 0.5rem 0 0 0;
+    }
+    
+    /* Statistics Cards - Match admin dashboard style */
+    .stats-card {
+        background: var(--white);
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: var(--shadow);
+        border-left: 4px solid var(--brand-yellow);
+        transition: var(--transition);
+        margin-bottom: 1.5rem;
+    }
+    .stats-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-hover);
+    }
+    .stats-card h3 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--brand-black);
+        margin-bottom: 0.5rem;
+    }
+    .stats-card p {
+        color: var(--text-muted);
+        font-weight: 500;
+        text-transform: uppercase;
+        font-size: 0.875rem;
+        letter-spacing: 0.5px;
+        margin: 0;
+    }
+    
+    /* Create Actions Section */
+    .create-actions {
+        background: var(--white);
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+    }
+    .create-actions h3 {
+        color: var(--brand-black);
+        font-weight: 600;
+        margin-bottom: 1rem;
+        font-size: 1.125rem;
+    }
+    .create-btn {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        margin: 0.25rem;
+        background: var(--accent-light);
+        color: var(--text-dark);
+        text-decoration: none;
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color);
+        font-weight: 500;
+        font-size: 0.875rem;
+        transition: var(--transition);
+    }
+    .create-btn:hover {
+        background: var(--brand-yellow);
+        color: var(--brand-black);
+        text-decoration: none;
+        transform: translateY(-1px);
+        border-color: var(--brand-yellow);
+    }
+    .create-btn i {
+        margin-right: 0.5rem;
+        opacity: 0.8;
+    }
+    
+    /* User Lists - Match admin dashboard style */
+    .user-list {
+        background: var(--white);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+        margin-bottom: 1.5rem;
+    }
+    .user-list h4 {
+        background: var(--brand-black);
+        color: var(--white);
+        padding: 1rem 1.5rem;
+        margin: 0;
+        font-weight: 600;
+        font-size: 1.125rem;
+    }
+    .user-list-content {
+        padding: 1.5rem;
+    }
+    .user-item {
+        padding: 1rem 0;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .user-item:last-child {
+        border-bottom: none;
+    }
+    .user-item:hover {
+        background-color: rgba(255, 204, 0, 0.05);
+        border-radius: var(--border-radius);
+        margin: 0 -0.5rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    .user-info {
+        flex: 1;
+    }
+    .user-email {
+        font-weight: 600;
+        color: var(--brand-black);
+        margin-bottom: 0.25rem;
+    }
+    .user-date {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+    .user-role {
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        background: var(--brand-yellow);
+        color: var(--brand-black);
+    }
+    .no-users {
+        text-align: center;
+        color: var(--text-muted);
+        padding: 1.5rem;
+        font-style: italic;
+    }
+    
+    /* Back button styling */
+    .btn-outline-primary {
+        border-color: var(--brand-black);
+        color: var(--brand-black);
+        font-weight: 500;
+        padding: 0.5rem 1.5rem;
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+    }
+    .btn-outline-primary:hover {
+        background-color: var(--brand-black);
+        border-color: var(--brand-black);
+        color: var(--white);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1><i class="fas fa-users-cog me-2"></i>User Management</h1>
+                <p>Create and manage professional accounts</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <!-- User Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card brokers-card">
+                <h3>{{ broker_count }}</h3>
+                <p>Brokers</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card staff-card">
+                <h3>{{ staff_count }}</h3>
+                <p>Staff Members</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card owners-card">
+                <h3>{{ owner_count }}</h3>
+                <p>Property Owners</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card applicants-card">
+                <h3>{{ applicant_count }}</h3>
+                <p>Applicants</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Account Actions -->
+    <div class="create-actions">
+        <h3><i class="fas fa-plus-circle"></i> Create New Accounts</h3>
+        <p class="text-muted mb-3">Professional accounts are created by administrators and invitation emails are sent automatically.</p>
+        
+        <a href="{% url 'admin_create_account' 'broker' %}" class="create-btn btn-broker">
+            <i class="fas fa-briefcase"></i> Create Broker Account
+        </a>
+        
+        {% if user.is_superuser %}
+        <a href="{% url 'admin_create_account' 'staff' %}" class="create-btn btn-staff">
+            <i class="fas fa-users-cog"></i> Create Staff Account
+        </a>
+        {% endif %}
+        
+        <a href="{% url 'admin_create_account' 'owner' %}" class="create-btn btn-owner">
+            <i class="fas fa-building"></i> Create Owner Account
+        </a>
+        
+        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+            <h4 style="margin-bottom: 1rem; color: var(--brand-black); font-weight: 600; font-size: 1rem;">
+                <i class="fas fa-chart-bar"></i> Performance Analytics
+            </h4>
+            <a href="{% url 'broker_leaderboard' %}" class="create-btn">
+                <i class="fas fa-trophy"></i> View Broker Leaderboard
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Recent Brokers -->
+        <div class="col-md-6">
+            <div class="user-list">
+                <h4><i class="fas fa-briefcase"></i> Recent Brokers</h4>
+                <div class="user-list-content">
+                    {% if recent_brokers %}
+                        {% for broker in recent_brokers %}
+                        <div class="user-item">
+                            <div class="user-info">
+                                <div class="user-email">{{ broker.email }}</div>
+                                <div class="user-date">Joined {{ broker.created_at|date:"M d, Y" }}</div>
+                            </div>
+                            <span class="user-role">Broker</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-users">No brokers created yet</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Staff -->
+        <div class="col-md-6">
+            <div class="user-list">
+                <h4><i class="fas fa-users-cog"></i> Recent Staff</h4>
+                <div class="user-list-content">
+                    {% if recent_staff %}
+                        {% for staff in recent_staff %}
+                        <div class="user-item">
+                            <div class="user-info">
+                                <div class="user-email">{{ staff.email }}</div>
+                                <div class="user-date">Joined {{ staff.created_at|date:"M d, Y" }}</div>
+                            </div>
+                            <span class="user-role">Staff</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-users">No staff members created yet</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Recent Owners -->
+        <div class="col-md-6">
+            <div class="user-list">
+                <h4><i class="fas fa-building"></i> Recent Owners</h4>
+                <div class="user-list-content">
+                    {% if recent_owners %}
+                        {% for owner in recent_owners %}
+                        <div class="user-item">
+                            <div class="user-info">
+                                <div class="user-email">{{ owner.email }}</div>
+                                <div class="user-date">Joined {{ owner.created_at|date:"M d, Y" }}</div>
+                            </div>
+                            <span class="user-role">Owner</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-users">No property owners created yet</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Applicants -->
+        <div class="col-md-6">
+            <div class="user-list">
+                <h4><i class="fas fa-user"></i> Recent Applicants</h4>
+                <div class="user-list-content">
+                    {% if recent_applicants %}
+                        {% for applicant in recent_applicants %}
+                        <div class="user-item">
+                            <div class="user-info">
+                                <div class="user-email">{{ applicant.email }}</div>
+                                <div class="user-date">Joined {{ applicant.created_at|date:"M d, Y" }}</div>
+                            </div>
+                            <span class="user-role">Applicant</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-users">No applicants registered yet</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Back to Dashboard -->
+    <div class="text-center mt-4">
+        <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left"></i> Back to Admin Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% load crispy_forms_tags %}
+
+<div class="amenities-field-container">
+    <div class="amenities-header">
+        <label for="{{ field.id_for_label }}" class="form-label">
+            Brokers
+            {% if field.field.required %}<span class="asteriskField">*</span>{% endif %}
+        </label>
+        <div class="amenities-summary">
+            <span class="selected-count broker-selected-count">0 selected</span>
+            <button type="button" class="btn btn-link btn-sm clear-all broker-clear-all">Clear all</button>
+        </div>
+    </div>
+    <div class="amenities-grid">
+        {% for choice_value, choice_label in field.field.choices %}
+            {% if choice_value %}
+                <div class="amenity-checkbox-item broker-checkbox-item">
+                    <input type="checkbox" 
+                           class="form-check-input amenity-checkbox broker-checkbox" 
+                           name="{{ field.html_name }}" 
+                           value="{{ choice_value }}" 
+                           id="id_brokers_{{ choice_value }}"
+                           {% if choice_value|stringformat:"s" in field.value %}checked{% endif %}>
+                    <label class="form-check-label amenity-label" 
+                           for="id_brokers_{{ choice_value }}">
+                        <span class="amenity-icon">
+                            <i class="fa-solid fa-user-tie"></i>
+                        </span>
+                        {{ choice_label }}
+                    </label>
+                </div>
+            {% endif %}
+        {% empty %}
+            <div class="no-amenities">
+                <p class="text-muted">No brokers available.</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const brokerCheckboxes = document.querySelectorAll('.broker-checkbox');
+    const selectedCount = document.querySelector('.broker-selected-count');
+    const clearAllBtn = document.querySelector('.broker-clear-all');
+    
+    function updateSelectedCount() {
+        const checkedCount = document.querySelectorAll('.broker-checkbox:checked').length;
+        selectedCount.textContent = `${checkedCount} selected`;
+        clearAllBtn.style.display = checkedCount > 0 ? 'inline' : 'none';
+        
+        // Add visual feedback
+        document.querySelectorAll('.broker-checkbox-item').forEach(item => {
+            const checkbox = item.querySelector('.broker-checkbox');
+            if (checkbox && checkbox.checked) {
+                item.classList.add('selected');
+            } else {
+                item.classList.remove('selected');
+            }
+        });
+    }
+    
+    brokerCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedCount);
+    });
+    
+    if (clearAllBtn) {
+        clearAllBtn.addEventListener('click', function() {
+            brokerCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            updateSelectedCount();
+        });
+    }
+    
+    // Initial count update
+    updateSelectedCount();
+});
+</script>
+

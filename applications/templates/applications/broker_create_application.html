@@ -1,0 +1,888 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'applications/css/applications.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1>Create New Application</h1>
+                <p>Step-by-step application creation for brokers</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'applications_list' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left"></i> Back to Applications
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Progress Bar -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h6 class="mb-3">Application Creation Progress</h6>
+            <div class="progress mb-3" style="height: 6px;">
+                <div class="progress-bar bg-yellow" style="width: 25%"></div>
+            </div>
+            <div class="row text-center">
+                <div class="col-3">
+                    <div class="step text-brand">
+                        <div class="step-number bg-yellow text-brand">1</div>
+                        <small>Property</small>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="step text-muted">
+                        <div class="step-number bg-light text-muted">2</div>
+                        <small>Applicant</small>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="step text-muted">
+                        <div class="step-number bg-light text-muted">3</div>
+                        <small>Customize</small>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="step text-muted">
+                        <div class="step-number bg-light text-muted">4</div>
+                        <small>Review & Send</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-container">
+        <form method="post" id="create-application-form" class="building-form">
+                        {% csrf_token %}
+
+            <!-- Step 1: Property Selection -->
+            <div class="step-section" id="step-property">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Step 1: Property Selection</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Property Selection Method -->
+                        <div class="form-group-enhanced">
+                            <label class="form-label">Property Selection Method</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="property_type" id="existing_property" value="existing" checked>
+                                <label class="btn btn-outline-primary" for="existing_property">
+                                    <i class="fas fa-building"></i> Select from Database
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="property_type" id="manual_property" value="manual">
+                                <label class="btn btn-outline-primary" for="manual_property">
+                                    <i class="fas fa-keyboard"></i> Enter Manually
+                                </label>
+                            </div>
+                            <div class="field-hint">
+                                <i class="fas fa-info-circle"></i>
+                                Choose an existing property or enter details manually
+                            </div>
+                        </div>
+
+                        <!-- Existing Property Selection -->
+                        <div id="existing-property-section">
+                            <div class="form-group-enhanced">
+                                <label for="apartment" class="form-label">Select Apartment</label>
+                                {{ form.apartment }}
+                                <div class="field-hint">
+                                    <i class="fas fa-search"></i>
+                                    Choose an apartment from your available listings
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Manual Property Entry -->
+                        <div id="manual-property-section" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group-enhanced">
+                                        <label for="manual_building_name" class="form-label">Building Name</label>
+                                        {{ form.manual_building_name }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group-enhanced">
+                                        <label for="manual_unit_number" class="form-label">Unit Number *</label>
+                                        {{ form.manual_unit_number }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group-enhanced">
+                                <label for="manual_building_address" class="form-label">Full Address *</label>
+                                {{ form.manual_building_address }}
+                                <div class="field-hint">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    Enter the complete building address
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-actions-enhanced">
+                            <button type="button" class="btn btn-primary" onclick="goToStep('applicant')">
+                                <i class="fas fa-arrow-right"></i> Next: Select Applicant
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Applicant Selection -->
+            <div class="step-section" id="step-applicant" style="display: none;">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Step 2: Applicant Selection</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Applicant Selection Method -->
+                        <div class="form-group-enhanced">
+                            <label class="form-label">Applicant Selection Method</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="applicant_type" id="existing_applicant" value="existing" checked>
+                                <label class="btn btn-outline-primary" for="existing_applicant">
+                                    <i class="fas fa-user"></i> Select Existing
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="applicant_type" id="new_applicant" value="new">
+                                <label class="btn btn-outline-primary" for="new_applicant">
+                                    <i class="fas fa-user-plus"></i> Create New
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="applicant_type" id="no_applicant" value="none">
+                                <label class="btn btn-outline-secondary" for="no_applicant">
+                                    <i class="fas fa-clock"></i> Add Later
+                                </label>
+                            </div>
+                            <div class="field-hint">
+                                <i class="fas fa-info-circle"></i>
+                                Choose how to handle applicant information
+                            </div>
+                        </div>
+
+                        <!-- Existing Applicant Selection -->
+                        <div id="existing-applicant-section">
+                            <div class="form-group-enhanced">
+                                <label for="applicant" class="form-label">Select Applicant</label>
+                                {{ form.applicant }}
+                                <div class="field-hint">
+                                    <i class="fas fa-search"></i>
+                                    Choose from your existing applicants
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- New Applicant Creation -->
+                        <div id="new-applicant-section" style="display: none;">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>Quick Applicant Creation:</strong> Just enter basic contact info. The applicant will provide full details when they complete the application.
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group-enhanced">
+                                        <label for="new_applicant_email" class="form-label">Email Address *</label>
+                                        <input type="email" class="form-control" id="new_applicant_email" name="new_applicant_email" 
+                                               placeholder="applicant@example.com" required>
+                                        <div class="field-hint">
+                                            <i class="fas fa-envelope"></i>
+                                            We'll send the application link to this email
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group-enhanced">
+                                        <label for="new_applicant_phone" class="form-label">Phone Number</label>
+                                        <input type="tel" class="form-control" id="new_applicant_phone" name="new_applicant_phone" 
+                                               placeholder="(555) 123-4567">
+                                        <div class="field-hint">
+                                            <i class="fas fa-sms"></i>
+                                            Optional: for SMS notifications
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group-enhanced">
+                                        <label for="new_applicant_first_name" class="form-label">First Name</label>
+                                        <input type="text" class="form-control" id="new_applicant_first_name" name="new_applicant_first_name">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group-enhanced">
+                                        <label for="new_applicant_last_name" class="form-label">Last Name</label>
+                                        <input type="text" class="form-control" id="new_applicant_last_name" name="new_applicant_last_name">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- No Applicant Option -->
+                        <div id="no-applicant-section" style="display: none;">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>No Applicant Selected:</strong> You can add applicant details later and send the application link when ready.
+                            </div>
+                        </div>
+
+                        <div class="form-actions-enhanced">
+                            <button type="button" class="btn btn-secondary" onclick="goToStep('property')">
+                                <i class="fas fa-arrow-left"></i> Back: Property
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="goToStep('customize')">
+                                <i class="fas fa-arrow-right"></i> Next: Customize Application
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Application Customization -->
+            <div class="step-section" id="step-customize" style="display: none;">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Step 3: Application Customization</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Required Documents -->
+                        <div class="form-group-enhanced">
+                            <label class="form-label">Required Documents</label>
+                            <div class="field-hint mb-3">
+                                <i class="fas fa-file-alt"></i>
+                                Select which documents the applicant must upload
+                            </div>
+                            {{ form.required_documents }}
+                        </div>
+
+                        <!-- Application Fee -->
+                        <div class="form-group-enhanced">
+                            <label for="application_fee" class="form-label">Application Fee</label>
+                            <div class="currency-input">
+                                <input type="number" class="form-control" id="application_fee" name="application_fee" 
+                                       value="50.00" step="0.01" min="0">
+                            </div>
+                            <div class="field-hint">
+                                <i class="fas fa-dollar-sign"></i>
+                                Amount the applicant will pay when submitting
+                            </div>
+                        </div>
+
+                        <!-- Application Notes -->
+                        <div class="form-group-enhanced">
+                            <label for="broker_notes" class="form-label">Broker Notes (Optional)</label>
+                            <textarea class="form-control" id="broker_notes" name="broker_notes" rows="3" 
+                                      placeholder="Any special instructions or notes for this application..."></textarea>
+                            <div class="field-hint">
+                                <i class="fas fa-sticky-note"></i>
+                                Private notes visible only to you
+                            </div>
+                        </div>
+
+                        <div class="form-actions-enhanced">
+                            <button type="button" class="btn btn-secondary" onclick="goToStep('applicant')">
+                                <i class="fas fa-arrow-left"></i> Back: Applicant
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="goToStep('review')">
+                                <i class="fas fa-arrow-right"></i> Next: Review & Send
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Review & Send -->
+            <div class="step-section" id="step-review" style="display: none;">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Step 4: Review & Send Application</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Application Summary -->
+                        <div class="card mb-4" style="border-left: 4px solid var(--brand-yellow);">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-clipboard-list"></i> Application Summary</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p><strong><i class="fas fa-building"></i> Property:</strong> <span id="summary-property">-</span></p>
+                                        <p><strong><i class="fas fa-user"></i> Applicant:</strong> <span id="summary-applicant">-</span></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p><strong><i class="fas fa-file-alt"></i> Required Documents:</strong> <span id="summary-documents">-</span></p>
+                                        <p><strong><i class="fas fa-dollar-sign"></i> Application Fee:</strong> $<span id="summary-fee">50.00</span></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Send Options -->
+                        <div class="form-group-enhanced">
+                            <label class="form-label">Send Application Options</label>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="send_email" name="send_email" checked>
+                                        <label class="form-check-label" for="send_email">
+                                            <i class="fas fa-envelope"></i> Send Email
+                                        </label>
+                                        <small class="text-muted d-block" id="email-status">Email will be available if applicant has email address</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="send_sms" name="send_sms">
+                                        <label class="form-check-label" for="send_sms">
+                                            <i class="fas fa-sms"></i> Send SMS
+                                        </label>
+                                        <small class="text-muted d-block" id="sms-status">SMS will be available if applicant has phone number</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="save_only" name="save_only">
+                                        <label class="form-check-label" for="save_only">
+                                            <i class="fas fa-save"></i> Save Draft Only
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Contact validation alerts -->
+                            <div class="alert alert-info mt-3" id="contact-validation" style="display: none;">
+                                <i class="fas fa-info-circle"></i> <span id="contact-message"></span>
+                            </div>
+                        </div>
+
+                        <!-- Application Preview & Pre-Fill Section -->
+                        <div class="form-group-enhanced">
+                            <label class="form-label">Review & Customize Application</label>
+                            <div class="field-hint mb-3">
+                                <i class="fas fa-info-circle"></i>
+                                Preview the application and optionally pre-fill information for the applicant
+                            </div>
+                            
+                            <!-- Action Buttons -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="card h-100">
+                                        <div class="card-body text-center">
+                                            <h6 class="card-title text-muted">PREVIEW APPLICATION</h6>
+                                            <div class="d-grid gap-2">
+                                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="openPreviewWindow()">
+                                                    <i class="fas fa-external-link-alt"></i> Preview in New Window
+                                                </button>
+                                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="togglePreviewIframe()">
+                                                    <i class="fas fa-eye"></i> <span id="iframe-toggle-text">Show Preview Below</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card h-100">
+                                        <div class="card-body text-center">
+                                            <h6 class="card-title text-muted">PRE-FILL INFORMATION</h6>
+                                            <div class="d-grid gap-2">
+                                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="openPreFillWindow()">
+                                                    <i class="fas fa-edit"></i> Pre-Fill Sections
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="showPreFillStatus()">
+                                                    <i class="fas fa-list-check"></i> <span id="prefill-status-text">View Status</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Pre-Fill Status Section -->
+                            <div id="prefill-status-container" style="display: none;" class="alert alert-light border mb-3">
+                                <h6 class="small mb-2"><i class="fas fa-info-circle"></i> Pre-Fill Status</h6>
+                                <div class="row small" id="prefill-status-content">
+                                    <div class="col-md-6">
+                                        <div id="section1-status"><i class="fas fa-circle text-muted"></i> Personal Information: <span class="text-muted">Not started</span></div>
+                                        <div id="section2-status"><i class="fas fa-circle text-muted"></i> Income & Employment: <span class="text-muted">Not started</span></div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div id="section3-status"><i class="fas fa-circle text-muted"></i> Legal History: <span class="text-muted">Not started</span></div>
+                                        <div class="text-muted small mt-2">
+                                            <i class="fas fa-lightbulb"></i> Tip: Pre-fill known information to save applicant time
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Embedded Preview iframe -->
+                            <div id="preview-iframe-container" style="display: none;" class="border rounded">
+                                <div class="bg-light p-2 small text-muted border-bottom">
+                                    <i class="fas fa-info-circle"></i> This is how the application will appear to the applicant
+                                </div>
+                                <iframe id="preview-iframe" src="" width="100%" height="600" frameborder="0"></iframe>
+                            </div>
+                        </div>
+
+                        <div class="form-actions-enhanced">
+                            <button type="button" class="btn btn-secondary" onclick="goToStep('customize')">
+                                <i class="fas fa-arrow-left"></i> Back: Customize
+                            </button>
+                            <div class="d-flex gap-2">
+                                <button type="submit" name="action" value="save_draft" class="btn btn-outline-primary">
+                                    <i class="fas fa-save"></i> Save as Draft
+                                </button>
+                                <button type="submit" name="action" value="create_and_send" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane"></i> Create & Send Application
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Property type toggle
+    document.querySelectorAll('input[name="property_type"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const existingSection = document.getElementById('existing-property-section');
+            const manualSection = document.getElementById('manual-property-section');
+            
+            if (this.value === 'existing') {
+                existingSection.style.display = 'block';
+                manualSection.style.display = 'none';
+            } else {
+                existingSection.style.display = 'none';
+                manualSection.style.display = 'block';
+            }
+            updateSummary();
+        });
+    });
+
+    // Applicant type toggle
+    document.querySelectorAll('input[name="applicant_type"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const existingSection = document.getElementById('existing-applicant-section');
+            const newSection = document.getElementById('new-applicant-section');
+            const noneSection = document.getElementById('no-applicant-section');
+            
+            // Hide all sections
+            existingSection.style.display = 'none';
+            newSection.style.display = 'none';
+            noneSection.style.display = 'none';
+            
+            // Show relevant section
+            if (this.value === 'existing') {
+                existingSection.style.display = 'block';
+            } else if (this.value === 'new') {
+                newSection.style.display = 'block';
+            } else {
+                noneSection.style.display = 'block';
+            }
+            updateSummary();
+        });
+    });
+
+    // Update summary when inputs change
+    document.addEventListener('change', updateSummary);
+    document.addEventListener('input', updateSummary);
+});
+
+function goToStep(stepName) {
+    // Hide all steps
+    document.querySelectorAll('.step-section').forEach(section => {
+        section.style.display = 'none';
+    });
+    
+    // Show target step
+    document.getElementById('step-' + stepName).style.display = 'block';
+    
+    // Update progress bar
+    const steps = ['property', 'applicant', 'customize', 'review'];
+    const currentIndex = steps.indexOf(stepName);
+    const progressPercent = ((currentIndex + 1) / steps.length) * 100;
+    
+    document.querySelector('.progress-bar').style.width = progressPercent + '%';
+    
+    // Update step indicators with new structure
+    const stepElements = document.querySelectorAll('.step');
+    const stepNumbers = document.querySelectorAll('.step-number');
+    
+    stepElements.forEach((step, index) => {
+        const stepNumber = stepNumbers[index];
+        if (index <= currentIndex) {
+            step.className = 'step text-brand';
+            stepNumber.className = 'step-number bg-yellow text-brand';
+        } else {
+            step.className = 'step text-muted';
+            stepNumber.className = 'step-number bg-light text-muted';
+        }
+    });
+    
+    updateSummary();
+}
+
+function updateSummary() {
+    // Update property summary
+    const propertyType = document.querySelector('input[name="property_type"]:checked')?.value;
+    let propertyText = '-';
+    
+    if (propertyType === 'existing') {
+        const apartmentSelect = document.getElementById('id_apartment');
+        if (apartmentSelect.value) {
+            propertyText = apartmentSelect.options[apartmentSelect.selectedIndex].text;
+        }
+    } else if (propertyType === 'manual') {
+        const buildingName = document.getElementById('id_manual_building_name').value;
+        const unitNumber = document.getElementById('id_manual_unit_number').value;
+        if (buildingName || unitNumber) {
+            propertyText = `${buildingName || 'Building'} - Unit ${unitNumber || 'TBD'}`;
+        }
+    }
+    
+    // Update applicant summary
+    const applicantType = document.querySelector('input[name="applicant_type"]:checked')?.value;
+    let applicantText = '-';
+    
+    if (applicantType === 'existing') {
+        const applicantSelect = document.getElementById('id_applicant');
+        if (applicantSelect.value) {
+            applicantText = applicantSelect.options[applicantSelect.selectedIndex].text;
+        }
+    } else if (applicantType === 'new') {
+        const email = document.getElementById('new_applicant_email').value;
+        const firstName = document.getElementById('new_applicant_first_name').value;
+        const lastName = document.getElementById('new_applicant_last_name').value;
+        if (email) {
+            applicantText = `${firstName || ''} ${lastName || ''} (${email})`.trim();
+        }
+    } else if (applicantType === 'none') {
+        applicantText = 'To be added later';
+    }
+    
+    // Update summaries
+    document.getElementById('summary-property').textContent = propertyText;
+    document.getElementById('summary-applicant').textContent = applicantText;
+    
+    // Update documents count
+    const selectedDocs = document.querySelectorAll('input[name="required_documents"]:checked').length;
+    document.getElementById('summary-documents').textContent = selectedDocs + ' documents';
+    
+    // Update fee
+    const fee = document.getElementById('application_fee')?.value || '50.00';
+    document.getElementById('summary-fee').textContent = fee;
+    
+    // Update contact validation
+    updateContactValidation();
+}
+
+function updateContactValidation() {
+    const applicantType = document.querySelector('input[name="applicant_type"]:checked')?.value;
+    let hasEmail = false;
+    let hasPhone = false;
+    
+    // Check contact info based on applicant type
+    if (applicantType === 'existing') {
+        const applicantSelect = document.getElementById('id_applicant');
+        if (applicantSelect && applicantSelect.value) {
+            // Get selected applicant data (would need AJAX in real implementation)
+            // For now, assume both are available for existing applicants
+            hasEmail = true;
+            hasPhone = true;
+        }
+    } else if (applicantType === 'new') {
+        const email = document.getElementById('new_applicant_email')?.value;
+        const phone = document.getElementById('new_applicant_phone')?.value;
+        hasEmail = Boolean(email && email.trim());
+        hasPhone = Boolean(phone && phone.trim());
+    }
+    
+    // Update UI based on available contact methods
+    const emailCheckbox = document.getElementById('send_email');
+    const smsCheckbox = document.getElementById('send_sms');
+    const emailStatus = document.getElementById('email-status');
+    const smsStatus = document.getElementById('sms-status');
+    const contactValidation = document.getElementById('contact-validation');
+    const contactMessage = document.getElementById('contact-message');
+    
+    // Email validation
+    if (hasEmail) {
+        emailCheckbox.disabled = false;
+        emailStatus.textContent = '✓ Email available';
+        emailStatus.className = 'text-success d-block';
+    } else {
+        emailCheckbox.disabled = true;
+        emailCheckbox.checked = false;
+        emailStatus.textContent = '✗ No email address provided';
+        emailStatus.className = 'text-muted d-block';
+    }
+    
+    // SMS validation
+    if (hasPhone) {
+        smsCheckbox.disabled = false;
+        smsStatus.textContent = '✓ Phone number available';
+        smsStatus.className = 'text-success d-block';
+    } else {
+        smsCheckbox.disabled = true;
+        smsCheckbox.checked = false;
+        smsStatus.textContent = '✗ No phone number provided';
+        smsStatus.className = 'text-muted d-block';
+    }
+    
+    // Show validation message
+    if (!hasEmail && !hasPhone) {
+        contactMessage.textContent = 'No contact information available. Application will be saved as draft only.';
+        contactValidation.className = 'alert alert-warning mt-3';
+        contactValidation.style.display = 'block';
+    } else if (hasEmail && hasPhone) {
+        contactMessage.textContent = 'Both email and SMS options are available.';
+        contactValidation.className = 'alert alert-success mt-3';
+        contactValidation.style.display = 'block';
+    } else if (hasEmail) {
+        contactMessage.textContent = 'Only email option is available.';
+        contactValidation.className = 'alert alert-info mt-3';
+        contactValidation.style.display = 'block';
+    } else if (hasPhone) {
+        contactMessage.textContent = 'Only SMS option is available.';
+        contactValidation.className = 'alert alert-info mt-3';
+        contactValidation.style.display = 'block';
+    } else {
+        contactValidation.style.display = 'none';
+    }
+}
+
+// Preview functionality
+let tempApplicationId = null;
+
+function openPreviewWindow() {
+    if (!tempApplicationId) {
+        // Create a temporary application first
+        createTempApplication(() => {
+            const previewUrl = `/applications/${tempApplicationId}/preview/`;
+            window.open(previewUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+        });
+    } else {
+        const previewUrl = `/applications/${tempApplicationId}/preview/`;
+        window.open(previewUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+    }
+}
+
+function togglePreviewIframe() {
+    const container = document.getElementById('preview-iframe-container');
+    const iframe = document.getElementById('preview-iframe');
+    const toggleText = document.getElementById('iframe-toggle-text');
+    
+    if (container.style.display === 'none') {
+        if (!tempApplicationId) {
+            // Create a temporary application first
+            createTempApplication(() => {
+                const previewUrl = `/applications/${tempApplicationId}/preview/`;
+                iframe.src = previewUrl;
+                container.style.display = 'block';
+                toggleText.textContent = 'Hide Preview';
+            });
+        } else {
+            const previewUrl = `/applications/${tempApplicationId}/preview/`;
+            iframe.src = previewUrl;
+            container.style.display = 'block';
+            toggleText.textContent = 'Hide Preview';
+        }
+    } else {
+        container.style.display = 'none';
+        toggleText.textContent = 'Show Preview Below';
+    }
+}
+
+function createTempApplication(callback) {
+    // Collect form data
+    const formData = new FormData(document.getElementById('create-application-form'));
+    formData.append('action', 'create_temp_preview');
+    
+    fetch('/applications/broker/create/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            tempApplicationId = data.application_id;
+            if (callback) callback();
+        } else {
+            alert('Error creating preview: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error creating preview. Please check your form data.');
+    });
+}
+
+// Pre-fill functionality
+function openPreFillWindow() {
+    if (!tempApplicationId) {
+        // Create a temporary application first
+        createTempApplication(() => {
+            const preFillUrl = `/applications/${tempApplicationId}/broker-prefill/`;
+            window.open(preFillUrl, '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
+        });
+    } else {
+        const preFillUrl = `/applications/${tempApplicationId}/broker-prefill/`;
+        window.open(preFillUrl, '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
+    }
+}
+
+function showPreFillStatus() {
+    const container = document.getElementById('prefill-status-container');
+    const toggleText = document.getElementById('prefill-status-text');
+    
+    if (container.style.display === 'none') {
+        // Update status if we have an application
+        if (tempApplicationId) {
+            updatePreFillStatus();
+        }
+        container.style.display = 'block';
+        toggleText.textContent = 'Hide Status';
+    } else {
+        container.style.display = 'none';
+        toggleText.textContent = 'View Status';
+    }
+}
+
+function updatePreFillStatus() {
+    if (!tempApplicationId) return;
+    
+    // Fetch current pre-fill status
+    fetch(`/applications/${tempApplicationId}/prefill-status/`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateStatusIndicator('section1-status', 'Personal Information', data.status.section1);
+            updateStatusIndicator('section2-status', 'Income & Employment', data.status.section2);
+            updateStatusIndicator('section3-status', 'Legal History', data.status.section3);
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching prefill status:', error);
+    });
+}
+
+function updateStatusIndicator(elementId, sectionName, status) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    let icon, text, color;
+    if (status === 'completed') {
+        icon = 'fas fa-check-circle';
+        text = 'Completed';
+        color = 'text-success';
+    } else if (status === 'partial') {
+        icon = 'fas fa-clock';
+        text = 'Partially filled';
+        color = 'text-warning';
+    } else {
+        icon = 'fas fa-circle';
+        text = 'Not started';
+        color = 'text-muted';
+    }
+    
+    element.innerHTML = `<i class="${icon} ${color}"></i> ${sectionName}: <span class="${color}">${text}</span>`;
+}
+</script>
+
+{% block extra_js %}
+<script>
+// Additional form enhancements
+document.addEventListener('DOMContentLoaded', function() {
+    // Add loading states to form buttons
+    const form = document.getElementById('create-application-form');
+    const formButtons = document.querySelectorAll('button[type="submit"]');
+    
+    formButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            // Don't disable the button immediately - let form validation happen first
+            const form = this.closest('form');
+            const currentButton = this;
+            
+            // Check if we're on the review step and this is a submit button
+            if (document.getElementById('step-review').style.display !== 'none') {
+                console.log('Form submitting...');
+                
+                // Validate required fields before disabling button
+                let isValid = true;
+                const requiredInputs = form.querySelectorAll('input[required], select[required]');
+                
+                requiredInputs.forEach(input => {
+                    if (!input.value.trim()) {
+                        isValid = false;
+                        console.log('Missing required field:', input.name || input.id);
+                    }
+                });
+                
+                // Only disable if validation passes
+                if (isValid) {
+                    setTimeout(() => {
+                        currentButton.disabled = true;
+                        const originalText = currentButton.innerHTML;
+                        currentButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                        
+                        // Re-enable after 10 seconds as fallback
+                        setTimeout(() => {
+                            currentButton.disabled = false;
+                            currentButton.innerHTML = originalText;
+                        }, 10000);
+                    }, 100);
+                } else {
+                    e.preventDefault();
+                    alert('Please fill in all required fields before submitting.');
+                    return false;
+                }
+            }
+        });
+    });
+
+    // Form validation feedback
+    const inputs = document.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            if (this.hasAttribute('required') && !this.value.trim()) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+        
+        input.addEventListener('input', function() {
+            this.classList.remove('is-invalid');
+        });
+    });
+});
+</script>
+{% endblock %}
+
+{% endblock %}

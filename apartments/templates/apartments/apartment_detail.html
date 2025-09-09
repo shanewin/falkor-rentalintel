@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block extra_css %}
+<!-- Cropper.js CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-3">
+
+    <h1 class="h5 fw-bold text-dark pb-2 mb-4 border-bottom">
+        {% if apartment %}
+            Edit Apartment – Unit {{ apartment.unit_number }}
+        {% else %}
+            Create New Apartment
+        {% endif %}
+    </h1>
+
+    <h1 class="h5 fw-bold text-dark pb-2 mb-4 border-bottom">{{ apartment.building.name }} – Unit {{ apartment.unit_number }}</h1>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Tabs Navigation -->
+    <ul class="nav nav-tabs" id="apartmentTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab">Apartment Info</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="images-tab" data-bs-toggle="tab" data-bs-target="#images" type="button" role="tab">Images</button>
+        </li>
+    </ul>
+
+    <div class="tab-content mt-3" id="apartmentTabsContent">
+
+        <!-- Apartment Info Tab -->
+        <div class="tab-pane fade show active" id="info" role="tabpanel">
+            <h3 class="h6 fw-bold text-secondary py-2 mt-4 mb-3 border-bottom">Edit Apartment Info</h3>
+            <form method="post">
+                {% csrf_token %}
+                {% crispy apartment_form %}
+            </form>
+        </div>
+
+        <!-- Images Tab -->
+        <div class="tab-pane fade" id="images" role="tabpanel">
+            <h3 class="h6 fw-bold text-secondary py-2 mt-4 mb-3 border-bottom">Upload Apartment Images</h3>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ image_form|crispy }}
+                <button type="submit" class="btn btn-primary" name="image_submit">Upload Image</button>
+            </form>
+
+            <h5 class="mt-4">Uploaded Images:</h5>
+            <div class="d-flex flex-wrap">
+                {% for img in apartment.images.all %}
+                    <div class="m-2">
+                        <img src="{{ img.thumbnail_url }}" alt="Apartment Image" class="img-thumbnail" width="150" height="150">
+                    </div>
+                {% empty %}
+                    <p>No images uploaded yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Cropper.js JavaScript -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<script src="{% static 'js/image-cropper.js' %}"></script>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Setup image cropper for apartment images (4:3 aspect ratio)
+    setupImageCropper(
+        '[name="image"]',
+        null,
+        null,
+        {
+            aspectRatio: 4/3, // Standard photo aspect ratio for apartments
+            modalTitle: 'Crop Apartment Image',
+            cropButtonText: 'Crop Image',
+            outputWidth: 800,
+            outputHeight: 600,
+            onUpload: function(file, imageSrc) {
+                console.log('Apartment image uploaded:', file.name);
+            }
+        }
+    );
+});
+</script>
+{% endblock %}
+
+{% endblock %}

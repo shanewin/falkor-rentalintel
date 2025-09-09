@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Staff Dashboard - Doorway{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'buildings/css/buildings.css' %}">
+<style>
+    /* Staff Dashboard - Buildings Color Scheme Integration */
+    :root {
+        --brand-black: #1a1a1a;
+        --brand-yellow: #ffcc00;
+        --brand-yellow-light: #ffd633;
+        --brand-yellow-dark: #e6b800;
+        --accent-gray: #6c757d;
+        --accent-light: #f8f9fa;
+        --white: #ffffff;
+        --border-color: #dee2e6;
+        --text-dark: #212529;
+        --text-muted: #6c757d;
+        --shadow: 0 2px 4px rgba(0,0,0,0.1);
+        --shadow-hover: 0 4px 8px rgba(0,0,0,0.15);
+        --border-radius: 8px;
+        --transition: all 0.2s ease;
+    }
+    
+    /* Dashboard Header */
+    .dashboard-header {
+        background: var(--brand-black);
+        color: var(--white);
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+    }
+    .dashboard-header h1 {
+        font-size: 2rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    .dashboard-header p {
+        color: rgba(255, 255, 255, 0.8);
+        margin: 0.5rem 0 0 0;
+    }
+    
+    /* Quick Actions */
+    .quick-actions {
+        background: var(--white);
+        padding: 2rem;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        margin-bottom: 2rem;
+    }
+    .quick-actions h3 {
+        color: var(--brand-black);
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        font-size: 1.125rem;
+    }
+    .action-btn {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        margin: 0.25rem 0.5rem 0.25rem 0;
+        background: var(--accent-light);
+        color: var(--text-dark);
+        text-decoration: none;
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color);
+        font-weight: 500;
+        transition: var(--transition);
+    }
+    .action-btn:hover {
+        background: var(--brand-yellow);
+        color: var(--brand-black);
+        text-decoration: none;
+        border-color: var(--brand-yellow);
+    }
+    .action-btn i {
+        margin-right: 0.5rem;
+        opacity: 0.8;
+    }
+    
+    /* Profile Status */
+    .profile-status {
+        background: var(--white);
+        padding: 2rem;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        text-align: center;
+    }
+    .profile-status h3 {
+        color: var(--brand-black);
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .dashboard-header {
+            padding: 1.5rem 0;
+        }
+        .dashboard-header h1 {
+            font-size: 1.5rem;
+        }
+        .action-btn {
+            width: 100%;
+            margin: 0.25rem 0;
+            text-align: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div class="container">
+        <h1>Staff Dashboard</h1>
+        <p>Welcome back, {{ user.email }}! Manage your daily tasks and responsibilities.</p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row">
+        <!-- Quick Actions -->
+        <div class="col-md-8">
+            <div class="quick-actions">
+                <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+                <a href="{% url 'staff_progressive_profile' %}" class="action-btn">
+                    <i class="fas fa-user"></i> My Profile
+                </a>
+                <a href="{% url 'applicants_list' %}" class="action-btn">
+                    <i class="fas fa-address-book"></i> View Applicants
+                </a>
+                <a href="{% url 'apartments_list' %}" class="action-btn">
+                    <i class="fas fa-home"></i> View Apartments
+                </a>
+                <a href="{% url 'applications_list' %}" class="action-btn">
+                    <i class="fas fa-file-alt"></i> View Applications
+                </a>
+                <a href="{% url 'buildings_list' %}" class="action-btn">
+                    <i class="fas fa-building"></i> Buildings
+                </a>
+                <a href="#" class="action-btn">
+                    <i class="fas fa-tasks"></i> Task Management
+                </a>
+                <a href="#" class="action-btn">
+                    <i class="fas fa-calendar-alt"></i> Schedule
+                </a>
+                <a href="#" class="action-btn">
+                    <i class="fas fa-comments"></i> Messages
+                </a>
+            </div>
+        </div>
+
+        <!-- Profile Status -->
+        <div class="col-md-4">
+            <div class="profile-status">
+                <h3><i class="fas fa-user-check"></i> Profile Status</h3>
+                <p class="text-muted">Keep your profile updated for better collaboration</p>
+                <a href="{% url 'staff_progressive_profile' %}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Complete Profile
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Information -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="quick-actions">
+                <h3><i class="fas fa-info-circle"></i> Important Information</h3>
+                <p class="text-muted">
+                    As a staff member, you have access to applicant management, property viewing, and administrative tasks. 
+                    Make sure your profile is complete to help with team coordination and emergency contacts.
+                </p>
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-shield-alt"></i> 
+                        Staff Dashboard - Limited administrative access
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

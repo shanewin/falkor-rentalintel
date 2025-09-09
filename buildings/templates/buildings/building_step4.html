@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1>{{ step_title }}</h1>
+                <p>Building: <strong>{{ building.name }}</strong></p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'buildings_list' %}" class="btn btn-outline-primary">
+                    Back to Buildings
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Progress Bar -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h6 class="mb-3">Building Setup Progress</h6>
+            <div class="progress mb-3" style="height: 6px;">
+                <div class="progress-bar bg-yellow" style="width: 100%"></div>
+            </div>
+            <div class="row text-center">
+                <div class="col-3">
+                    <div class="step text-success">
+                        <div class="step-number bg-success text-white">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <small>Basic Info</small>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="step text-success">
+                        <div class="step-number bg-success text-white">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <small>Images</small>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="step text-success">
+                        <div class="step-number bg-success text-white">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <small>Access</small>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="step text-brand">
+                        <div class="step-number bg-yellow text-brand">4</div>
+                        <small>Promotions</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 4: Special Offers -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-star"></i> Promotions & Special Offers</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">Add any special promotions, deals, or unique features to highlight and attract tenants.</p>
+                    
+                    <!-- Special Offers Form -->
+                    <form method="post" class="mb-4">
+                        {% csrf_token %}
+                        {% crispy special_form %}
+                        <div class="d-grid gap-2">
+                            <button type="submit" name="special_submit" class="btn btn-warning">
+                                <i class="fas fa-plus"></i> Add Special Offer
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- Current Special Offers -->
+                    {% if building.special_offers.all %}
+                    <hr>
+                    <h6>Current Special Offers ({{ building.special_offers.count }})</h6>
+                    {% for special in building.special_offers.all %}
+                    <div class="alert alert-warning border">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ special.title }}</h6>
+                                <p class="mb-1">{{ special.description }}</p>
+                                <small class="text-muted">
+                                    {% if special.start_date %}Valid from {{ special.start_date|date:"M d, Y" }}{% endif %}
+                                    {% if special.end_date %} until {{ special.end_date|date:"M d, Y" }}{% endif %}
+                                    {% if not special.start_date and not special.end_date %}Ongoing offer{% endif %}
+                                </small>
+                            </div>
+                            {% if special.discount_amount %}
+                            <div class="badge bg-success fs-6">${{ special.discount_amount }} OFF</div>
+                            {% elif special.discount_percentage %}
+                            <div class="badge bg-success fs-6">{{ special.discount_percentage }}% OFF</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> No special offers added yet. This is optional - you can add promotions to attract more tenants.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="card mt-4 shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">Ready to Complete Building Setup?</h6>
+                            <small class="text-muted">You can always add more promotions later from the building details page.</small>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'building_step3' building.id %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Back: Access
+                            </a>
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" name="skip_specials" class="btn btn-outline-secondary">
+                                    <i class="fas fa-forward"></i> Skip Promotions
+                                </button>
+                            </form>
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" name="complete_building" class="btn btn-success">
+                                    Complete Setup <i class="fas fa-check"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script src="{% static 'js/forms.js' %}"></script>
+{% endblock %}
+{% endblock %}

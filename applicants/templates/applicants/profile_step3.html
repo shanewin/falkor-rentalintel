@@ -1,0 +1,1039 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1>My Applicant Profile</h1>
+                <p>Fill out as much information as possible to receive more matches and make applying easier</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'applicant_dashboard' %}" class="btn btn-outline-primary">
+                    Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Progress Bar -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h6 class="mb-3">Profile Completion Progress ({{ completion_percentage }}% Complete)</h6>
+            <div class="progress mb-3" style="height: 6px;">
+                <div class="progress-bar" style="width: 100%; background-color: #ffcc00;"></div>
+            </div>
+            <div class="row text-center">
+                <div class="col-4">
+                    <a href="{% url 'profile_step1' %}" class="text-decoration-none">
+                        <div class="step text-muted">
+                            <div class="step-number bg-light text-muted">1</div>
+                            <small>Personal Info</small>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-4">
+                    <a href="{% url 'profile_step2' %}" class="text-decoration-none">
+                        <div class="step text-muted">
+                            <div class="step-number bg-light text-muted">2</div>
+                            <small>Housing Needs & Preferences</small>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-4">
+                    <a href="{% url 'profile_step3' %}" class="text-decoration-none">
+                        <div class="step" style="color: #ffcc00;">
+                            <div class="step-number text-white" style="background-color: #000000;">3</div>
+                            <small>Income & Employment</small>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Income & Employment -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Step 3: Income & Employment</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" class="doorway-form">
+                {% csrf_token %}
+                {% crispy form form.helper %}
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script src="{% static 'js/forms.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Initialize Select2 dropdowns using the standard function
+    if (typeof initializeSelect2 === 'function') {
+        initializeSelect2();
+    }
+    
+    // Currency field formatting
+    setupCurrencyFields();
+    
+    // Employment status field functionality
+    setupEmploymentStatusFields();
+    
+    // Currently employed checkbox functionality (for main employment section only)
+    setupCurrentlyEmployedFields();
+    
+    // Add job button functionality for students
+    setupAddJobButton();
+    
+    // Add income button functionality for students
+    setupAddIncomeButton();
+    
+    // Add asset button functionality for students
+    setupAddAssetButton();
+    
+    // Setup buttons for employed section
+    setupEmployedButtons();
+    
+    // Setup buttons for other section
+    setupOtherButtons();
+});
+
+function setupCurrencyFields() {
+    const currencyFields = document.querySelectorAll('.currency-field');
+    currencyFields.forEach(field => {
+        field.addEventListener('blur', function() {
+            if (this.value) {
+                const value = parseFloat(this.value);
+                if (!isNaN(value)) {
+                    this.value = value.toFixed(2);
+                }
+            }
+        });
+    });
+}
+
+function setupEmploymentStatusFields() {
+    const employedFields = document.getElementById('employed-fields');
+    const studentFields = document.getElementById('student-fields');
+    const otherFields = document.getElementById('other-fields');
+    
+    function toggleFields() {
+        // Get value from Select2 element
+        const selectedValue = $('#id_employment_status').val();
+        
+        // Hide all field groups initially
+        if (employedFields) employedFields.style.display = 'none';
+        if (studentFields) studentFields.style.display = 'none';
+        if (otherFields) otherFields.style.display = 'none';
+        
+        // Show appropriate field group based on selection
+        if (selectedValue === 'employed' && employedFields) {
+            employedFields.style.display = 'block';
+        } else if (selectedValue === 'student' && studentFields) {
+            studentFields.style.display = 'block';
+        } else if (selectedValue === 'other' && otherFields) {
+            otherFields.style.display = 'block';
+        }
+    }
+    
+    // Initial toggle on page load
+    toggleFields();
+    
+    // Listen for Select2 change events
+    if (typeof $ !== 'undefined') {
+        $('#id_employment_status').on('select2:select', function (e) {
+            toggleFields();
+        });
+    }
+}
+
+function setupCurrentlyEmployedFields() {
+    // Handle employment section checkbox
+    const currentlyEmployedCheckbox = document.querySelector('.currently-employed-checkbox');
+    const endDateField = document.getElementById('end-date-field');
+    
+    if (currentlyEmployedCheckbox && endDateField) {
+        function toggleEndDateField() {
+            if (currentlyEmployedCheckbox.checked) {
+                endDateField.style.display = 'none';
+            } else {
+                endDateField.style.display = 'block';
+            }
+        }
+        
+        toggleEndDateField();
+        currentlyEmployedCheckbox.addEventListener('change', toggleEndDateField);
+    }
+}
+
+function setupAddJobButton() {
+    let jobCount = 0;
+    const maxJobs = 5;
+    
+    const addBtn = document.getElementById('add-job-btn');
+    if (addBtn) {
+        // Remove any existing event listeners by cloning the element
+        const newBtn = addBtn.cloneNode(true);
+        addBtn.parentNode.replaceChild(newBtn, addBtn);
+        
+        // Add single event listener
+        newBtn.addEventListener('click', function() {
+            const jobsContainer = document.getElementById('jobs-container');
+            const jobsList = document.getElementById('jobs-list');
+            
+            if (jobsContainer && jobsList) {
+                // Show container if hidden
+                if (jobsContainer.style.display === 'none') {
+                    jobsContainer.style.display = 'block';
+                }
+                
+                // Add new job if under limit
+                if (jobCount < maxJobs) {
+                    jobCount++;
+                    const jobHtml = createJobForm(jobCount);
+                    jobsList.insertAdjacentHTML('beforeend', jobHtml);
+                    
+                    // Setup currently employed checkbox for this job
+                    setupJobEmployedCheckbox(jobCount);
+                    
+                    // Hide button if reached max
+                    if (jobCount >= maxJobs) {
+                        newBtn.style.display = 'none';
+                    }
+                }
+            }
+        });
+    }
+    
+    // Function to create job form HTML
+    window.createJobForm = function(index) {
+        return `
+            <div class="job-container card mb-3" id="job_${index}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Job ${index}</h6>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeJob(${index})">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Company Name</label>
+                            <input type="text" class="form-control" name="job_company_${index}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Position</label>
+                            <input type="text" class="form-control" name="job_position_${index}">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Annual Income</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control currency-field" name="job_income_${index}" step="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Supervisor Name</label>
+                            <input type="text" class="form-control" name="job_supervisor_${index}">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Supervisor Email</label>
+                            <input type="email" class="form-control" name="job_supervisor_email_${index}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Supervisor Phone</label>
+                            <input type="text" class="form-control" name="job_supervisor_phone_${index}" placeholder="(555) 555-5555">
+                        </div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="job_current_${index}" name="job_current_${index}">
+                        <label class="form-check-label" for="job_current_${index}">
+                            I am currently employed here
+                        </label>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-control" name="job_start_${index}">
+                        </div>
+                        <div class="col-md-6 mb-3" id="job_end_date_${index}">
+                            <label class="form-label">End Date</label>
+                            <input type="date" class="form-control" name="job_end_${index}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    };
+    
+    // Function to setup currently employed checkbox for a job
+    window.setupJobEmployedCheckbox = function(index) {
+        const checkbox = document.getElementById(`job_current_${index}`);
+        const endDateField = document.getElementById(`job_end_date_${index}`);
+        
+        if (checkbox && endDateField) {
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    endDateField.style.display = 'none';
+                } else {
+                    endDateField.style.display = 'block';
+                }
+            });
+        }
+    };
+    
+    // Function to remove job
+    window.removeJob = function(index) {
+        const jobElement = document.getElementById(`job_${index}`);
+        if (jobElement) {
+            jobElement.remove();
+            jobCount--;
+            
+            // Show add button again if under limit
+            const addBtn = document.getElementById('add-job-btn');
+            if (addBtn && jobCount < maxJobs) {
+                addBtn.style.display = 'inline-block';
+            }
+            
+            // Hide container if no jobs
+            const jobsList = document.getElementById('jobs-list');
+            if (jobsList && jobsList.children.length === 0) {
+                const jobsContainer = document.getElementById('jobs-container');
+                if (jobsContainer) {
+                    jobsContainer.style.display = 'none';
+                }
+            }
+        }
+    };
+}
+
+function setupAddIncomeButton() {
+    let incomeCount = 0;
+    const maxIncomes = 5;
+    
+    const addBtn = document.getElementById('add-income-btn');
+    if (addBtn) {
+        // Remove any existing event listeners by cloning the element
+        const newBtn = addBtn.cloneNode(true);
+        addBtn.parentNode.replaceChild(newBtn, addBtn);
+        
+        // Add single event listener
+        newBtn.addEventListener('click', function() {
+            const incomeContainer = document.getElementById('income-container');
+            const incomeList = document.getElementById('income-list');
+            
+            if (incomeContainer && incomeList) {
+                // Show container if hidden
+                if (incomeContainer.style.display === 'none') {
+                    incomeContainer.style.display = 'block';
+                }
+                
+                // Add new income if under limit
+                if (incomeCount < maxIncomes) {
+                    incomeCount++;
+                    const incomeHtml = createIncomeForm(incomeCount);
+                    incomeList.insertAdjacentHTML('beforeend', incomeHtml);
+                    
+                    // Hide button if reached max
+                    if (incomeCount >= maxIncomes) {
+                        newBtn.style.display = 'none';
+                    }
+                }
+            }
+        });
+    }
+    
+    // Function to create income form HTML
+    window.createIncomeForm = function(index) {
+        return `
+            <div class="income-container card mb-3" id="income_${index}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Income Source ${index}</h6>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeIncome(${index})">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Income Source</label>
+                            <input type="text" class="form-control" name="income_source_${index}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Average Annual Income</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control currency-field" name="income_amount_${index}" step="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    };
+    
+    // Function to remove income
+    window.removeIncome = function(index) {
+        const incomeElement = document.getElementById(`income_${index}`);
+        if (incomeElement) {
+            incomeElement.remove();
+            incomeCount--;
+            
+            // Show add button again if under limit
+            const addBtn = document.getElementById('add-income-btn');
+            if (addBtn && incomeCount < maxIncomes) {
+                addBtn.style.display = 'inline-block';
+            }
+            
+            // Hide container if no incomes
+            const incomeList = document.getElementById('income-list');
+            if (incomeList && incomeList.children.length === 0) {
+                const incomeContainer = document.getElementById('income-container');
+                if (incomeContainer) {
+                    incomeContainer.style.display = 'none';
+                }
+            }
+        }
+    };
+}
+
+function setupAddAssetButton() {
+    let assetCount = 0;
+    const maxAssets = 5;
+    
+    const addBtn = document.getElementById('add-asset-btn');
+    if (addBtn) {
+        // Remove any existing event listeners by cloning the element
+        const newBtn = addBtn.cloneNode(true);
+        addBtn.parentNode.replaceChild(newBtn, addBtn);
+        
+        // Add single event listener
+        newBtn.addEventListener('click', function() {
+            const assetsContainer = document.getElementById('assets-container');
+            const assetsList = document.getElementById('assets-list');
+            
+            if (assetsContainer && assetsList) {
+                // Show container if hidden
+                if (assetsContainer.style.display === 'none') {
+                    assetsContainer.style.display = 'block';
+                }
+                
+                // Add new asset if under limit
+                if (assetCount < maxAssets) {
+                    assetCount++;
+                    const assetHtml = createAssetForm(assetCount);
+                    assetsList.insertAdjacentHTML('beforeend', assetHtml);
+                    
+                    // Hide button if reached max
+                    if (assetCount >= maxAssets) {
+                        newBtn.style.display = 'none';
+                    }
+                }
+            }
+        });
+    }
+    
+    // Function to create asset form HTML
+    window.createAssetForm = function(index) {
+        return `
+            <div class="asset-container card mb-3" id="asset_${index}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Asset ${index}</h6>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeAsset(${index})">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Asset Name / Type</label>
+                            <input type="text" class="form-control" name="asset_name_${index}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Account Balance</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control currency-field" name="asset_balance_${index}" step="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    };
+    
+    // Function to remove asset
+    window.removeAsset = function(index) {
+        const assetElement = document.getElementById(`asset_${index}`);
+        if (assetElement) {
+            assetElement.remove();
+            assetCount--;
+            
+            // Show add button again if under limit
+            const addBtn = document.getElementById('add-asset-btn');
+            if (addBtn && assetCount < maxAssets) {
+                addBtn.style.display = 'inline-block';
+            }
+            
+            // Hide container if no assets
+            const assetsList = document.getElementById('assets-list');
+            if (assetsList && assetsList.children.length === 0) {
+                const assetsContainer = document.getElementById('assets-container');
+                if (assetsContainer) {
+                    assetsContainer.style.display = 'none';
+                }
+            }
+        }
+    };
+}
+
+function setupEmployedButtons() {
+    // Setup Add Job button for employed section
+    setupEmployedJobButton();
+    
+    // Setup Add Income button for employed section  
+    setupEmployedIncomeButton();
+    
+    // Setup Add Asset button for employed section
+    setupEmployedAssetButton();
+}
+
+function setupEmployedJobButton() {
+    let jobCount = 0;
+    const maxJobs = 5;
+    
+    const addBtn = document.getElementById('add-job-btn-employed');
+    if (addBtn) {
+        // Remove any existing event listeners by cloning the element
+        const newBtn = addBtn.cloneNode(true);
+        addBtn.parentNode.replaceChild(newBtn, addBtn);
+        
+        // Add single event listener
+        newBtn.addEventListener('click', function() {
+            const jobsContainer = document.getElementById('jobs-container-employed');
+            const jobsList = document.getElementById('jobs-list-employed');
+            
+            if (jobsContainer && jobsList) {
+                // Show container if hidden
+                if (jobsContainer.style.display === 'none') {
+                    jobsContainer.style.display = 'block';
+                }
+                
+                // Add new job if under limit
+                if (jobCount < maxJobs) {
+                    jobCount++;
+                    const jobHtml = createEmployedJobForm(jobCount);
+                    jobsList.insertAdjacentHTML('beforeend', jobHtml);
+                    
+                    // Setup currently employed checkbox for this job
+                    setupEmployedJobCheckbox(jobCount);
+                    
+                    // Hide button if reached max
+                    if (jobCount >= maxJobs) {
+                        newBtn.style.display = 'none';
+                    }
+                }
+            }
+        });
+    }
+    
+    // Function to create job form HTML for employed section
+    window.createEmployedJobForm = function(index) {
+        return `
+            <div class="job-container card mb-3" id="employed_job_${index}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Additional Job ${index}</h6>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeEmployedJob(${index})">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Company Name</label>
+                            <input type="text" class="form-control" name="employed_job_company_${index}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Position</label>
+                            <input type="text" class="form-control" name="employed_job_position_${index}">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Annual Income</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control currency-field" name="employed_job_income_${index}" step="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Supervisor Name</label>
+                            <input type="text" class="form-control" name="employed_job_supervisor_${index}">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Supervisor Email</label>
+                            <input type="email" class="form-control" name="employed_job_supervisor_email_${index}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Supervisor Phone</label>
+                            <input type="text" class="form-control" name="employed_job_supervisor_phone_${index}" placeholder="(555) 555-5555">
+                        </div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="employed_job_current_${index}" name="employed_job_current_${index}">
+                        <label class="form-check-label" for="employed_job_current_${index}">
+                            I am currently employed here
+                        </label>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-control" name="employed_job_start_${index}">
+                        </div>
+                        <div class="col-md-6 mb-3" id="employed_job_end_date_${index}">
+                            <label class="form-label">End Date</label>
+                            <input type="date" class="form-control" name="employed_job_end_${index}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    };
+    
+    // Setup checkbox for employed job
+    window.setupEmployedJobCheckbox = function(index) {
+        const checkbox = document.getElementById(`employed_job_current_${index}`);
+        const endDateField = document.getElementById(`employed_job_end_date_${index}`);
+        
+        if (checkbox && endDateField) {
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    endDateField.style.display = 'none';
+                } else {
+                    endDateField.style.display = 'block';
+                }
+            });
+        }
+    };
+    
+    // Remove employed job
+    window.removeEmployedJob = function(index) {
+        const jobElement = document.getElementById(`employed_job_${index}`);
+        if (jobElement) {
+            jobElement.remove();
+            jobCount--;
+            
+            // Show add button again if under limit
+            const addBtn = document.getElementById('add-job-btn-employed');
+            if (addBtn && jobCount < maxJobs) {
+                addBtn.style.display = 'inline-block';
+            }
+            
+            // Hide container if no jobs
+            const jobsList = document.getElementById('jobs-list-employed');
+            if (jobsList && jobsList.children.length === 0) {
+                const jobsContainer = document.getElementById('jobs-container-employed');
+                if (jobsContainer) {
+                    jobsContainer.style.display = 'none';
+                }
+            }
+        }
+    };
+}
+
+function setupEmployedIncomeButton() {
+    let incomeCount = 0;
+    const maxIncomes = 5;
+    
+    const addBtn = document.getElementById('add-income-btn-employed');
+    if (addBtn) {
+        // Remove any existing event listeners by cloning the element
+        const newBtn = addBtn.cloneNode(true);
+        addBtn.parentNode.replaceChild(newBtn, addBtn);
+        
+        // Add single event listener
+        newBtn.addEventListener('click', function() {
+            const incomeContainer = document.getElementById('income-container-employed');
+            const incomeList = document.getElementById('income-list-employed');
+            
+            if (incomeContainer && incomeList) {
+                // Show container if hidden
+                if (incomeContainer.style.display === 'none') {
+                    incomeContainer.style.display = 'block';
+                }
+                
+                // Add new income if under limit
+                if (incomeCount < maxIncomes) {
+                    incomeCount++;
+                    const incomeHtml = createEmployedIncomeForm(incomeCount);
+                    incomeList.insertAdjacentHTML('beforeend', incomeHtml);
+                    
+                    // Hide button if reached max
+                    if (incomeCount >= maxIncomes) {
+                        newBtn.style.display = 'none';
+                    }
+                }
+            }
+        });
+    }
+    
+    // Create income form for employed section
+    window.createEmployedIncomeForm = function(index) {
+        return `
+            <div class="income-container card mb-3" id="employed_income_${index}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Income Source ${index}</h6>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeEmployedIncome(${index})">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Income Source</label>
+                            <input type="text" class="form-control" name="employed_income_source_${index}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Average Annual Income</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control currency-field" name="employed_income_amount_${index}" step="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    };
+    
+    // Remove employed income
+    window.removeEmployedIncome = function(index) {
+        const incomeElement = document.getElementById(`employed_income_${index}`);
+        if (incomeElement) {
+            incomeElement.remove();
+            incomeCount--;
+            
+            // Show add button again if under limit
+            const addBtn = document.getElementById('add-income-btn-employed');
+            if (addBtn && incomeCount < maxIncomes) {
+                addBtn.style.display = 'inline-block';
+            }
+            
+            // Hide container if no incomes
+            const incomeList = document.getElementById('income-list-employed');
+            if (incomeList && incomeList.children.length === 0) {
+                const incomeContainer = document.getElementById('income-container-employed');
+                if (incomeContainer) {
+                    incomeContainer.style.display = 'none';
+                }
+            }
+        }
+    };
+}
+
+function setupEmployedAssetButton() {
+    let assetCount = 0;
+    const maxAssets = 5;
+    
+    const addBtn = document.getElementById('add-asset-btn-employed');
+    if (addBtn) {
+        // Remove any existing event listeners by cloning the element
+        const newBtn = addBtn.cloneNode(true);
+        addBtn.parentNode.replaceChild(newBtn, addBtn);
+        
+        // Add single event listener
+        newBtn.addEventListener('click', function() {
+            const assetsContainer = document.getElementById('assets-container-employed');
+            const assetsList = document.getElementById('assets-list-employed');
+            
+            if (assetsContainer && assetsList) {
+                // Show container if hidden
+                if (assetsContainer.style.display === 'none') {
+                    assetsContainer.style.display = 'block';
+                }
+                
+                // Add new asset if under limit
+                if (assetCount < maxAssets) {
+                    assetCount++;
+                    const assetHtml = createEmployedAssetForm(assetCount);
+                    assetsList.insertAdjacentHTML('beforeend', assetHtml);
+                    
+                    // Hide button if reached max
+                    if (assetCount >= maxAssets) {
+                        newBtn.style.display = 'none';
+                    }
+                }
+            }
+        });
+    }
+    
+    // Create asset form for employed section
+    window.createEmployedAssetForm = function(index) {
+        return `
+            <div class="asset-container card mb-3" id="employed_asset_${index}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Asset ${index}</h6>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeEmployedAsset(${index})">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Asset Name / Type</label>
+                            <input type="text" class="form-control" name="employed_asset_name_${index}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Account Balance</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control currency-field" name="employed_asset_balance_${index}" step="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    };
+    
+    // Remove employed asset
+    window.removeEmployedAsset = function(index) {
+        const assetElement = document.getElementById(`employed_asset_${index}`);
+        if (assetElement) {
+            assetElement.remove();
+            assetCount--;
+            
+            // Show add button again if under limit
+            const addBtn = document.getElementById('add-asset-btn-employed');
+            if (addBtn && assetCount < maxAssets) {
+                addBtn.style.display = 'inline-block';
+            }
+            
+            // Hide container if no assets
+            const assetsList = document.getElementById('assets-list-employed');
+            if (assetsList && assetsList.children.length === 0) {
+                const assetsContainer = document.getElementById('assets-container-employed');
+                if (assetsContainer) {
+                    assetsContainer.style.display = 'none';
+                }
+            }
+        }
+    };
+}
+
+function setupOtherButtons() {
+    // Setup Add Income button for other section  
+    setupOtherIncomeButton();
+    
+    // Setup Add Asset button for other section
+    setupOtherAssetButton();
+}
+
+function setupOtherIncomeButton() {
+    let incomeCount = 0;
+    const maxIncomes = 5;
+    
+    const addBtn = document.getElementById('add-income-btn-other');
+    if (addBtn) {
+        // Remove any existing event listeners by cloning the element
+        const newBtn = addBtn.cloneNode(true);
+        addBtn.parentNode.replaceChild(newBtn, addBtn);
+        
+        // Add single event listener
+        newBtn.addEventListener('click', function() {
+            const incomeContainer = document.getElementById('income-container-other');
+            const incomeList = document.getElementById('income-list-other');
+            
+            if (incomeContainer && incomeList) {
+                // Show container if hidden
+                if (incomeContainer.style.display === 'none') {
+                    incomeContainer.style.display = 'block';
+                }
+                
+                // Add new income if under limit
+                if (incomeCount < maxIncomes) {
+                    incomeCount++;
+                    const incomeHtml = createOtherIncomeForm(incomeCount);
+                    incomeList.insertAdjacentHTML('beforeend', incomeHtml);
+                    
+                    // Hide button if reached max
+                    if (incomeCount >= maxIncomes) {
+                        newBtn.style.display = 'none';
+                    }
+                }
+            }
+        });
+    }
+    
+    // Create income form for other section
+    window.createOtherIncomeForm = function(index) {
+        return `
+            <div class="income-container card mb-3" id="other_income_${index}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Income Source ${index}</h6>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeOtherIncome(${index})">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Income Source</label>
+                            <input type="text" class="form-control" name="other_income_source_${index}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Average Annual Income</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control currency-field" name="other_income_amount_${index}" step="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    };
+    
+    // Remove other income
+    window.removeOtherIncome = function(index) {
+        const incomeElement = document.getElementById(`other_income_${index}`);
+        if (incomeElement) {
+            incomeElement.remove();
+            incomeCount--;
+            
+            // Show add button again if under limit
+            const addBtn = document.getElementById('add-income-btn-other');
+            if (addBtn && incomeCount < maxIncomes) {
+                addBtn.style.display = 'inline-block';
+            }
+            
+            // Hide container if no incomes
+            const incomeList = document.getElementById('income-list-other');
+            if (incomeList && incomeList.children.length === 0) {
+                const incomeContainer = document.getElementById('income-container-other');
+                if (incomeContainer) {
+                    incomeContainer.style.display = 'none';
+                }
+            }
+        }
+    };
+}
+
+function setupOtherAssetButton() {
+    let assetCount = 0;
+    const maxAssets = 5;
+    
+    const addBtn = document.getElementById('add-asset-btn-other');
+    if (addBtn) {
+        // Remove any existing event listeners by cloning the element
+        const newBtn = addBtn.cloneNode(true);
+        addBtn.parentNode.replaceChild(newBtn, addBtn);
+        
+        // Add single event listener
+        newBtn.addEventListener('click', function() {
+            const assetsContainer = document.getElementById('assets-container-other');
+            const assetsList = document.getElementById('assets-list-other');
+            
+            if (assetsContainer && assetsList) {
+                // Show container if hidden
+                if (assetsContainer.style.display === 'none') {
+                    assetsContainer.style.display = 'block';
+                }
+                
+                // Add new asset if under limit
+                if (assetCount < maxAssets) {
+                    assetCount++;
+                    const assetHtml = createOtherAssetForm(assetCount);
+                    assetsList.insertAdjacentHTML('beforeend', assetHtml);
+                    
+                    // Hide button if reached max
+                    if (assetCount >= maxAssets) {
+                        newBtn.style.display = 'none';
+                    }
+                }
+            }
+        });
+    }
+    
+    // Create asset form for other section
+    window.createOtherAssetForm = function(index) {
+        return `
+            <div class="asset-container card mb-3" id="other_asset_${index}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Asset ${index}</h6>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeOtherAsset(${index})">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Asset Name / Type</label>
+                            <input type="text" class="form-control" name="other_asset_name_${index}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Account Balance</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control currency-field" name="other_asset_balance_${index}" step="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    };
+    
+    // Remove other asset
+    window.removeOtherAsset = function(index) {
+        const assetElement = document.getElementById(`other_asset_${index}`);
+        if (assetElement) {
+            assetElement.remove();
+            assetCount--;
+            
+            // Show add button again if under limit
+            const addBtn = document.getElementById('add-asset-btn-other');
+            if (addBtn && assetCount < maxAssets) {
+                addBtn.style.display = 'inline-block';
+            }
+            
+            // Hide container if no assets
+            const assetsList = document.getElementById('assets-list-other');
+            if (assetsList && assetsList.children.length === 0) {
+                const assetsContainer = document.getElementById('assets-container-other');
+                if (assetsContainer) {
+                    assetsContainer.style.display = 'none';
+                }
+            }
+        }
+    };
+}
+</script>
+{% endblock %}
+{% endblock %}

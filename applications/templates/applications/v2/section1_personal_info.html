@@ -1,0 +1,502 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    
+    {% if is_preview %}
+    <!-- Preview Banner -->
+    <div class="alert alert-info mb-4">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-eye fa-lg me-3"></i>
+            <div>
+                <h6 class="mb-1">Application Preview Mode</h6>
+                <small>This is exactly how the application will appear to the applicant. You can navigate through all sections to see the complete form experience.</small>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Section Progress Header -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Application for {% if application.apartment %}{{ application.apartment.building.name }} - Unit {{ application.apartment.unit_number }}{% else %}{{ application.get_building_display }} - {{ application.get_unit_display }}{% endif %}</h4>
+        </div>
+        <div class="card-body">
+            <!-- Progress Bar -->
+            <div class="progress mb-3" style="height: 25px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress_percent }}%;" aria-valuenow="{{ progress_percent }}" aria-valuemin="0" aria-valuemax="100">
+                    Section {{ current_section }} of 5
+                </div>
+            </div>
+            
+            <!-- Section Navigation -->
+            <div class="d-flex justify-content-between">
+                <span class="badge bg-primary px-3 py-2">1. Personal Information</span>
+                {% if is_preview %}
+                    <a href="{% url 'section2_income' application.id %}?preview=true" class="badge bg-secondary px-3 py-2 text-decoration-none">2. Income</a>
+                    <a href="{% url 'section3_legal' application.id %}?preview=true" class="badge bg-secondary px-3 py-2 text-decoration-none">3. Legal</a>
+                    <a href="{% url 'section4_review' application.id %}?preview=true" class="badge bg-secondary px-3 py-2 text-decoration-none">4. Review</a>
+                    <a href="{% url 'section5_payment' application.id %}?preview=true" class="badge bg-secondary px-3 py-2 text-decoration-none">5. Payment</a>
+                {% elif is_applicant_access %}
+                    <a href="{% url 'section2_income' application.id %}?token={{ token }}" class="badge bg-secondary px-3 py-2 text-decoration-none">2. Income</a>
+                    <a href="{% url 'section3_legal' application.id %}?token={{ token }}" class="badge bg-secondary px-3 py-2 text-decoration-none">3. Legal</a>
+                    <a href="{% url 'section4_review' application.id %}?token={{ token }}" class="badge bg-secondary px-3 py-2 text-decoration-none">4. Review</a>
+                    <a href="{% url 'section5_payment' application.id %}?token={{ token }}" class="badge bg-secondary px-3 py-2 text-decoration-none">5. Payment</a>
+                {% else %}
+                    <span class="badge bg-secondary px-3 py-2">2. Income</span>
+                    <span class="badge bg-secondary px-3 py-2">3. Legal</span>
+                    <span class="badge bg-secondary px-3 py-2">4. Review</span>
+                    <span class="badge bg-secondary px-3 py-2">5. Payment</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <h1 class="mb-4">{{ section_title }}</h1>
+    
+    <!-- Pre-fill notification -->
+    {% if personal_info.broker_notes %}
+    <div class="alert alert-success mb-4">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-user-tie fa-lg me-3"></i>
+            <div>
+                <h6 class="mb-1">Your broker has pre-filled some information</h6>
+                <small class="text-muted">{{ personal_info.broker_notes }}</small>
+                <br><small class="text-muted">Please review all information and make any necessary changes.</small>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if form.errors %}
+        <div class="alert alert-danger">
+            <strong>Errors:</strong>
+            <ul>
+                {% for field, errors in form.errors.items %}
+                    <li>{{ field }}: {{ errors|join:", " }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <form method="post" class="card p-4 shadow-sm">
+        {% csrf_token %}
+
+        <!-- Basic Information -->
+        <h4 class="mb-3">Basic Information</h4>
+        
+        <div class="row">
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
+                    {{ form.first_name }}
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label for="{{ form.middle_name.id_for_label }}" class="form-label">Middle Name</label>
+                    {{ form.middle_name }}
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
+                    {{ form.last_name }}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.date_of_birth.id_for_label }}" class="form-label">Date of Birth</label>
+                    {{ form.date_of_birth }}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.ssn.id_for_label }}" class="form-label">Social Security Number</label>
+                    {{ form.ssn }}
+                    <div class="form-text">Format: XXX-XX-XXXX</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Information -->
+        <h4 class="mb-3 mt-4">Contact Information</h4>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.phone_cell.id_for_label }}" class="form-label">Phone Number</label>
+                    {{ form.phone_cell }}
+                    <div class="form-text">Format: (XXX) XXX-XXXX</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.email.id_for_label }}" class="form-label">Email Address</label>
+                    {{ form.email }}
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <div class="form-check">
+                {{ form.can_receive_sms }}
+                <label for="{{ form.can_receive_sms.id_for_label }}" class="form-check-label">
+                    I can receive SMS messages at this number
+                </label>
+            </div>
+        </div>
+
+        <!-- Current Address -->
+        <h4 class="mb-3 mt-4">Current Address</h4>
+        
+        <div class="mb-3">
+            <label for="{{ form.current_address.id_for_label }}" class="form-label">Street Address</label>
+            {{ form.current_address }}
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.apt_unit_number.id_for_label }}" class="form-label">Apartment/Unit (Optional)</label>
+                    {{ form.apt_unit_number }}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.address_duration.id_for_label }}" class="form-label">How long at this address?</label>
+                    {{ form.address_duration }}
+                    <div class="form-text">Example: 2 years, 6 months</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <div class="form-check">
+                {{ form.is_rental_property }}
+                <label for="{{ form.is_rental_property.id_for_label }}" class="form-check-label">
+                    Is your current residence a rental property?
+                </label>
+            </div>
+        </div>
+
+        <!-- Landlord Information (conditional) -->
+        <div id="landlord-fields" style="display: none;">
+            <h5 class="mb-3">Landlord Information</h5>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="{{ form.landlord_name.id_for_label }}" class="form-label">Landlord Name</label>
+                        {{ form.landlord_name }}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="{{ form.landlord_phone.id_for_label }}" class="form-label">Landlord Phone</label>
+                        {{ form.landlord_phone }}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="{{ form.landlord_email.id_for_label }}" class="form-label">Landlord Email</label>
+                        {{ form.landlord_email }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Desired Property -->
+        <h4 class="mb-3 mt-4">Desired Property</h4>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.desired_address.id_for_label }}" class="form-label">Desired Address</label>
+                    {{ form.desired_address }}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.desired_unit.id_for_label }}" class="form-label">Desired Unit</label>
+                    {{ form.desired_unit }}
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.desired_move_in_date.id_for_label }}" class="form-label">Desired Move-in Date</label>
+            {{ form.desired_move_in_date }}
+        </div>
+
+        <!-- Additional Information -->
+        <h4 class="mb-3 mt-4">Additional Information</h4>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.referral_source.id_for_label }}" class="form-label">How did you hear about us?</label>
+                    {{ form.referral_source }}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <div class="form-check">
+                        {{ form.has_pets }}
+                        <label for="{{ form.has_pets.id_for_label }}" class="form-check-label">
+                            Do you have pets?
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- References -->
+        <h4 class="mb-3 mt-4">References</h4>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.reference1_name.id_for_label }}" class="form-label">Reference 1 Name</label>
+                    {{ form.reference1_name }}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.reference1_phone.id_for_label }}" class="form-label">Reference 1 Phone</label>
+                    {{ form.reference1_phone }}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.reference2_name.id_for_label }}" class="form-label">Reference 2 Name (Optional)</label>
+                    {{ form.reference2_name }}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.reference2_phone.id_for_label }}" class="form-label">Reference 2 Phone (Optional)</label>
+                    {{ form.reference2_phone }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Previous Addresses Section -->
+        <h4 class="mb-3 mt-4">Previous Addresses (Last 5 Years)</h4>
+        <div id="previous-addresses">
+            {% for address in previous_addresses %}
+                <div class="card mb-3 previous-address-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="card-title mb-0">Previous Address {{ forloop.counter }}</h6>
+                            <button type="button" class="btn btn-sm btn-danger remove-address" data-address-id="{{ address.id }}">Remove</button>
+                        </div>
+                        <p><strong>Address:</strong> {{ address.address }}</p>
+                        <p><strong>Duration:</strong> {{ address.duration }}</p>
+                        {% if address.landlord_name %}
+                            <p><strong>Landlord:</strong> {{ address.landlord_name }} ({{ address.landlord_contact }})</p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% empty %}
+                <p class="text-muted">No previous addresses added yet.</p>
+            {% endfor %}
+        </div>
+        
+        <button type="button" id="add-address-btn" class="btn btn-outline-secondary mb-4">+ Add Previous Address</button>
+
+        <!-- Legal History -->
+        <h4 class="mb-3 mt-4">Legal History</h4>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <div class="form-check">
+                        {{ form.has_filed_bankruptcy }}
+                        <label for="{{ form.has_filed_bankruptcy.id_for_label }}" class="form-check-label">
+                            Have you ever filed for bankruptcy?
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <div class="form-check">
+                        {{ form.has_criminal_conviction }}
+                        <label for="{{ form.has_criminal_conviction.id_for_label }}" class="form-check-label">
+                            Have you ever been convicted of a crime?
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- About Yourself -->
+        <div class="mb-3">
+            <label for="{{ form.about_yourself.id_for_label }}" class="form-label">About Yourself (Optional)</label>
+            {{ form.about_yourself }}
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="d-flex justify-content-between mt-4">
+            {% if is_preview %}
+                <a href="{% url 'application_detail' application.id %}?preview=true" class="btn btn-secondary">← Back to Overview</a>
+            {% elif is_applicant_access %}
+                <a href="{% url 'v2_application_overview' application.id %}?token={{ token }}" class="btn btn-secondary">← Back to Overview</a>
+            {% else %}
+                <a href="{% url 'application_detail' application.id %}" class="btn btn-secondary">← Back to Overview</a>
+            {% endif %}
+            <div>
+                {% if is_preview %}
+                    <a href="{% url 'section2_income' application.id %}?preview=true" class="btn btn-primary">Continue to Income →</a>
+                {% elif is_applicant_access %}
+                    <a href="{% url 'section2_income' application.id %}?token={{ token }}" class="btn btn-primary">Continue to Income →</a>
+                {% else %}
+                    <button type="submit" name="save_continue" class="btn btn-primary">Save & Continue to Income →</button>
+                    <button type="submit" name="save_exit" class="btn btn-outline-primary">Save & Exit</button>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- JavaScript for Conditional Fields and AJAX -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const isRentalCheckbox = document.getElementById('{{ form.is_rental_property.id_for_label }}');
+    const landlordFields = document.getElementById('landlord-fields');
+    
+    // Show/hide landlord fields based on rental property status
+    function toggleLandlordFields() {
+        if (isRentalCheckbox && isRentalCheckbox.checked) {
+            landlordFields.style.display = 'block';
+        } else {
+            landlordFields.style.display = 'none';
+        }
+    }
+    
+    // Initial check
+    toggleLandlordFields();
+    
+    // Listen for changes
+    if (isRentalCheckbox) {
+        isRentalCheckbox.addEventListener('change', toggleLandlordFields);
+    }
+    
+    // Add Previous Address AJAX functionality
+    const addAddressBtn = document.getElementById('add-address-btn');
+    if (addAddressBtn) {
+        addAddressBtn.addEventListener('click', function() {
+            // Simple form to add address
+            const address = prompt('Enter previous address:');
+            const duration = prompt('Duration at this address:');
+            
+            if (address && duration) {
+                fetch('{% url "add_previous_address" application.id %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        'address': address,
+                        'duration': duration
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload(); // Reload to show new address
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        });
+    }
+    
+    // Remove Previous Address functionality
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-address')) {
+            const addressId = e.target.dataset.addressId;
+            if (addressId && confirm('Are you sure you want to remove this address?')) {
+                fetch(`{% url "remove_previous_address" application.id 0 %}`.replace('0', addressId), {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        e.target.closest('.previous-address-card').remove();
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        }
+    });
+});
+</script>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.prefilled-field {
+    border-left: 4px solid #28a745 !important;
+    background-color: #f8fff9 !important;
+}
+.prefilled-label {
+    color: #28a745 !important;
+    font-weight: 600;
+}
+.prefilled-badge {
+    background-color: #28a745;
+    color: white;
+    font-size: 0.7em;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 8px;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Highlight pre-filled fields
+    {% if personal_info.broker_notes %}
+    const fieldsToCheck = [
+        'id_first_name', 'id_last_name', 'id_email', 'id_phone_number', 
+        'id_date_of_birth', 'id_current_address', 'id_current_city', 
+        'id_current_state', 'id_current_zip', 'id_emergency_contact_name',
+        'id_emergency_contact_phone', 'id_emergency_contact_relationship'
+    ];
+    
+    fieldsToCheck.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field && field.value && field.value.trim() !== '') {
+            // Add prefilled styling
+            field.classList.add('prefilled-field');
+            
+            // Add badge to label
+            const label = document.querySelector(`label[for="${fieldId}"]`);
+            if (label && !label.querySelector('.prefilled-badge')) {
+                label.classList.add('prefilled-label');
+                const badge = document.createElement('span');
+                badge.className = 'prefilled-badge';
+                badge.innerHTML = '<i class="fas fa-user-tie"></i> Pre-filled';
+                label.appendChild(badge);
+            }
+        }
+    });
+    {% endif %}
+});
+</script>
+{% endblock %}

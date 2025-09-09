@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'applications/css/applications.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1>Applications</h1>
+                <p>Manage all rental applications and track their progress</p>
+            </div>
+            <div class="col-md-4 text-end">
+                {% if user.is_broker or user.is_superuser %}
+                    <div class="btn-group">
+                        <a href="{% url 'broker_create_application' %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Create Application
+                        </a>
+                        <a href="{% url 'apartments_list' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-building"></i> View Properties
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+
+    <!-- Statistics Overview -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ total_applications|default:"0" }}</div>
+            <div class="stat-label">Total Applications</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ new_applications|default:"0" }}</div>
+            <div class="stat-label">New Applications</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ pending_applications|default:"0" }}</div>
+            <div class="stat-label">Pending Review</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ approved_applications|default:"0" }}</div>
+            <div class="stat-label">Approved</div>
+        </div>
+    </div>
+
+    <!-- Admin Communication Test (only for superusers) -->
+    {% if user.is_superuser %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0">🔧 Admin Tools - Communication Testing</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <!-- Email Test -->
+                <div class="col-md-6">
+                    <form method="post" action="{% url 'test_email_send' %}" class="d-flex flex-column gap-2">
+                        {% csrf_token %}
+                        <label for="test_email" class="form-label">Test Email Address:</label>
+                        <input type="email" class="form-control" id="test_email" name="test_email" 
+                               placeholder="your-email@gmail.com" required>
+                        <div class="form-text">Send a test email to verify email configuration</div>
+                        <button type="submit" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-envelope"></i> Send Test Email
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- SMS Test -->
+                <div class="col-md-6">
+                    <form method="post" action="{% url 'test_sms_send' %}" class="d-flex flex-column gap-2">
+                        {% csrf_token %}
+                        <label for="test_phone" class="form-label">Test Phone Number:</label>
+                        <input type="tel" class="form-control" id="test_phone" name="test_phone" 
+                               placeholder="+1234567890 or 234-567-8900" required>
+                        <div class="form-text">Send a test SMS to verify Twilio configuration</div>
+                        <button type="submit" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-sms"></i> Send Test SMS
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if messages %}
+        <div class="alert-messages">
+            {% for message in messages %}
+                <div class="alert 
+                    {% if message.tags == 'success' %}alert-success
+                    {% elif message.tags == 'error' %}alert-danger
+                    {% elif message.tags == 'warning' %}alert-warning
+                    {% else %}alert-info
+                    {% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+
+    <!-- Search Filter -->
+    <div class="mb-3">
+        <input type="text" id="searchInput" class="form-control" placeholder="Search applicants, apartments, brokers...">
+    </div>
+
+    <div class="table-container">
+        <div class="table-header">
+            Applications Overview
+        </div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Applicant Name</th>
+                    <th>Property</th>
+                    <th>Broker</th>
+                    <th>Application Link</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="applicationsTable">
+                {% for application in applications %}
+                    <tr>
+                        <td>
+                            {% if application.applicant %}
+                                <a href="{% url 'applicant_overview' application.applicant.id %}">
+                                    {{ application.applicant.first_name }} {{ application.applicant.last_name }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted">No applicant assigned</span>
+                            {% endif %}
+                            
+                        </td>
+                        
+                        <td>
+                            {% if application.apartment %}
+                                <a href="{% url 'apartment_overview' application.apartment.id %}">
+                                    {{ application.apartment.building.name }} - {{ application.apartment.unit_number }}
+                                </a>
+                            {% else %}
+                                {{ application.get_building_display }} - {{ application.get_unit_display }}
+                                <small class="text-muted">(Manual Entry)</small>
+                            {% endif %}
+                        </td>
+                        
+                        <td>
+                            {% if application.broker %}
+                                {% if application.broker.get_full_name %}
+                                    {{ application.broker.get_full_name }}
+                                {% else %}
+                                    {{ application.broker.email }}
+                                {% endif %}
+                            {% else %}
+                                <i>No Broker Assigned</i>
+                            {% endif %}
+
+                        </td>
+                        <td>
+                            {% if request.user.is_broker or request.user.is_superuser %}
+                                <!-- Brokers / Superusers see Application Detail -->
+                                <a href="{% url 'application_detail' application.id %}" target="_blank">
+                                    View Application
+                                </a>
+                            {% else %}
+                                <!-- Applicants see Application Completion Page -->
+                                <a href="{% url 'applicant_complete' application.unique_link %}?token={{ application.unique_link }}" target="_blank">
+                                    Complete Application
+                                </a>
+                            {% endif %}
+                        </td>
+                        
+                        
+                        <td>
+                            <span class="badge 
+                                {% if application.get_status_display == 'New' %} bg-primary
+                                {% elif application.get_status_display == 'Pending Review' %} bg-warning text-dark
+                                {% elif application.get_status_display == 'Approved' %} bg-success
+                                {% elif application.get_status_display == 'Rejected' %} bg-danger
+                                {% elif application.get_status_display == 'Waitlisted' %} bg-info
+                                {% else %} bg-secondary
+                                {% endif %}">
+                                {{ application.get_status_display }}
+                            </span>
+                        </td>
+                        
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center">
+                            <p class="text-muted mt-4 mb-4">No applications found.</p>
+                            {% if user.is_broker or user.is_superuser %}
+                                <a href="{% url 'broker_create_application' %}" class="btn btn-primary">
+                                    Create First Application
+                                </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Filter table rows by search input
+        document.getElementById('searchInput').addEventListener('keyup', function () {
+            const searchValue = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#applicationsTable tr');
+
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(searchValue) ? '' : 'none';
+            });
+        });
+    </script>
+
+</div>
+{% endblock %}

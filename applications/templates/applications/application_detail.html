@@ -1,0 +1,399 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load json_filters %}
+
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Application Overview</h2>
+
+    <!-- Application Progress -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5>Application for {% if application.apartment %}{{ application.apartment.building.name }} - Unit {{ application.apartment.unit_number }}{% else %}{{ application.get_building_display }} - Unit {{ application.get_unit_display }}{% endif %}</h5>
+            <a href="{% url 'application_edit' application.id %}" class="btn btn-light btn-sm">✏️ Edit</a>
+        </div>
+        <div class="card-body">
+            <!-- Section Progress Overview -->
+            <h6 class="mb-3">Application Progress</h6>
+            <div class="row">
+                <!-- Section 1: Personal Information -->
+                <div class="col-md-6 col-lg-2 mb-3">
+                    <div class="card h-100 {% if application.personal_info_data %}border-success{% else %}border-secondary{% endif %}">
+                        <div class="card-body text-center p-2">
+                            <div class="mb-2">
+                                {% if application.personal_info_data %}
+                                    <i class="fas fa-check-circle text-success fa-2x"></i>
+                                {% else %}
+                                    <i class="fas fa-circle-o text-secondary fa-2x"></i>
+                                {% endif %}
+                            </div>
+                            <h6 class="card-title">Personal Info</h6>
+                            <a href="{% url 'section1_personal_info' application.id %}" class="btn btn-sm 
+                                {% if application.personal_info_data %}btn-success{% else %}btn-outline-primary{% endif %}">
+                                {% if application.personal_info_data %}Review{% else %}Start{% endif %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Income -->
+                <div class="col-md-6 col-lg-2 mb-3">
+                    <div class="card h-100 {% if application.income_data %}border-success{% else %}border-secondary{% endif %}">
+                        <div class="card-body text-center p-2">
+                            <div class="mb-2">
+                                {% if application.income_data %}
+                                    <i class="fas fa-check-circle text-success fa-2x"></i>
+                                {% else %}
+                                    <i class="fas fa-circle-o text-secondary fa-2x"></i>
+                                {% endif %}
+                            </div>
+                            <h6 class="card-title">Income</h6>
+                            <a href="{% url 'section2_income' application.id %}" class="btn btn-sm 
+                                {% if application.income_data %}btn-success{% else %}btn-outline-primary{% endif %}">
+                                {% if application.income_data %}Review{% else %}Start{% endif %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Legal -->
+                <div class="col-md-6 col-lg-2 mb-3">
+                    <div class="card h-100 {% if application.legal_documents %}border-success{% else %}border-secondary{% endif %}">
+                        <div class="card-body text-center p-2">
+                            <div class="mb-2">
+                                {% if application.legal_documents %}
+                                    <i class="fas fa-check-circle text-success fa-2x"></i>
+                                {% else %}
+                                    <i class="fas fa-circle-o text-secondary fa-2x"></i>
+                                {% endif %}
+                            </div>
+                            <h6 class="card-title">Legal</h6>
+                            <a href="{% url 'section3_legal' application.id %}" class="btn btn-sm 
+                                {% if application.legal_documents %}btn-success{% else %}btn-outline-primary{% endif %}">
+                                {% if application.legal_documents %}Review{% else %}Start{% endif %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Review -->
+                <div class="col-md-6 col-lg-2 mb-3">
+                    <div class="card h-100 {% if application.review_completed %}border-success{% else %}border-secondary{% endif %}">
+                        <div class="card-body text-center p-2">
+                            <div class="mb-2">
+                                {% if application.review_completed %}
+                                    <i class="fas fa-check-circle text-success fa-2x"></i>
+                                {% else %}
+                                    <i class="fas fa-circle-o text-secondary fa-2x"></i>
+                                {% endif %}
+                            </div>
+                            <h6 class="card-title">Review</h6>
+                            <a href="{% url 'section4_review' application.id %}" class="btn btn-sm 
+                                {% if application.review_completed %}btn-success{% else %}btn-outline-primary{% endif %}">
+                                {% if application.review_completed %}View{% else %}Start{% endif %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 5: Payment -->
+                <div class="col-md-6 col-lg-2 mb-3">
+                    <div class="card h-100 {% if application.application_payment %}border-success{% else %}border-secondary{% endif %}">
+                        <div class="card-body text-center p-2">
+                            <div class="mb-2">
+                                {% if application.application_payment %}
+                                    <i class="fas fa-check-circle text-success fa-2x"></i>
+                                {% else %}
+                                    <i class="fas fa-circle-o text-secondary fa-2x"></i>
+                                {% endif %}
+                            </div>
+                            <h6 class="card-title">Payment</h6>
+                            <a href="{% url 'section5_payment' application.id %}" class="btn btn-sm 
+                                {% if application.application_payment %}btn-success{% else %}btn-outline-primary{% endif %}">
+                                {% if application.application_payment %}View{% else %}Pay{% endif %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Overall Progress -->
+                <div class="col-md-6 col-lg-2 mb-3">
+                    <div class="card h-100 border-info">
+                        <div class="card-body text-center p-2">
+                            <div class="mb-2">
+                                <i class="fas fa-chart-pie text-info fa-2x"></i>
+                            </div>
+                            <h6 class="card-title">Progress</h6>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: {{ application.completion_percentage }}%;">
+                                    {{ application.completion_percentage }}%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Summary -->
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h5>Application Summary</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Applicant:</strong> 
+                        {% if application.applicant %}
+                            {{ application.applicant.first_name }} {{ application.applicant.last_name }}
+                        {% elif application.personal_info_data %}
+                            {{ application.personal_info_data.first_name|default:"[Not provided]" }} {{ application.personal_info_data.last_name|default:"" }}
+                        {% else %}
+                            <span class="text-muted">No applicant assigned yet</span>
+                        {% endif %}
+                    </p>
+                    <p><strong>Property:</strong> 
+                        {% if application.apartment %}
+                            <a href="{% url 'apartment_overview' application.apartment.id %}" target="_blank">
+                                {{ application.apartment.building.name }} - Unit {{ application.apartment.unit_number }}
+                            </a>
+                        {% else %}
+                            {{ application.get_building_display }} - Unit {{ application.get_unit_display }}
+                            <small class="text-muted">(Manual Entry)</small>
+                            <br><small class="text-muted">{{ application.get_address_display }}</small>
+                        {% endif %}
+                    </p>
+                    <p><strong>Broker:</strong> 
+                        {% if application.broker %}
+                            {{ application.broker.get_full_name|default:application.broker.email }}
+                        {% else %}
+                            <i>No Broker Assigned</i>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Application Status:</strong>
+                        <span class="badge 
+                            {% if application.get_status_display == 'New' %} bg-primary
+                            {% elif application.get_status_display == 'Pending Review' %} bg-warning text-dark
+                            {% elif application.get_status_display == 'Approved' %} bg-success
+                            {% elif application.get_status_display == 'Rejected' %} bg-danger
+                            {% elif application.get_status_display == 'Waitlisted' %} bg-info
+                            {% else %} bg-secondary
+                            {% endif %}">
+                            {{ application.get_status_display }}
+                        </span>
+                    </p>
+
+                    <p><strong>Submitted by Applicant:</strong> 
+                        {% if application.submitted_by_applicant %}
+                            <span class="badge bg-success">✅ Yes</span>
+                        {% else %}
+                            <span class="badge bg-danger">❌ No</span>
+                        {% endif %}
+                    </p>
+
+                    <p><strong>Application Link:</strong> 
+                        <div class="input-group mb-2">
+                            <input type="text" id="app-link" class="form-control" 
+                                   value="{{ request.scheme }}://{{ request.get_host }}{% url 'applicant_complete' uuid=application.unique_link %}?token={{ application.unique_link }}" 
+                                   readonly>
+                            <button class="btn btn-secondary" onclick="copyToClipboard()">📋 Copy</button>
+                        </div>
+                        {% if user.is_broker or user.is_superuser %}
+                            {% if application.applicant and application.applicant.email %}
+                                <div class="d-flex gap-2">
+                                    <a href="{% url 'send_application_link' application.id %}" 
+                                       class="btn btn-success btn-sm"
+                                       onclick="return confirm('Send application link to {{ application.applicant.email }}?')">
+                                        📧 Send Link via Email
+                                    </a>
+                                    <small class="text-muted align-self-center">to {{ application.applicant.email }}</small>
+                                </div>
+                            {% else %}
+                                <small class="text-warning">⚠️ No applicant email - cannot send automatically</small>
+                            {% endif %}
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            
+            <script>
+                function copyToClipboard() {
+                    const input = document.getElementById("app-link");
+                    input.select();
+                    document.execCommand("copy");
+                    alert("Application link copied!");
+                }
+            </script>
+        </div>
+    </div>
+
+    <!-- Activity Log -->
+<div class="card mb-4">
+    <div class="card-header bg-dark text-white">
+        <h5>Activity Log</h5>
+    </div>
+    <div class="card-body">
+        {% if application.activity_log.all %}
+            <ul class="list-group">
+                {% for log in application.activity_log.all|slice:":3" %}
+                    <li class="list-group-item">
+                        <strong>{{ log.timestamp|date:"M d, Y H:i" }}</strong> - {{ log.description }}
+                    </li>
+                {% endfor %}
+            </ul>
+
+            {% if application.activity_log.all|length > 3 %}
+                <!-- Show More Button -->
+                <button class="btn btn-link mt-2" data-bs-toggle="collapse" data-bs-target="#allActivityLogs">
+                    Show More
+                </button>
+
+                <!-- Collapsible Section for All Logs -->
+                <div class="collapse mt-2" id="allActivityLogs">
+                    <ul class="list-group">
+                        {% for log in application.activity_log.all|slice:"3:" %}
+                            <li class="list-group-item">
+                                <strong>{{ log.timestamp|date:"M d, Y H:i" }}</strong> - {{ log.description }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+        {% else %}
+            <p>No recorded activity yet.</p>
+        {% endif %}
+    </div>
+</div>
+
+
+    <!-- Applicant Information -->
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h5>Applicant Details</h5>
+        </div>
+        <div class="card-body">
+            <p><strong>Name:</strong> {{ application.applicant.first_name }} {{ application.applicant.last_name }}</p>
+            <p><strong>Date of Birth:</strong> {{ application.applicant.date_of_birth }}</p>
+            <p><strong>Email:</strong> {{ application.applicant.email }}</p>
+            <p><strong>Phone:</strong> {{ application.applicant.phone_number|default:"N/A" }}</p>
+            <p><strong>Address:</strong> {{ application.applicant.street_address_1 }}, {{ application.applicant.city }}, {{ application.applicant.state }} {{ application.applicant.zip_code }}</p>
+        </div>
+    </div>
+
+    <!-- Uploaded Files -->
+   <!-- Uploaded Files -->
+<div class="card mb-4">
+    <div class="card-header bg-warning text-dark">
+        <h5>Uploaded Documents</h5>
+    </div>
+    {% if messages %}
+    <div class="alert-container">
+        {% for message in messages %}
+            <div class="alert {% if message.tags == 'success' %}alert-success
+                            {% elif message.tags == 'error' %}alert-danger
+                            {% elif message.tags == 'info' %}alert-info{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+{% if file.analysis_results %}
+    <div class="card border-info mb-4">
+        <div class="card-header bg-info text-white">
+            <h5>📊 Analysis Results</h5>
+        </div>
+        <div class="card-body">
+            <p class="mb-1"><strong>Status:</strong> 
+                <span class="badge 
+                    {% if file.analysis_results.status == "Complete" %} bg-success 
+                    {% elif file.analysis_results.status == "Needs Manual Review" %} bg-warning text-dark
+                    {% else %} bg-danger {% endif %}">
+                    {{ file.analysis_results.status }}
+                </span>
+            </p>
+            <hr>
+            {% if file.analysis_results.summary %}
+                <p class="mb-1"><strong>📑 Summary:</strong></p>
+                <div class="alert alert-light">
+                    {{ file.analysis_results.summary|linebreaks }}
+                </div>
+            {% endif %}
+            {% if file.analysis_results.reasoning %}
+                <p class="mb-1"><strong>⚠️ Reasoning (if flagged):</strong></p>
+                <div class="alert alert-warning">
+                    {{ file.analysis_results.reasoning|linebreaks }}
+                </div>
+            {% endif %}
+            <hr>
+            {% if file.analysis_results.modification_check %}
+                <p class="mb-1"><strong>🛑 Modification Check:</strong></p>
+                <div class="alert alert-info">
+                    {{ file.analysis_results.modification_check|linebreaks }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
+
+
+
+
+
+    <div class="card-body">
+        {% if application.uploaded_files.all %}
+            <ul class="list-group">
+                {% for file in application.uploaded_files.all %}
+                    <li class="list-group-item">
+                        <p><strong>Document Type:</strong> {{ file.document_type|default:"Unknown Document" }}</p>
+                        
+                        <!-- File View Link -->
+                        <a href="{{ file.file.url }}" target="_blank">📄 View File {{ forloop.counter }}</a>
+
+                        <!-- ✅ PDF Preview -->
+                        {% if file.file.url|lower|slice:"-4:" == ".pdf" %}
+                            <div class="mt-2">
+                                <iframe src="{{ file.file.url }}" width="100%" height="400px" style="border: none;"></iframe>
+                            </div>
+                        {% endif %}
+
+                        <!-- ✅ Action Buttons -->
+                        <div class="mt-2">
+                            <a href="{{ file.file.url }}" target="_blank" class="btn btn-primary btn-sm">🔍 View in New Tab</a>
+                            <a href="{{ file.file.url }}" download class="btn btn-secondary btn-sm">📥 Download</a>
+
+                            <!-- ✅ Analyze Button (Distinct and Separate) -->
+                            <form action="{% url 'analyze_uploaded_file' file.id %}" method="post" class="mt-2">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-info btn-sm">
+                                    📊 Analyze
+                                </button>
+                            </form>
+                            
+                        </div>
+
+                        <!-- ✅ Delete Button for Broker -->
+                        {% if user.is_authenticated and user.is_superuser or user == application.broker %}
+                            <form action="{% url 'delete_uploaded_file' file.id %}" method="post" class="mt-2">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-sm">🗑️ Delete</button>
+                            </form>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No documents uploaded yet.</p>
+        {% endif %}
+    </div>
+</div>
+
+
+
+
+</div>
+{% endblock %}

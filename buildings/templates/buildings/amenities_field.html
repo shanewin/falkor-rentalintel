@@ -1,0 +1,171 @@
+{% load crispy_forms_tags %}
+
+<div class="amenities-field-container">
+    <div class="amenities-header">
+        <label for="{{ field.id_for_label }}" class="form-label">
+            {{ field.label|safe }}
+            {% if field.field.required %}<span class="asteriskField">*</span>{% endif %}
+        </label>
+        <div class="amenities-summary">
+            <span class="selected-count">0 selected</span>
+            <button type="button" class="btn btn-link btn-sm clear-all">Clear all</button>
+        </div>
+    </div>
+    <div class="amenities-grid">
+        {% for choice in field.field.queryset %}
+            <div class="amenity-checkbox-item">
+                <input type="checkbox" 
+                       class="form-check-input amenity-checkbox" 
+                       name="{{ field.html_name }}" 
+                       value="{{ choice.pk }}" 
+                       id="id_{{ field.html_name }}_{{ forloop.counter0 }}"
+                       {% if choice.pk in field.value %}checked{% endif %}>
+                <label class="form-check-label amenity-label" 
+                       for="id_{{ field.html_name }}_{{ forloop.counter0 }}"
+                       style="cursor: pointer; width: 100%; display: flex; align-items: center;">
+                    <span class="amenity-icon">
+                        {% if choice.name == "Bike Room" %}
+                            <i class="fa-solid fa-bicycle"></i>
+                        {% elif choice.name == "Business center" %}
+                            <i class="fa-solid fa-briefcase"></i>
+                        {% elif choice.name == "Children's Play Room" %}
+                            <i class="fa-solid fa-child"></i>
+                        {% elif choice.name == "Cold Storage" %}
+                            <i class="fa-regular fa-snowflake"></i>
+                        {% elif choice.name == "Concierge" %}
+                            <i class="fa-solid fa-bell-concierge"></i>
+                        {% elif choice.name == "Courtyard" %}
+                            <i class="fa-solid fa-tree"></i>
+                        {% elif choice.name == "Covered parking" %}
+                            <i class="fa-solid fa-square-parking"></i>
+                        {% elif choice.name == "Doorman" %}
+                            <i class="fa-solid fa-door-closed"></i>
+                        {% elif choice.name == "Elevator" %}
+                            <i class="fa-solid fa-arrows-up-down"></i>
+                        {% elif choice.name == "Fitness Center" %}
+                            <i class="fa-solid fa-dumbbell"></i>
+                        {% elif choice.name == "Gym" %}
+                            <i class="fa-solid fa-dumbbell"></i>
+                        {% elif choice.name == "Garage Parking" %}
+                            <i class="fa-solid fa-square-parking"></i>
+                        {% elif choice.name == "Garbage chute" %}
+                            <i class="fa-solid fa-trash"></i>
+                        {% elif choice.name == "Garden" %}
+                            <i class="fa-solid fa-seedling"></i>
+                        {% elif choice.name == "Green building" %}
+                            <i class="fa-solid fa-leaf"></i>
+                        {% elif choice.name == "Guarantors Welcome" %}
+                            <i class="fa-regular fa-file-signature"></i>
+                        {% elif choice.name == "Laundry In Building" %}
+                            <i class="fa-solid fa-soap"></i>
+                        {% elif choice.name == "Live In Super" %}
+                            <i class="fa-solid fa-screwdriver-wrench"></i>
+                        {% elif choice.name == "Locker Rooms" %}
+                            <i class="fa-solid fa-lock"></i>
+                        {% elif choice.name == "Media Room" %}
+                            <i class="fa-solid fa-tv"></i>
+                        {% elif choice.name == "Non Smoking Building" %}
+                            <i class="fa-solid fa-ban-smoking"></i>
+                        {% elif choice.name == "On site super" %}
+                            <i class="fa-solid fa-screwdriver-wrench"></i>
+                        {% elif choice.name == "Outdoor Spaces" %}
+                            <i class="fa-solid fa-umbrella-beach"></i>
+                        {% elif choice.name == "Package Room" %}
+                            <i class="fa-solid fa-box"></i>
+                        {% elif choice.name == "Parking" %}
+                            <i class="fa-solid fa-square-parking"></i>
+                        {% elif choice.name == "Pet spa" %}
+                            <i class="fa-solid fa-bath"></i>
+                        {% elif choice.name == "Pool" %}
+                            <i class="fa-solid fa-water-ladder"></i>
+                        {% elif choice.name == "Recreation" %}
+                            <i class="fa-solid fa-table-tennis-paddle-ball"></i>
+                        {% elif choice.name == "Resident Lounge" %}
+                            <i class="fa-solid fa-couch"></i>
+                        {% elif choice.name == "Roof Access" %}
+                            <i class="fa-solid fa-arrow-up-from-ground-water"></i>
+                        {% elif choice.name == "Roof Deck" %}
+                            <i class="fa-solid fa-arrow-up-from-ground-water"></i>
+                        {% elif choice.name == "Screening room" %}
+                            <i class="fa-solid fa-tv"></i>
+                        {% elif choice.name == "Security cameras" %}
+                            <i class="fa-solid fa-video"></i>
+                        {% elif choice.name == "Smoke free property" %}
+                            <i class="fa-solid fa-ban-smoking"></i>
+                        {% elif choice.name == "Storage" %}
+                            <i class="fa-solid fa-box-archive"></i>
+                        {% elif choice.name == "Valet" %}
+                            <i class="fa-solid fa-key"></i>
+                        {% elif choice.name == "Verizon Fios" %}
+                            <i class="fa-solid fa-tower-broadcast"></i>
+                        {% elif choice.name == "Virtual Doorman" %}
+                            <i class="fa-solid fa-tablet-screen-button"></i>
+                        {% elif choice.name == "Wheelchair Access" %}
+                            <i class="fa-solid fa-wheelchair"></i>
+                        {% elif choice.name == "Yoga studio" %}
+                            <i class="fa-solid fa-spa"></i>
+                        {% else %}
+                            <i class="fa-solid fa-check-circle"></i>
+                        {% endif %}
+                    </span>
+                    {{ choice.name }}
+                </label>
+            </div>
+        {% empty %}
+            <div class="no-amenities">
+                <p class="text-muted">No amenities available. <a href="/admin/buildings/amenity/">Add amenities</a> in the admin panel.</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const amenityCheckboxes = document.querySelectorAll('.amenity-checkbox');
+    const selectedCount = document.querySelector('.selected-count');
+    const clearAllBtn = document.querySelector('.clear-all');
+    
+    function updateSelectedCount() {
+        const checkedCount = document.querySelectorAll('.amenity-checkbox:checked').length;
+        selectedCount.textContent = `${checkedCount} selected`;
+        clearAllBtn.style.display = checkedCount > 0 ? 'inline' : 'none';
+        
+        // Add visual feedback
+        document.querySelectorAll('.amenity-checkbox-item').forEach(item => {
+            const checkbox = item.querySelector('.amenity-checkbox');
+            if (checkbox.checked) {
+                item.classList.add('selected');
+            } else {
+                item.classList.remove('selected');
+            }
+        });
+    }
+    
+    // Make entire card clickable
+    document.querySelectorAll('.amenity-checkbox-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            // Don't trigger if clicking directly on checkbox or label
+            if (e.target.type === 'checkbox' || e.target.tagName === 'LABEL' || e.target.closest('label')) {
+                return;
+            }
+            const checkbox = this.querySelector('.amenity-checkbox');
+            checkbox.checked = !checkbox.checked;
+            updateSelectedCount();
+        });
+    });
+    
+    amenityCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedCount);
+    });
+    
+    clearAllBtn.addEventListener('click', function() {
+        amenityCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        updateSelectedCount();
+    });
+    
+    // Initial count update
+    updateSelectedCount();
+});
+</script>

@@ -1,0 +1,31 @@
+{{ site_name }} - Complete Your Rental Application
+
+Hello {% if applicant.first_name %}{{ applicant.first_name }}{% else %}{{ applicant.email }}{% endif %},
+
+Your broker, {{ broker.get_full_name|default:broker.email }}, has created a rental application for you.
+
+PROPERTY DETAILS:
+{{ property_display }}
+{% if application.apartment %}Address: {{ application.apartment.building.street_address_1 }}, {{ application.apartment.building.city }}, {{ application.apartment.building.state }} {{ application.apartment.zip_code }}
+Rent: ${{ application.apartment.rent_price|floatformat:0 }}/month{% elif application.manual_building_address %}
+Address: {{ application.manual_building_address }}{% endif %}
+{% if application.application_fee_amount %}Application Fee: ${{ application.application_fee_amount }}{% endif %}
+
+{% if application.required_documents %}REQUIRED DOCUMENTS:
+{% for doc in application.required_documents %}- {{ doc }}
+{% endfor %}
+Please have these documents ready before completing your application.
+{% endif %}
+
+TO COMPLETE YOUR APPLICATION:
+{{ completion_url }}
+
+IMPORTANT: This application link is secure and unique to you. Please do not share this link with others.
+
+If you have any questions about this property or the application process, please contact your broker directly.
+
+Thank you,
+The {{ site_name }} Team
+
+---
+This email was sent to {{ applicant.email }}. This is an automated message, please do not reply.

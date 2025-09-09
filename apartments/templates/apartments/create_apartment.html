@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block extra_css %}
+<!-- Cropper.js CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-3">
+    <h1 class="h5 fw-bold text-dark pb-2 mb-4 border-bottom">
+        {% if apartment %}
+            Edit Apartment – Unit {{ apartment.unit_number }} in {{ building.name }}
+        {% else %}
+            Create New Apartment in {{ building.name }}
+        {% endif %}
+    </h1>
+
+    <!-- Success Message -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Apartment Info Form -->
+    <div class="card shadow-sm p-4 mb-4">
+        <form method="post">
+            {% csrf_token %}
+            {% crispy apartment_form apartment_form.helper %}
+
+        </form>
+    </div>
+
+    {% if apartment %}
+        <!-- Images Upload Section -->
+        <div class="card shadow-sm p-4 mb-4">
+            <h3 class="h6 fw-bold text-secondary pb-2 mb-3 border-bottom">Upload Apartment Images</h3>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ image_form|crispy }}
+                <button type="submit" class="btn btn-primary" name="image_submit">Upload Image</button>
+            </form>
+
+            <!-- Display Uploaded Images -->
+            {% if apartment.images.exists %}
+                <div class="row mt-3">
+                    {% for image in apartment.images.all %}
+                        <div class="col-md-3 mb-3">
+                            <div class="card">
+                                <img src="{{ image.thumbnail_url }}" class="card-img-top img-thumbnail" alt="Apartment Image">
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-muted mt-2">No images uploaded yet.</p>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<!-- Cropper.js JavaScript -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<script src="{% static 'js/image-cropper.js' %}"></script>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Setup image cropper for apartment images (4:3 aspect ratio)
+    setupImageCropper(
+        '[name="image"]',
+        null,
+        null,
+        {
+            aspectRatio: 4/3, // Standard photo aspect ratio for apartments
+            modalTitle: 'Crop Apartment Image',
+            cropButtonText: 'Crop Image',
+            outputWidth: 800,
+            outputHeight: 600,
+            onUpload: function(file, imageSrc) {
+                console.log('Apartment image uploaded:', file.name);
+            }
+        }
+    );
+});
+</script>
+{% endblock %}
+
+{% endblock %}

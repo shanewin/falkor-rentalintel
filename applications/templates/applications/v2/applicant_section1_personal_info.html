@@ -1,0 +1,586 @@
+{% extends 'applications/applicant_base.html' %}
+{% load static %}
+
+{% block title %}Personal Information - {% if application.apartment %}{{ application.apartment.building.name }}{% else %}{{ application.get_building_display }}{% endif %}{% endblock %}
+
+{% block header_title %}
+    {% if application.apartment %}
+        {{ application.apartment.building.name }}
+    {% else %}
+        {{ application.get_building_display }}
+    {% endif %}
+{% endblock %}
+
+{% block header_subtitle %}
+    Personal Information • Step 1 of 5
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Main Form Area -->
+    <div class="col-lg-8">
+        
+        <!-- Section Progress Header -->
+        <div class="application-progress">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0"><i class="fas fa-user me-2"></i>Personal Information</h4>
+                <span class="badge" style="background-color: var(--brand-yellow); color: var(--brand-black); font-size: 1rem;">
+                    Step 1 of 5
+                </span>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="progress mb-3" style="height: 12px; border-radius: 6px; background-color: #e9ecef;">
+                <div class="progress-bar" style="width: {{ progress_percent }}%"></div>
+            </div>
+            
+            <!-- Section Navigation -->
+            <div class="section-nav">
+                <span class="section-badge active">
+                    <i class="fas fa-user me-2"></i>Personal Info
+                </span>
+                {% if is_applicant_access %}
+                    <a href="{% url 'section2_income' application.id %}?token={{ token }}" class="section-badge">
+                        <i class="fas fa-dollar-sign me-2"></i>Income
+                    </a>
+                    <a href="{% url 'section3_legal' application.id %}?token={{ token }}" class="section-badge">
+                        <i class="fas fa-gavel me-2"></i>Legal
+                    </a>
+                    <a href="{% url 'section4_review' application.id %}?token={{ token }}" class="section-badge">
+                        <i class="fas fa-eye me-2"></i>Review
+                    </a>
+                    <a href="{% url 'section5_payment' application.id %}?token={{ token }}" class="section-badge">
+                        <i class="fas fa-credit-card me-2"></i>Payment
+                    </a>
+                {% else %}
+                    <span class="section-badge">
+                        <i class="fas fa-dollar-sign me-2"></i>Income
+                    </span>
+                    <span class="section-badge">
+                        <i class="fas fa-gavel me-2"></i>Legal
+                    </span>
+                    <span class="section-badge">
+                        <i class="fas fa-eye me-2"></i>Review
+                    </span>
+                    <span class="section-badge">
+                        <i class="fas fa-credit-card me-2"></i>Payment
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Pre-fill notification -->
+        {% if personal_info.broker_notes %}
+        <div class="alert" style="background-color: #d4edda; border-color: var(--brand-yellow); color: #155724;">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-user-tie fa-lg me-3"></i>
+                <div>
+                    <h6 class="mb-1">Your broker has pre-filled some information</h6>
+                    <small>{{ personal_info.broker_notes }}</small>
+                    <br><small>Please review all information and make any necessary changes.</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if form.errors %}
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Please correct the following errors:</strong>
+                <ul class="mb-0 mt-2">
+                    {% for field, errors in form.errors.items %}
+                        <li>{{ field }}: {{ errors|join:", " }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <!-- Personal Information Form -->
+        <form method="post" class="application-form">
+            {% csrf_token %}
+
+            <!-- Basic Information -->
+            <h4 class="form-section-title">
+                <i class="fas fa-id-card me-2"></i>Basic Information
+            </h4>
+            
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name *</label>
+                        {{ form.first_name }}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="{{ form.middle_name.id_for_label }}" class="form-label">Middle Name</label>
+                        {{ form.middle_name }}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name *</label>
+                        {{ form.last_name }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.date_of_birth.id_for_label }}" class="form-label">Date of Birth *</label>
+                        {{ form.date_of_birth }}
+                        <div class="form-text">Format: MM/DD/YYYY</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.ssn.id_for_label }}" class="form-label">Social Security Number *</label>
+                        {{ form.ssn }}
+                        <div class="form-text">Format: XXX-XX-XXXX (Encrypted & Secure)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Information -->
+            <h4 class="form-section-title">
+                <i class="fas fa-phone me-2"></i>Contact Information
+            </h4>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.phone_cell.id_for_label }}" class="form-label">Phone Number *</label>
+                        {{ form.phone_cell }}
+                        <div class="form-text">Format: (XXX) XXX-XXXX</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.email.id_for_label }}" class="form-label">Email Address *</label>
+                        {{ form.email }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="form-check">
+                    {{ form.can_receive_sms }}
+                    <label for="{{ form.can_receive_sms.id_for_label }}" class="form-check-label">
+                        I can receive SMS messages at this number
+                    </label>
+                </div>
+            </div>
+
+            <!-- Current Address -->
+            <h4 class="form-section-title">
+                <i class="fas fa-home me-2"></i>Current Address
+            </h4>
+            
+            <div class="mb-3">
+                <label for="{{ form.current_address.id_for_label }}" class="form-label">Street Address *</label>
+                {{ form.current_address }}
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.apt_unit_number.id_for_label }}" class="form-label">Apartment/Unit</label>
+                        {{ form.apt_unit_number }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.address_duration.id_for_label }}" class="form-label">How long at this address? *</label>
+                        {{ form.address_duration }}
+                        <div class="form-text">Example: 2 years, 6 months</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="form-check">
+                    {{ form.is_rental_property }}
+                    <label for="{{ form.is_rental_property.id_for_label }}" class="form-check-label">
+                        Is your current residence a rental property?
+                    </label>
+                </div>
+            </div>
+
+            <!-- Landlord Information (conditional) -->
+            <div id="landlord-fields" style="display: none;">
+                <h5 class="mb-3" style="color: var(--brand-black); font-weight: 600;">Current Landlord Information</h5>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="{{ form.landlord_name.id_for_label }}" class="form-label">Landlord Name</label>
+                            {{ form.landlord_name }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="{{ form.landlord_phone.id_for_label }}" class="form-label">Landlord Phone</label>
+                            {{ form.landlord_phone }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="{{ form.landlord_email.id_for_label }}" class="form-label">Landlord Email</label>
+                            {{ form.landlord_email }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Desired Property -->
+            <h4 class="form-section-title">
+                <i class="fas fa-map-marker-alt me-2"></i>Desired Property
+            </h4>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.desired_address.id_for_label }}" class="form-label">Desired Address</label>
+                        {{ form.desired_address }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.desired_unit.id_for_label }}" class="form-label">Desired Unit</label>
+                        {{ form.desired_unit }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="{{ form.desired_move_in_date.id_for_label }}" class="form-label">Desired Move-in Date</label>
+                {{ form.desired_move_in_date }}
+            </div>
+
+            <!-- Additional Information -->
+            <h4 class="form-section-title">
+                <i class="fas fa-info-circle me-2"></i>Additional Information
+            </h4>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.referral_source.id_for_label }}" class="form-label">How did you hear about us?</label>
+                        {{ form.referral_source }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <div class="form-check mt-4">
+                            {{ form.has_pets }}
+                            <label for="{{ form.has_pets.id_for_label }}" class="form-check-label">
+                                Do you have pets?
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- References -->
+            <h4 class="form-section-title">
+                <i class="fas fa-users me-2"></i>References
+            </h4>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.reference1_name.id_for_label }}" class="form-label">Reference 1 Name *</label>
+                        {{ form.reference1_name }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.reference1_phone.id_for_label }}" class="form-label">Reference 1 Phone *</label>
+                        {{ form.reference1_phone }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.reference2_name.id_for_label }}" class="form-label">Reference 2 Name</label>
+                        {{ form.reference2_name }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.reference2_phone.id_for_label }}" class="form-label">Reference 2 Phone</label>
+                        {{ form.reference2_phone }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Previous Addresses Section -->
+            <h4 class="form-section-title">
+                <i class="fas fa-history me-2"></i>Previous Addresses (Last 5 Years)
+            </h4>
+            <p class="text-muted mb-3">Please provide your address history for the past 5 years.</p>
+            
+            <div id="previous-addresses">
+                {% for address in previous_addresses %}
+                    <div class="card mb-3 previous-address-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="card-title mb-0">Previous Address {{ forloop.counter }}</h6>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-address" data-address-id="{{ address.id }}">
+                                    <i class="fas fa-trash me-1"></i>Remove
+                                </button>
+                            </div>
+                            <p class="mb-1"><strong>Address:</strong> {{ address.address }}</p>
+                            <p class="mb-1"><strong>Duration:</strong> {{ address.duration }}</p>
+                            {% if address.landlord_name %}
+                                <p class="mb-0"><strong>Landlord:</strong> {{ address.landlord_name }} ({{ address.landlord_contact }})</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="text-center p-4" style="background-color: #f8f9fa; border-radius: 8px;">
+                        <i class="fas fa-plus-circle fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No previous addresses added yet.</p>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <button type="button" id="add-address-btn" class="btn btn-outline-secondary mb-4">
+                <i class="fas fa-plus me-2"></i>Add Previous Address
+            </button>
+
+            <!-- Legal History -->
+            <h4 class="form-section-title">
+                <i class="fas fa-gavel me-2"></i>Legal History
+            </h4>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.has_filed_bankruptcy }}
+                            <label for="{{ form.has_filed_bankruptcy.id_for_label }}" class="form-check-label">
+                                Have you ever filed for bankruptcy?
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.has_criminal_conviction }}
+                            <label for="{{ form.has_criminal_conviction.id_for_label }}" class="form-check-label">
+                                Have you ever been convicted of a crime?
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- About Yourself -->
+            <div class="mb-4">
+                <label for="{{ form.about_yourself.id_for_label }}" class="form-label">About Yourself</label>
+                {{ form.about_yourself }}
+                <div class="form-text">Tell us a bit about yourself (optional)</div>
+            </div>
+
+            <!-- Navigation Buttons -->
+            <div class="d-flex justify-content-between mt-4 pt-4" style="border-top: 2px solid #e9ecef;">
+                {% if is_applicant_access %}
+                    <a href="{% url 'v2_application_overview' application.id %}?token={{ token }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Overview
+                    </a>
+                    <div>
+                        <button type="submit" name="save_continue" class="btn btn-primary btn-lg">
+                            Save & Continue to Income
+                            <i class="fas fa-arrow-right ms-2"></i>
+                        </button>
+                        <button type="submit" name="save_exit" class="btn btn-outline-primary ms-2">
+                            <i class="fas fa-save me-2"></i>Save & Exit
+                        </button>
+                    </div>
+                {% else %}
+                    <a href="{% url 'application_detail' application.id %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Overview
+                    </a>
+                    <div>
+                        <button type="submit" name="save_continue" class="btn btn-primary btn-lg">
+                            Save & Continue to Income
+                            <i class="fas fa-arrow-right ms-2"></i>
+                        </button>
+                        <button type="submit" name="save_exit" class="btn btn-outline-primary ms-2">
+                            <i class="fas fa-save me-2"></i>Save & Exit
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Property Details Sidebar -->
+    <div class="col-lg-4">
+        {% if application.apartment %}
+        <!-- Quick Property Reference -->
+        <div class="property-sidebar">
+            <h5><i class="fas fa-home me-2"></i>You're Applying For</h5>
+            
+            <div class="text-center mb-3">
+                {% if application.apartment.building.images.first %}
+                    <img src="{{ application.apartment.building.images.first.small_url }}" 
+                         class="img-fluid rounded" alt="Property Image" 
+                         style="height: 150px; width: 100%; object-fit: cover;">
+                {% else %}
+                    <div class="bg-light rounded d-flex align-items-center justify-content-center" 
+                         style="height: 150px;">
+                        <i class="fas fa-building fa-3x text-muted"></i>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <h6 class="text-center mb-1">{{ application.apartment.building.name }}</h6>
+            <p class="text-center text-muted mb-3">Unit {{ application.apartment.unit_number }}</p>
+            
+            <div class="row text-center">
+                <div class="col-6">
+                    <strong>${{ application.apartment.rent_price|floatformat:0 }}</strong>
+                    <br><small class="text-muted">Monthly Rent</small>
+                </div>
+                <div class="col-6">
+                    <strong>{{ application.apartment.bedrooms|default:"Studio" }}</strong>
+                    <br><small class="text-muted">{% if application.apartment.bedrooms %}BR{% else %}Studio{% endif %}</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Progress Summary -->
+        <div class="property-sidebar">
+            <h5><i class="fas fa-tasks me-2"></i>Application Progress</h5>
+            
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span>Personal Information</span>
+                <i class="fas fa-clock text-warning"></i>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span>Income & Employment</span>
+                <i class="fas fa-circle text-muted"></i>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span>Legal Documents</span>
+                <i class="fas fa-circle text-muted"></i>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span>Review & Submit</span>
+                <i class="fas fa-circle text-muted"></i>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+                <span>Payment</span>
+                <i class="fas fa-circle text-muted"></i>
+            </div>
+        </div>
+
+        <!-- Tips -->
+        <div class="property-sidebar">
+            <h5><i class="fas fa-lightbulb me-2"></i>Helpful Tips</h5>
+            <ul class="list-unstyled">
+                <li class="mb-2">
+                    <i class="fas fa-check text-success me-2"></i>
+                    Have your ID and recent pay stubs ready
+                </li>
+                <li class="mb-2">
+                    <i class="fas fa-check text-success me-2"></i>
+                    Your progress is automatically saved
+                </li>
+                <li class="mb-2">
+                    <i class="fas fa-check text-success me-2"></i>
+                    Complete sections at your own pace
+                </li>
+                <li class="mb-0">
+                    <i class="fas fa-check text-success me-2"></i>
+                    All information is secure and encrypted
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Conditional Fields and AJAX -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const isRentalCheckbox = document.getElementById('{{ form.is_rental_property.id_for_label }}');
+    const landlordFields = document.getElementById('landlord-fields');
+    
+    // Show/hide landlord fields based on rental property status
+    function toggleLandlordFields() {
+        if (isRentalCheckbox && isRentalCheckbox.checked) {
+            landlordFields.style.display = 'block';
+        } else {
+            landlordFields.style.display = 'none';
+        }
+    }
+    
+    // Initial check
+    toggleLandlordFields();
+    
+    // Listen for changes
+    if (isRentalCheckbox) {
+        isRentalCheckbox.addEventListener('change', toggleLandlordFields);
+    }
+    
+    // Add Previous Address AJAX functionality
+    const addAddressBtn = document.getElementById('add-address-btn');
+    if (addAddressBtn) {
+        addAddressBtn.addEventListener('click', function() {
+            // Simple form to add address
+            const address = prompt('Enter previous address:');
+            const duration = prompt('Duration at this address:');
+            
+            if (address && duration) {
+                fetch('{% url "add_previous_address" application.id %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        'address': address,
+                        'duration': duration
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload(); // Reload to show new address
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        });
+    }
+    
+    // Remove Previous Address functionality
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-address')) {
+            const addressId = e.target.dataset.addressId;
+            if (addressId && confirm('Are you sure you want to remove this address?')) {
+                fetch(`{% url "remove_previous_address" application.id 0 %}`.replace('0', addressId), {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        e.target.closest('.previous-address-card').remove();
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'buildings/css/buildings.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1>{{ step_title }}</h1>
+                <p>Congratulations! Your apartment is ready to go.</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'apartments_list' %}" class="btn btn-outline-primary">
+                    Back to Apartments
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Progress Bar - Complete -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h6 class="mb-3">Apartment Setup Progress - Complete!</h6>
+            <div class="progress mb-3" style="height: 6px;">
+                <div class="progress-bar bg-success" style="width: 100%"></div>
+            </div>
+            <div class="row text-center">
+                <div class="col-3">
+                    <div class="step text-success">
+                        <div class="step-number bg-success text-white">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <small>Basic Info</small>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="step text-success">
+                        <div class="step-number bg-success text-white">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <small>Images</small>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="step text-success">
+                        <div class="step-number bg-success text-white">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <small>Amenities</small>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="step text-success">
+                        <div class="step-number bg-success text-white">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <small>Details</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Completion Summary -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow border-success">
+                <div class="card-header bg-success text-white text-center">
+                    <h4 class="mb-0"><i class="fas fa-check-circle fa-2x mb-2"></i></h4>
+                    <h4 class="mb-0">Apartment "{{ apartment.unit_number }}" Created Successfully!</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center mb-4">
+                        <div class="col-md-4">
+                            <div class="border rounded p-3">
+                                <h5 class="text-success">{{ apartment.images.count }}</h5>
+                                <small class="text-muted">Images Uploaded</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border rounded p-3">
+                                <h5 class="text-info">{{ apartment.amenities.count }}</h5>
+                                <small class="text-muted">Amenities Selected</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border rounded p-3">
+                                <h5 class="text-warning">${{ apartment.rent_price }}</h5>
+                                <small class="text-muted">Monthly Rent</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Apartment Summary -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Apartment Details:</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Building:</strong> {{ apartment.building.name }}</li>
+                                <li><strong>Unit:</strong> {{ apartment.unit_number }}</li>
+                                <li><strong>Layout:</strong> {{ apartment.bedrooms }}bd / {{ apartment.bathrooms }}ba</li>
+                                <li><strong>Rent:</strong> ${{ apartment.rent_price }}/month</li>
+                                {% if apartment.square_feet %}
+                                <li><strong>Size:</strong> {{ apartment.square_feet }} sqft</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Next Steps:</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-eye text-info"></i> Review apartment details</li>
+                                <li><i class="fas fa-edit text-warning"></i> Update information anytime</li>
+                                <li><i class="fas fa-users text-success"></i> Start receiving applications</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="card mt-4 shadow">
+                <div class="card-body text-center">
+                    <h5 class="mb-3">What would you like to do next?</h5>
+                    <div class="d-flex justify-content-center gap-3 flex-wrap">
+                        <a href="{% url 'apartment_overview' apartment.id %}" class="btn btn-primary">
+                            <i class="fas fa-eye"></i> View Apartment Details
+                        </a>
+                        <a href="{% url 'apartments_list' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-list"></i> Back to Apartments List
+                        </a>
+                        <a href="{% url 'create_apartment_v2_with_building' apartment.building.id %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-plus"></i> Add Another Unit
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+// Confetti animation or celebration effect could go here
+console.log('🎉 Apartment creation completed successfully!');
+</script>
+{% endblock %}
+{% endblock %}

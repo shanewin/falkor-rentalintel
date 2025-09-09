@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1>Buildings</h1>
+                <p>Manage your property portfolio</p>
+            </div>
+            <div class="col-md-4 text-end">
+                {% if user.is_superuser or user.is_staff %}
+                    <a href="{% url 'create_building' %}" class="btn btn-primary">
+                        Add Building
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ buildings.count }}</div>
+            <div class="stat-label">Total Buildings</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ total_apartments|default:"0" }}</div>
+            <div class="stat-label">Active Apartments</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ buildings_with_photos|default:"0" }}</div>
+            <div class="stat-label">With Photos</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ unique_cities|default:"0" }}</div>
+            <div class="stat-label">Cities</div>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <div class="table-header">
+            Buildings Overview
+        </div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Building</th>
+                    <th>Location</th>
+                    <th>Units</th>
+                    <th>Owner</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for building in buildings %}
+                    <tr>
+                        <td>
+                            <div class="building-name">{{ building.name }}</div>
+                            {% if building.neighborhood %}
+                                <small class="text-muted">{{ building.neighborhood }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div>{{ building.street_address_1 }}</div>
+                            <small class="text-muted">{{ building.city }}, {{ building.state }}</small>
+                        </td>
+                        <td>
+                            {% if building.active_apartments_count > 0 %}
+                                <span class="badge badge-yellow">{{ building.active_apartments_count }}</span>
+                            {% else %}
+                                <span class="badge badge-gray">0</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ building.owner_name|default:"—" }}</td>
+                        <td>
+                            {% if user.is_superuser or user.is_staff %}
+                                <a href="{% url 'building_detail' building.id %}" class="btn btn-outline-primary btn-sm">
+                                    Edit
+                                </a>
+                            {% endif %}
+                            <a href="{% url 'building_overview' building.id %}" class="btn btn-secondary btn-sm">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center">
+                            <p class="text-muted mt-4 mb-4">No buildings found.</p>
+                            {% if user.is_superuser or user.is_staff %}
+                                <a href="{% url 'create_building' %}" class="btn btn-primary">
+                                    Add First Building
+                                </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

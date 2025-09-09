@@ -1,0 +1,533 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-1">Apartments for Rent</h1>
+            <p class="text-muted mb-0">{{ apartments.count }} results</p>
+        </div>
+        <div>
+            <a href="{% url 'create_apartment' %}" class="btn btn-doorway-primary">List Rental</a>
+        </div>
+    </div>
+
+    <!-- View Toggle -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-outline-dark active" id="listViewBtn">
+                <i class="bi bi-list"></i> List View
+            </button>
+            <button type="button" class="btn btn-outline-dark" id="mapViewBtn">
+                <i class="bi bi-map"></i> Map View
+            </button>
+        </div>
+        <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-outline-dark active">Relevant</button>
+            <button type="button" class="btn btn-outline-dark">Price Low to High</button>
+            <button type="button" class="btn btn-outline-dark">Newest</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="row">
+        <!-- Filters Sidebar -->
+        <div class="col-lg-3 col-md-4 mb-4" id="filtersSidebar">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Filters</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Price Filter -->
+                    <div class="mb-4">
+                        <h6 class="mb-2">Price</h6>
+                        <select class="form-select form-select-sm mb-2" id="priceFilter">
+                            <option value="">Any Price</option>
+                            <option value="2000">Under $2,000</option>
+                            <option value="2000-3000">$2,000 - $3,000</option>
+                            <option value="3000-4000">$3,000 - $4,000</option>
+                            <option value="4000">Over $4,000</option>
+                        </select>
+                    </div>
+
+                    <!-- Bedrooms Filter -->
+                    <div class="mb-4">
+                        <h6 class="mb-2">Bedrooms</h6>
+                        <div class="btn-group btn-group-sm w-100" role="group" id="bedroomFilter">
+                            <button type="button" class="btn btn-outline-dark" data-value="0">Studio</button>
+                            <button type="button" class="btn btn-outline-dark" data-value="1">1</button>
+                            <button type="button" class="btn btn-outline-dark" data-value="2">2</button>
+                            <button type="button" class="btn btn-outline-dark" data-value="3">3+</button>
+                        </div>
+                    </div>
+
+                    <!-- Bathrooms Filter -->
+                    <div class="mb-4">
+                        <h6 class="mb-2">Bathrooms</h6>
+                        <div class="btn-group btn-group-sm w-100" role="group" id="bathroomFilter">
+                            <button type="button" class="btn btn-outline-dark" data-value="1">1</button>
+                            <button type="button" class="btn btn-outline-dark" data-value="2">2</button>
+                            <button type="button" class="btn btn-outline-dark" data-value="3">3+</button>
+                        </div>
+                    </div>
+
+                    <!-- Amenities Filter -->
+                    <div class="mb-4">
+                        <h6 class="mb-2">Amenities</h6>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="elevator" value="elevator">
+                            <label class="form-check-label small" for="elevator">Elevator</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="laundry" value="laundry">
+                            <label class="form-check-label small" for="laundry">Laundry in Building</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="pets" value="pets">
+                            <label class="form-check-label small" for="pets">Pets Allowed</label>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-doorway-primary btn-sm w-100" id="applyFilters">Apply Filters</button>
+                    <button class="btn btn-outline-dark btn-sm w-100 mt-2" id="clearFilters">Clear All</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- List View -->
+        <div class="col-lg-9 col-md-8" id="listView">
+            <!-- Apartments Grid -->
+            <div class="row" id="apartmentsGrid">
+                {% for apartment in apartments %}
+                <div class="col-xl-4 col-lg-6 col-md-12 mb-4 apartment-card" 
+                     data-apartment-id="{{ apartment.id }}"
+                     data-price="{{ apartment.rent_price }}"
+                     data-bedrooms="{{ apartment.bedrooms }}"
+                     data-bathrooms="{{ apartment.bathrooms }}"
+                     data-lat="{{ apartment.building.latitude|default:40.7128 }}"
+                     data-lng="{{ apartment.building.longitude|default:-74.0060 }}">
+                    <div class="card h-100 shadow-sm rental-card">
+                        <!-- Image Carousel -->
+                        <div class="rental-image-container">
+                            {% if apartment.images.all %}
+                                <img src="{{ apartment.images.first.thumbnail_url }}" 
+                                     class="card-img-top rental-image" 
+                                     alt="{{ apartment.building.name }} - Unit {{ apartment.unit_number }}"
+                                     style="height: 200px; object-fit: cover;">
+                            {% else %}
+                                <div class="card-img-top rental-image-placeholder" 
+                                     style="height: 200px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center;">
+                                    <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                                </div>
+                            {% endif %}
+                            <div class="rental-price-badge">
+                                ${{ apartment.rent_price|floatformat:0 }}
+                            </div>
+                            {% if apartment.images.all.count > 1 %}
+                            <div class="image-count-badge">
+                                <i class="bi bi-camera"></i> {{ apartment.images.all.count }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="card-body">
+                            <h6 class="card-title mb-1">
+                                {{ apartment.building.name }} - Unit {{ apartment.unit_number }}
+                            </h6>
+                            <p class="card-text text-muted small mb-2">
+                                {{ apartment.building.address }}
+                            </p>
+
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-light text-dark">
+                                    <i class="bi bi-door-closed"></i> 
+                                    {% if apartment.bedrooms == 0 %}Studio{% else %}{{ apartment.bedrooms|floatformat:0 }} bed{% endif %}
+                                </span>
+                                <span class="badge bg-light text-dark">
+                                    <i class="bi bi-droplet"></i> {{ apartment.bathrooms|floatformat:0 }} bath
+                                </span>
+                                {% if apartment.square_feet %}
+                                <span class="badge bg-light text-dark">
+                                    {{ apartment.square_feet }} ft²
+                                </span>
+                                {% endif %}
+                            </div>
+
+                            {% if apartment.amenities.all %}
+                            <div class="amenities-preview mb-2">
+                                <small class="text-muted">
+                                    {% for amenity in apartment.amenities.all|slice:":3" %}
+                                        {{ amenity.name }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </small>
+                            </div>
+                            {% endif %}
+
+                            {% if apartment.available_from %}
+                            <div class="available-date mb-2">
+                                <small class="text-success">
+                                    <i class="bi bi-calendar-check"></i> Available {{ apartment.available_from|date:"M d, Y" }}
+                                </small>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="card-footer bg-white border-0 pt-0">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'apartment_overview' apartment.id %}" class="btn btn-outline-dark btn-sm">
+                                    View Details
+                                </a>
+                                <a href="{% url 'create_application' apartment.id %}" class="btn btn-doorway-primary btn-sm">
+                                    Apply Now
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="text-center py-5">
+                        <i class="bi bi-house-x text-muted" style="font-size: 3rem;"></i>
+                        <h4 class="mt-3">No apartments found</h4>
+                        <p class="text-muted">Try adjusting your filters or check back later for new listings.</p>
+                        <a href="{% url 'create_apartment' %}" class="btn btn-doorway-primary">List a Rental</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if apartments.has_other_pages %}
+            <nav aria-label="Apartments pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if apartments.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ apartments.previous_page_number }}">Previous</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for i in apartments.paginator.page_range %}
+                    <li class="page-item {% if apartments.number == i %}active{% endif %}">
+                        <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if apartments.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ apartments.next_page_number }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+
+        <!-- Map View (Hidden by default) -->
+        <div class="col-lg-9 col-md-8 d-none" id="mapView">
+            <div class="card shadow-sm">
+                <div class="card-body p-0" style="height: 600px;">
+                    <div id="map" style="height: 100%; width: 100%; border-radius: 0.375rem;"></div>
+                </div>
+            </div>
+            
+            <!-- Map Results List -->
+            <div class="mt-3">
+                <h6 class="mb-2">Apartments on Map</h6>
+                <div class="row" id="mapResults">
+                    {% for apartment in apartments|slice:":6" %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card h-100 map-result-card" data-apartment-id="{{ apartment.id }}">
+                            <div class="card-body py-2">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-0">${{ apartment.rent_price|floatformat:0 }}</h6>
+                                        <small class="text-muted">
+                                            {{ apartment.bedrooms|floatformat:0 }} bed, {{ apartment.bathrooms|floatformat:0 }} bath
+                                        </small>
+                                    </div>
+                                    {% if apartment.images.all %}
+                                    <img src="{{ apartment.images.first.thumbnail_url }}" 
+                                         class="rounded" 
+                                         style="width: 50px; height: 40px; object-fit: cover;">
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted d-block mt-1">
+                                    {{ apartment.building.name }} - Unit {{ apartment.unit_number }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+.rental-card, .map-result-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    border: 1px solid #e9ecef;
+    cursor: pointer;
+}
+
+.rental-card:hover, .map-result-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    border-color: #000000;
+}
+
+/* Active states for view toggle buttons */
+.btn-outline-dark.active {
+    background-color: #000000;
+    color: #ffcc00;
+    border-color: #000000;
+}
+
+.btn-outline-dark:hover {
+    background-color: #000000;
+    color: #ffcc00;
+    border-color: #000000;
+}
+
+.rental-image-container, .map-result-card {
+    position: relative;
+}
+
+.rental-price-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.image-count-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(255,255,255,0.9);
+    color: #333;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.amenities-preview {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.card-footer .btn {
+    border-radius: 6px;
+}
+
+/* Map specific styles */
+#map {
+    z-index: 1;
+}
+
+.map-result-card.active {
+    border: 2px solid #000000;
+    background-color: #fffef8;
+}
+
+.filter-active {
+    background-color: #000000 !important;
+    color: #ffcc00 !important;
+    border-color: #000000 !important;
+}
+
+.leaflet-popup-content {
+    margin: 12px;
+}
+
+.leaflet-popup-content-wrapper {
+    border-radius: 8px;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const listViewBtn = document.getElementById('listViewBtn');
+    const mapViewBtn = document.getElementById('mapViewBtn');
+    const listView = document.getElementById('listView');
+    const mapView = document.getElementById('mapView');
+    const apartmentsGrid = document.getElementById('apartmentsGrid');
+    const mapResults = document.getElementById('mapResults');
+    let map = null;
+    let markers = [];
+
+    // View toggle functionality
+    listViewBtn.addEventListener('click', function() {
+        listView.classList.remove('d-none');
+        mapView.classList.add('d-none');
+        listViewBtn.classList.add('active');
+        mapViewBtn.classList.remove('active');
+    });
+
+    mapViewBtn.addEventListener('click', function() {
+        listView.classList.add('d-none');
+        mapView.classList.remove('d-none');
+        mapViewBtn.classList.add('active');
+        listViewBtn.classList.remove('active');
+        initializeMap();
+    });
+
+    // Filter button functionality
+    const filterButtons = document.querySelectorAll('#bedroomFilter button, #bathroomFilter button');
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            this.classList.toggle('filter-active');
+        });
+    });
+
+    // Clear filters
+    document.getElementById('clearFilters').addEventListener('click', function() {
+        // Reset price filter
+        document.getElementById('priceFilter').value = '';
+        
+        // Reset bedroom buttons
+        document.querySelectorAll('#bedroomFilter button').forEach(btn => {
+            btn.classList.remove('filter-active');
+        });
+        
+        // Reset bathroom buttons
+        document.querySelectorAll('#bathroomFilter button').forEach(btn => {
+            btn.classList.remove('filter-active');
+        });
+        
+        // Reset checkboxes
+        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        
+        // Show all apartments
+        document.querySelectorAll('.apartment-card').forEach(card => {
+            card.style.display = 'block';
+        });
+    });
+
+    // Apply filters
+    document.getElementById('applyFilters').addEventListener('click', function() {
+        const priceFilter = document.getElementById('priceFilter').value;
+        const activeBedrooms = Array.from(document.querySelectorAll('#bedroomFilter button.filter-active'))
+            .map(btn => parseInt(btn.dataset.value));
+        const activeBathrooms = Array.from(document.querySelectorAll('#bathroomFilter button.filter-active'))
+            .map(btn => parseInt(btn.dataset.value));
+
+        document.querySelectorAll('.apartment-card').forEach(card => {
+            let show = true;
+            const price = parseFloat(card.dataset.price);
+            const bedrooms = parseFloat(card.dataset.bedrooms);
+            const bathrooms = parseFloat(card.dataset.bathrooms);
+
+            // Price filter
+            if (priceFilter) {
+                if (priceFilter === '2000' && price >= 2000) show = false;
+                else if (priceFilter === '2000-3000' && (price < 2000 || price > 3000)) show = false;
+                else if (priceFilter === '3000-4000' && (price < 3000 || price > 4000)) show = false;
+                else if (priceFilter === '4000' && price <= 4000) show = false;
+            }
+
+            // Bedroom filter
+            if (activeBedrooms.length > 0) {
+                if (activeBedrooms.includes(3)) {
+                    if (bedrooms < 3) show = false;
+                } else if (!activeBedrooms.includes(bedrooms)) {
+                    show = false;
+                }
+            }
+
+            // Bathroom filter
+            if (activeBathrooms.length > 0) {
+                if (activeBathrooms.includes(3)) {
+                    if (bathrooms < 3) show = false;
+                } else if (!activeBathrooms.includes(bathrooms)) {
+                    show = false;
+                }
+            }
+
+            card.style.display = show ? 'block' : 'none';
+        });
+    });
+
+    // Initialize map
+    function initializeMap() {
+        if (map) return; // Map already initialized
+
+        // Default to NYC coordinates
+        map = L.map('map').setView([40.7128, -74.0060], 13);
+        
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Add markers for each apartment
+        document.querySelectorAll('.apartment-card').forEach(card => {
+            const lat = parseFloat(card.dataset.lat);
+            const lng = parseFloat(card.dataset.lng);
+            const apartmentId = card.dataset.apartmentId;
+            
+            if (!isNaN(lat) && !isNaN(lng)) {
+                const marker = L.marker([lat, lng]).addTo(map);
+                
+                // Add popup content
+                const popupContent = card.querySelector('.card-body').innerHTML;
+                marker.bindPopup(`
+                    <div style="min-width: 250px; max-height: 300px; overflow-y: auto;">
+                        ${popupContent}
+                        <div class="text-center mt-2">
+                            <a href="/apartments/${apartmentId}/overview/" class="btn btn-doorway-primary btn-sm">View Details</a>
+                        </div>
+                    </div>
+                `);
+                
+                markers.push(marker);
+                
+                // Add click event to map result cards
+                const resultCard = document.querySelector(`.map-result-card[data-apartment-id="${apartmentId}"]`);
+                if (resultCard) {
+                    resultCard.addEventListener('click', function() {
+                        // Remove active class from all cards
+                        document.querySelectorAll('.map-result-card').forEach(c => {
+                            c.classList.remove('active');
+                        });
+                        // Add active class to clicked card
+                        this.classList.add('active');
+                        // Open popup on map
+                        marker.openPopup();
+                        // Pan to marker
+                        map.panTo(marker.getLatLng());
+                    });
+                }
+            }
+        });
+
+        // Fit map to show all markers
+        if (markers.length > 0) {
+            const group = new L.featureGroup(markers);
+            map.fitBounds(group.getBounds().pad(0.1));
+        }
+    }
+
+    // Initialize map if hash parameter is present
+    if (window.location.hash === '#map') {
+        mapViewBtn.click();
+    }
+});
+</script>
+{% endblock %}

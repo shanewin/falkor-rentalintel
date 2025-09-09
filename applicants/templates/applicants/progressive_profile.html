@@ -1,0 +1,977 @@
+{% extends 'base.html' %}
+
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block extra_css %}
+    {{ form.media.css }}
+    <link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
+    <!-- Cropper.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1>Complete Your Profile</h1>
+                <p>Fill out your information to help brokers find and connect with you</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'applicant_dashboard' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+
+    <!-- Success Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Profile Completion Progress -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h5 class="card-title mb-2">Profile Completion</h5>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-warning" role="progressbar" 
+                             style="width: {{ completion_percentage }}%;" 
+                             aria-valuenow="{{ completion_percentage }}" 
+                             aria-valuemin="0" aria-valuemax="100">
+                        </div>
+                    </div>
+                    <small class="text-muted">{{ completion_percentage }}% Complete ({{ completion_status.overall.filled_fields }}/{{ completion_status.overall.total_fields }} fields)</small>
+                </div>
+                <div class="col-md-4 text-end">
+                    {% if completion_percentage == 100 %}
+                        <span class="badge bg-success fs-6">✓ Complete</span>
+                    {% else %}
+                        <span class="badge bg-warning fs-6">In Progress</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Detailed Section Progress -->
+            {% if completion_status %}
+            <div class="mt-3">
+                <h6 class="text-muted mb-2">Section Progress</h6>
+                <div class="row">
+                    {% for section_name, section_data in completion_status.sections.items %}
+                    <div class="col-md-6 col-lg-4 mb-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">{{ section_name }}</small>
+                            <small class="badge bg-{% if section_data.completion_percentage == 100 %}success{% elif section_data.completion_percentage > 0 %}warning{% else %}secondary{% endif %}">
+                                {{ section_data.completion_percentage }}%
+                            </small>
+                        </div>
+                        <div class="progress" style="height: 3px;">
+                            <div class="progress-bar bg-{% if section_data.completion_percentage == 100 %}success{% elif section_data.completion_percentage > 0 %}warning{% else %}secondary{% endif %}" 
+                                 style="width: {{ section_data.completion_percentage }}%;"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+
+    <!-- Profile Form -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Complete Your Profile</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data" class="doorway-form">
+                {% csrf_token %}
+                {% crispy form form.helper %}
+            </form>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+    {{ form.media.js }}
+    <script src="{% static 'js/forms.js' %}"></script>
+    <!-- Cropper.js JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    
+    <script>
+    let cropper;
+    let currentImageSrc;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle "Is this a Rental?" checkbox functionality
+        const rentalCheckbox = document.getElementById('is_rental_checkbox');
+        const landlordFields = document.getElementById('landlord_fields');
+        const housingStatusField = document.getElementById('id_housing_status');
+        
+        // Function to show/hide landlord fields
+        function toggleLandlordFields() {
+            if (rentalCheckbox && landlordFields) {
+                if (rentalCheckbox.checked) {
+                    landlordFields.classList.remove('d-none');
+                    // Set housing status to 'rent' if checkbox is checked
+                    if (housingStatusField) {
+                        housingStatusField.value = 'rent';
+                    }
+                } else {
+                    landlordFields.classList.add('d-none');
+                    // Clear landlord fields when unchecked
+                    const landlordNameInput = document.getElementById('id_current_landlord_name');
+                    const landlordPhoneInput = document.getElementById('id_current_landlord_phone');
+                    const landlordEmailInput = document.getElementById('id_current_landlord_email');
+                    if (landlordNameInput) landlordNameInput.value = '';
+                    if (landlordPhoneInput) landlordPhoneInput.value = '';
+                    if (landlordEmailInput) landlordEmailInput.value = '';
+                    // Set housing status to 'own' if checkbox is unchecked
+                    if (housingStatusField) {
+                        housingStatusField.value = 'own';
+                    }
+                }
+            }
+        }
+        
+        // Set initial state based on existing housing status or landlord data
+        if (rentalCheckbox) {
+            const landlordNameInput = document.getElementById('id_current_landlord_name');
+            const landlordPhoneInput = document.getElementById('id_current_landlord_phone');
+            const landlordEmailInput = document.getElementById('id_current_landlord_email');
+            
+            // Check if there's existing landlord data or housing status is 'rent'
+            if ((housingStatusField && housingStatusField.value === 'rent') ||
+                (landlordNameInput && landlordNameInput.value) ||
+                (landlordPhoneInput && landlordPhoneInput.value) ||
+                (landlordEmailInput && landlordEmailInput.value)) {
+                rentalCheckbox.checked = true;
+                toggleLandlordFields();
+            }
+        }
+        
+        // Add event listener for checkbox change
+        if (rentalCheckbox) {
+            rentalCheckbox.addEventListener('change', toggleLandlordFields);
+        }
+        
+        // Previous Address Management
+        const maxPreviousAddresses = 4;
+        let previousAddressCount = 0;
+        
+        // Function to create a previous address form
+        function createPreviousAddressForm(index) {
+            return `
+                <div class="previous-address-container border rounded p-3 mb-3" data-index="${index}" id="previous_address_${index}">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold text-secondary">Previous Address ${index}</h5>
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removePreviousAddress(${index})">
+                            <i class="fas fa-trash"></i> Remove
+                        </button>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Street Address 1</label>
+                            <input type="text" class="form-control" name="prev_street_address_1_${index}" id="prev_street_address_1_${index}" placeholder="Street Address 1">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Street Address 2</label>
+                            <input type="text" class="form-control" name="prev_street_address_2_${index}" id="prev_street_address_2_${index}" placeholder="Apt, Unit, etc">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label">City</label>
+                            <input type="text" class="form-control" name="prev_city_${index}" id="prev_city_${index}" placeholder="City">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">State</label>
+                            <select class="form-control" name="prev_state_${index}" id="prev_state_${index}">
+                                <option value="">Select State</option>
+                                <option value="NY">New York</option>
+                                <option value="CA">California</option>
+                                <option value="TX">Texas</option>
+                                <option value="FL">Florida</option>
+                                <!-- Add more states as needed -->
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Zip Code</label>
+                            <input type="text" class="form-control" name="prev_zip_code_${index}" id="prev_zip_code_${index}" placeholder="Zip Code">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">How long did you live here?</label>
+                        <input type="text" class="form-control" name="prev_length_at_address_${index}" id="prev_length_at_address_${index}" placeholder="e.g., 2 years">
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input prev-rental-checkbox" type="checkbox" id="prev_is_rental_${index}" name="prev_is_rental_${index}" data-index="${index}">
+                        <label class="form-check-label" for="prev_is_rental_${index}">
+                            Was this a Rental?
+                        </label>
+                    </div>
+                    
+                    <input type="hidden" name="prev_housing_status_${index}" id="prev_housing_status_${index}" value="own">
+                    
+                    <div class="landlord-fields d-none" id="prev_landlord_fields_${index}">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label class="form-label">Landlord's Name</label>
+                                <input type="text" class="form-control" name="prev_landlord_name_${index}" id="prev_landlord_name_${index}" placeholder="Landlord's Name">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Landlord's Phone</label>
+                                <input type="text" class="form-control" name="prev_landlord_phone_${index}" id="prev_landlord_phone_${index}" placeholder="Landlord's Phone">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Landlord's Email</label>
+                                <input type="email" class="form-control" name="prev_landlord_email_${index}" id="prev_landlord_email_${index}" placeholder="Landlord's Email">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Function to add a previous address form
+        function addPreviousAddress() {
+            if (previousAddressCount >= maxPreviousAddresses) {
+                alert('Maximum of 4 previous addresses allowed.');
+                return;
+            }
+            
+            previousAddressCount++;
+            const container = document.getElementById('previous-addresses-container');
+            const newForm = createPreviousAddressForm(previousAddressCount);
+            container.insertAdjacentHTML('beforeend', newForm);
+            
+            // Add rental checkbox functionality for new form
+            const newCheckbox = document.getElementById(`prev_is_rental_${previousAddressCount}`);
+            if (newCheckbox) {
+                newCheckbox.addEventListener('change', function() {
+                    togglePreviousLandlordFields(previousAddressCount);
+                });
+            }
+            
+            // Hide add button if we've reached the maximum
+            if (previousAddressCount >= maxPreviousAddresses) {
+                document.getElementById('add-previous-address-btn').style.display = 'none';
+            }
+        }
+        
+        // Function to remove a previous address form
+        window.removePreviousAddress = function(index) {
+            const container = document.getElementById(`previous_address_${index}`);
+            if (container) {
+                container.remove();
+                // Show add button again if we're under the maximum
+                if (previousAddressCount >= maxPreviousAddresses) {
+                    document.getElementById('add-previous-address-btn').style.display = 'inline-block';
+                }
+            }
+        }
+        
+        // Function to toggle landlord fields for previous addresses
+        function togglePreviousLandlordFields(index) {
+            const checkbox = document.getElementById(`prev_is_rental_${index}`);
+            const landlordFields = document.getElementById(`prev_landlord_fields_${index}`);
+            const housingStatus = document.getElementById(`prev_housing_status_${index}`);
+            
+            if (checkbox && landlordFields && housingStatus) {
+                if (checkbox.checked) {
+                    landlordFields.classList.remove('d-none');
+                    housingStatus.value = 'rent';
+                } else {
+                    landlordFields.classList.add('d-none');
+                    housingStatus.value = 'own';
+                    // Clear landlord fields
+                    document.getElementById(`prev_landlord_name_${index}`).value = '';
+                    document.getElementById(`prev_landlord_phone_${index}`).value = '';
+                    document.getElementById(`prev_landlord_email_${index}`).value = '';
+                }
+            }
+        }
+        
+        // Add event listener for the add previous address button
+        const addPreviousBtn = document.getElementById('add-previous-address-btn');
+        if (addPreviousBtn) {
+            addPreviousBtn.addEventListener('click', addPreviousAddress);
+        }
+        
+        // Load existing previous addresses
+        {% if previous_addresses %}
+        const existingAddresses = [
+            {% for addr in previous_addresses %}
+            {
+                order: {{ addr.order }},
+                street_address_1: "{{ addr.street_address_1|default:'' }}",
+                street_address_2: "{{ addr.street_address_2|default:'' }}",
+                city: "{{ addr.city|default:'' }}",
+                state: "{{ addr.state|default:'' }}",
+                zip_code: "{{ addr.zip_code|default:'' }}",
+                length_at_address: "{{ addr.length_at_address|default:'' }}",
+                housing_status: "{{ addr.housing_status|default:'own' }}",
+                landlord_name: "{{ addr.landlord_name|default:'' }}",
+                landlord_phone: "{{ addr.landlord_phone|default:'' }}",
+                landlord_email: "{{ addr.landlord_email|default:'' }}"
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+        
+        // Load existing addresses on page load
+        existingAddresses.forEach(function(addr) {
+            previousAddressCount = Math.max(previousAddressCount, addr.order);
+            const container = document.getElementById('previous-addresses-container');
+            const newForm = createPreviousAddressForm(addr.order);
+            container.insertAdjacentHTML('beforeend', newForm);
+            
+            // Populate the fields
+            document.getElementById(`prev_street_address_1_${addr.order}`).value = addr.street_address_1;
+            document.getElementById(`prev_street_address_2_${addr.order}`).value = addr.street_address_2;
+            document.getElementById(`prev_city_${addr.order}`).value = addr.city;
+            document.getElementById(`prev_state_${addr.order}`).value = addr.state;
+            document.getElementById(`prev_zip_code_${addr.order}`).value = addr.zip_code;
+            document.getElementById(`prev_length_at_address_${addr.order}`).value = addr.length_at_address;
+            document.getElementById(`prev_housing_status_${addr.order}`).value = addr.housing_status;
+            document.getElementById(`prev_landlord_name_${addr.order}`).value = addr.landlord_name;
+            document.getElementById(`prev_landlord_phone_${addr.order}`).value = addr.landlord_phone;
+            document.getElementById(`prev_landlord_email_${addr.order}`).value = addr.landlord_email;
+            
+            // Set rental checkbox and show/hide landlord fields
+            const checkbox = document.getElementById(`prev_is_rental_${addr.order}`);
+            if (addr.housing_status === 'rent') {
+                checkbox.checked = true;
+                document.getElementById(`prev_landlord_fields_${addr.order}`).classList.remove('d-none');
+            }
+            
+            // Add event listener for the checkbox
+            checkbox.addEventListener('change', function() {
+                togglePreviousLandlordFields(addr.order);
+            });
+        });
+        
+        // Hide add button if we've reached the maximum
+        if (previousAddressCount >= maxPreviousAddresses) {
+            document.getElementById('add-previous-address-btn').style.display = 'none';
+        }
+        {% endif %}
+        
+        // Dynamic Employment Management
+        const maxJobs = 5;
+        const maxIncomeSources = 5;
+        const maxAssets = 5;
+        let jobCount = 0;
+        let incomeSourceCount = 0;
+        let assetCount = 0;
+        
+        // Function to create a job form
+        function createJobForm(index) {
+            return `
+                <div class="job-container border rounded p-3 mb-3" data-index="${index}" id="job_${index}">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold text-primary">Job ${index}</h6>
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeJob(${index})">
+                            <i class="fas fa-trash"></i> Remove
+                        </button>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Company Name</label>
+                            <input type="text" class="form-control" name="job_company_${index}" id="job_company_${index}" placeholder="Company Name">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Position</label>
+                            <input type="text" class="form-control" name="job_position_${index}" id="job_position_${index}" placeholder="Job Title">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Annual Income</label>
+                            <input type="number" class="form-control currency-field" name="job_income_${index}" id="job_income_${index}" placeholder="50000" step="0.01" min="0">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Supervisor Name</label>
+                            <input type="text" class="form-control" name="job_supervisor_${index}" id="job_supervisor_${index}" placeholder="Supervisor Name">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Supervisor Email</label>
+                            <input type="email" class="form-control" name="job_supervisor_email_${index}" id="job_supervisor_email_${index}" placeholder="supervisor@company.com">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Supervisor Phone</label>
+                            <input type="tel" class="form-control" name="job_supervisor_phone_${index}" id="job_supervisor_phone_${index}" placeholder="(555) 123-4567">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="job_current_${index}" id="job_current_${index}" checked>
+                                <label class="form-check-label" for="job_current_${index}">Currently Employed</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-control" name="job_start_${index}" id="job_start_${index}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">End Date</label>
+                            <input type="date" class="form-control" name="job_end_${index}" id="job_end_${index}">
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Function to create an income source form
+        function createIncomeSourceForm(index) {
+            return `
+                <div class="income-source-container border rounded p-3 mb-3" data-index="${index}" id="income_source_${index}">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold text-success">Income Source ${index}</h6>
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeIncomeSource(${index})">
+                            <i class="fas fa-trash"></i> Remove
+                        </button>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Income Source</label>
+                            <input type="text" class="form-control" name="income_source_${index}" id="income_source_${index}" placeholder="e.g., Freelancing, Investments, etc.">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Average Annual Income</label>
+                            <input type="number" class="form-control currency-field" name="income_amount_${index}" id="income_amount_${index}" placeholder="10000" step="0.01" min="0">
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Function to create an asset form
+        function createAssetForm(index) {
+            return `
+                <div class="asset-container border rounded p-3 mb-3" data-index="${index}" id="asset_${index}">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold text-info">Asset ${index}</h6>
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeAsset(${index})">
+                            <i class="fas fa-trash"></i> Remove
+                        </button>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Asset Name</label>
+                            <input type="text" class="form-control" name="asset_name_${index}" id="asset_name_${index}" placeholder="e.g., Savings Account, Investment Portfolio">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Account Balance</label>
+                            <input type="number" class="form-control currency-field" name="asset_balance_${index}" id="asset_balance_${index}" placeholder="5000" step="0.01" min="0">
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Add job function
+        function addJob() {
+            if (jobCount >= maxJobs) {
+                alert('Maximum of 5 jobs allowed.');
+                return;
+            }
+            jobCount++;
+            const container = document.getElementById('jobs-container');
+            const newForm = createJobForm(jobCount);
+            container.insertAdjacentHTML('beforeend', newForm);
+            
+            if (jobCount >= maxJobs) {
+                document.getElementById('add-job-btn').style.display = 'none';
+            }
+        }
+        
+        // Add income source function
+        function addIncomeSource() {
+            if (incomeSourceCount >= maxIncomeSources) {
+                alert('Maximum of 5 income sources allowed.');
+                return;
+            }
+            incomeSourceCount++;
+            const container = document.getElementById('income-sources-container');
+            const newForm = createIncomeSourceForm(incomeSourceCount);
+            container.insertAdjacentHTML('beforeend', newForm);
+            
+            if (incomeSourceCount >= maxIncomeSources) {
+                document.getElementById('add-income-source-btn').style.display = 'none';
+            }
+        }
+        
+        // Add asset function
+        function addAsset() {
+            if (assetCount >= maxAssets) {
+                alert('Maximum of 5 assets allowed.');
+                return;
+            }
+            assetCount++;
+            const container = document.getElementById('assets-container');
+            const newForm = createAssetForm(assetCount);
+            container.insertAdjacentHTML('beforeend', newForm);
+            
+            if (assetCount >= maxAssets) {
+                document.getElementById('add-asset-btn').style.display = 'none';
+            }
+        }
+        
+        // Remove functions
+        window.removeJob = function(index) {
+            const container = document.getElementById(`job_${index}`);
+            if (container) {
+                container.remove();
+                if (jobCount >= maxJobs) {
+                    document.getElementById('add-job-btn').style.display = 'inline-block';
+                }
+            }
+        }
+        
+        window.removeIncomeSource = function(index) {
+            const container = document.getElementById(`income_source_${index}`);
+            if (container) {
+                container.remove();
+                if (incomeSourceCount >= maxIncomeSources) {
+                    document.getElementById('add-income-source-btn').style.display = 'inline-block';
+                }
+            }
+        }
+        
+        window.removeAsset = function(index) {
+            const container = document.getElementById(`asset_${index}`);
+            if (container) {
+                container.remove();
+                if (assetCount >= maxAssets) {
+                    document.getElementById('add-asset-btn').style.display = 'inline-block';
+                }
+            }
+        }
+        
+        // Add event listeners for add buttons
+        const addJobBtn = document.getElementById('add-job-btn');
+        if (addJobBtn) {
+            addJobBtn.addEventListener('click', addJob);
+        }
+        
+        const addIncomeSourceBtn = document.getElementById('add-income-source-btn');
+        if (addIncomeSourceBtn) {
+            addIncomeSourceBtn.addEventListener('click', addIncomeSource);
+        }
+        
+        const addAssetBtn = document.getElementById('add-asset-btn');
+        if (addAssetBtn) {
+            addAssetBtn.addEventListener('click', addAsset);
+        }
+        
+        // Load existing employment data
+        {% if existing_jobs %}
+        const existingJobs = {{ existing_jobs|safe }};
+        existingJobs.forEach(function(job, index) {
+            jobCount = Math.max(jobCount, index + 1);
+            const container = document.getElementById('jobs-container');
+            const newForm = createJobForm(jobCount);
+            container.insertAdjacentHTML('beforeend', newForm);
+            
+            // Populate fields
+            document.getElementById(`job_company_${jobCount}`).value = job.company_name || '';
+            document.getElementById(`job_position_${jobCount}`).value = job.position || '';
+            document.getElementById(`job_income_${jobCount}`).value = job.annual_income || '';
+            document.getElementById(`job_supervisor_${jobCount}`).value = job.supervisor_name || '';
+            document.getElementById(`job_supervisor_email_${jobCount}`).value = job.supervisor_email || '';
+            document.getElementById(`job_supervisor_phone_${jobCount}`).value = job.supervisor_phone || '';
+            document.getElementById(`job_current_${jobCount}`).checked = job.currently_employed;
+            document.getElementById(`job_start_${jobCount}`).value = job.employment_start_date || '';
+            document.getElementById(`job_end_${jobCount}`).value = job.employment_end_date || '';
+        });
+        
+        if (jobCount >= maxJobs) {
+            document.getElementById('add-job-btn').style.display = 'none';
+        }
+        {% endif %}
+        
+        {% if existing_income_sources %}
+        const existingIncomeSources = {{ existing_income_sources|safe }};
+        existingIncomeSources.forEach(function(source, index) {
+            incomeSourceCount = Math.max(incomeSourceCount, index + 1);
+            const container = document.getElementById('income-sources-container');
+            const newForm = createIncomeSourceForm(incomeSourceCount);
+            container.insertAdjacentHTML('beforeend', newForm);
+            
+            document.getElementById(`income_source_${incomeSourceCount}`).value = source.income_source || '';
+            document.getElementById(`income_amount_${incomeSourceCount}`).value = source.average_annual_income || '';
+        });
+        
+        if (incomeSourceCount >= maxIncomeSources) {
+            document.getElementById('add-income-source-btn').style.display = 'none';
+        }
+        {% endif %}
+        
+        {% if existing_assets %}
+        const existingAssets = {{ existing_assets|safe }};
+        existingAssets.forEach(function(asset, index) {
+            assetCount = Math.max(assetCount, index + 1);
+            const container = document.getElementById('assets-container');
+            const newForm = createAssetForm(assetCount);
+            container.insertAdjacentHTML('beforeend', newForm);
+            
+            document.getElementById(`asset_name_${assetCount}`).value = asset.asset_name || '';
+            document.getElementById(`asset_balance_${assetCount}`).value = asset.account_balance || '';
+        });
+        
+        if (assetCount >= maxAssets) {
+            document.getElementById('add-asset-btn').style.display = 'none';
+        }
+        {% endif %}
+        
+        // Photo upload preview functionality
+        const photoInput = document.getElementById('id_profile_photo');
+        if (photoInput) {
+            photoInput.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    // Validate file type
+                    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                    if (!validTypes.includes(file.type)) {
+                        showToast('Please select a valid image file (JPG, PNG, GIF, or WebP).', 'error');
+                        this.value = '';
+                        return;
+                    }
+                    
+                    // Validate file size (10MB)
+                    if (file.size > 10 * 1024 * 1024) {
+                        showToast('File size must be less than 10MB.', 'error');
+                        this.value = '';
+                        return;
+                    }
+                    
+                    // Show preview and enable crop button
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        currentImageSrc = e.target.result;
+                        updatePreviewImage(currentImageSrc);
+                        enableCropButton();
+                        showToast('Image uploaded! Click "Crop & Zoom" to adjust.', 'success');
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+    });
+
+    function updatePreviewImage(imageSrc) {
+        const preview = document.getElementById('photo-preview');
+        const placeholder = document.getElementById('photo-placeholder');
+        
+        if (placeholder) {
+            // Replace placeholder with image
+            placeholder.outerHTML = `
+                <div class="profile-photo-container position-relative">
+                    <img src="${imageSrc}" 
+                         alt="Profile Photo" 
+                         class="rounded-circle border border-2 border-warning" 
+                         width="120" 
+                         height="120" 
+                         style="object-fit: cover; cursor: pointer;"
+                         id="photo-preview"
+                         onclick="showCropControls()">
+                    <div class="delete-photo-btn" onclick="removePhoto()" title="Remove photo">
+                        <i class="fas fa-times"></i>
+                    </div>
+                </div>
+            `;
+        } else if (preview) {
+            // Update existing image
+            preview.src = imageSrc;
+        }
+    }
+
+    function enableCropButton() {
+        // Update upload button text and show crop/preview buttons
+        const uploadBtn = document.querySelector('button[onclick*="id_profile_photo"]');
+        const cropBtn = document.getElementById('crop-btn');
+        const previewBtn = document.getElementById('preview-btn');
+        
+        if (uploadBtn) {
+            uploadBtn.innerHTML = '<i class="fas fa-camera"></i> Change Photo';
+        }
+        if (cropBtn) {
+            cropBtn.style.display = 'inline-block';
+        }
+        if (previewBtn) {
+            previewBtn.style.display = 'inline-block';
+        }
+    }
+
+    function removePhoto() {
+        if (confirm('Are you sure you want to remove your profile photo?')) {
+            // Clear file input and crop data
+            const photoInput = document.getElementById('id_profile_photo');
+            if (photoInput) {
+                photoInput.value = '';
+            }
+            document.getElementById('crop-data').value = '';
+            
+            // Reset to placeholder
+            const container = document.querySelector('.profile-photo-container');
+            if (container) {
+                container.innerHTML = `
+                    <div class="bg-light rounded-circle border border-2 border-secondary d-flex align-items-center justify-content-center" 
+                         style="width: 120px; height: 120px;"
+                         id="photo-placeholder">
+                        <i class="fas fa-user fa-3x text-muted"></i>
+                    </div>
+                `;
+            }
+            
+            // Update button text and hide crop/preview buttons
+            const uploadBtn = document.querySelector('button[onclick*="id_profile_photo"]');
+            const cropBtn = document.getElementById('crop-btn');
+            const previewBtn = document.getElementById('preview-btn');
+            
+            if (uploadBtn) {
+                uploadBtn.innerHTML = '<i class="fas fa-camera"></i> Upload Photo';
+            }
+            if (cropBtn) {
+                cropBtn.style.display = 'none';
+            }
+            if (previewBtn) {
+                previewBtn.style.display = 'none';
+            }
+            
+            // Clean up cropper
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+            currentImageSrc = null;
+        }
+    }
+
+    function previewPhoto() {
+        const preview = document.getElementById('photo-preview');
+        const modalPhoto = document.getElementById('modal-photo');
+        
+        if (preview && modalPhoto) {
+            modalPhoto.src = preview.src;
+            const modal = new bootstrap.Modal(document.getElementById('photoModal'));
+            modal.show();
+        }
+    }
+
+    function showCropControls() {
+        if (!currentImageSrc) {
+            // If no current image, get from preview
+            const preview = document.getElementById('photo-preview');
+            if (preview && preview.src) {
+                currentImageSrc = preview.src;
+            } else {
+                showToast('Please upload an image first.', 'error');
+                return;
+            }
+        }
+
+        // Set up the cropper image
+        const cropImage = document.getElementById('crop-image');
+        cropImage.src = currentImageSrc;
+
+        // Show the modal
+        const cropperModal = new bootstrap.Modal(document.getElementById('cropperModal'));
+        cropperModal.show();
+
+        // Initialize cropper after modal is shown
+        document.getElementById('cropperModal').addEventListener('shown.bs.modal', function() {
+            if (cropper) {
+                cropper.destroy();
+            }
+            
+            cropper = new Cropper(cropImage, {
+                aspectRatio: 1, // Square crop for profile photos
+                viewMode: 2, // Restrict crop box to not exceed the canvas
+                dragMode: 'move',
+                autoCropArea: 0.8,
+                responsive: true,
+                restore: false,
+                guides: true,
+                center: true,
+                highlight: false,
+                cropBoxMovable: true,
+                cropBoxResizable: true,
+                toggleDragModeOnDblclick: false,
+                minContainerWidth: 400,
+                minContainerHeight: 300
+            });
+        }, { once: true });
+
+        // Clean up cropper when modal is hidden
+        document.getElementById('cropperModal').addEventListener('hidden.bs.modal', function() {
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+        });
+    }
+
+    // Cropper control functions
+    document.addEventListener('DOMContentLoaded', function() {
+        // Zoom in
+        document.getElementById('zoom-in').addEventListener('click', function() {
+            if (cropper) cropper.zoom(0.1);
+        });
+
+        // Zoom out
+        document.getElementById('zoom-out').addEventListener('click', function() {
+            if (cropper) cropper.zoom(-0.1);
+        });
+
+        // Rotate left
+        document.getElementById('rotate-left').addEventListener('click', function() {
+            if (cropper) cropper.rotate(-90);
+        });
+
+        // Rotate right
+        document.getElementById('rotate-right').addEventListener('click', function() {
+            if (cropper) cropper.rotate(90);
+        });
+
+        // Reset crop
+        document.getElementById('reset-crop').addEventListener('click', function() {
+            if (cropper) cropper.reset();
+        });
+
+        // Apply crop
+        document.getElementById('apply-crop').addEventListener('click', function() {
+            if (!cropper) return;
+
+            // Get cropped canvas
+            const canvas = cropper.getCroppedCanvas({
+                width: 400,
+                height: 400,
+                fillColor: '#fff',
+                imageSmoothingEnabled: true,
+                imageSmoothingQuality: 'high'
+            });
+
+            if (canvas) {
+                // Convert canvas to blob
+                canvas.toBlob(function(blob) {
+                    // Create a new file from the cropped data
+                    const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                    
+                    // Update the preview image
+                    updatePreviewImage(croppedDataUrl);
+                    
+                    // Store crop data for form submission
+                    const cropData = cropper.getData();
+                    document.getElementById('crop-data').value = JSON.stringify({
+                        cropped: true,
+                        data: cropData,
+                        croppedImage: croppedDataUrl
+                    });
+                    
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('cropperModal'));
+                    modal.hide();
+                    
+                    showToast('Photo cropped successfully! Remember to save the form.', 'success');
+                }, 'image/jpeg', 0.9);
+            }
+        });
+    });
+
+    function showToast(message, type = 'info') {
+        const alertClass = type === 'error' ? 'alert-danger' : type === 'success' ? 'alert-success' : 'alert-info';
+        const iconClass = type === 'error' ? 'fa-exclamation-triangle' : type === 'success' ? 'fa-check-circle' : 'fa-info-circle';
+        
+        const toast = document.createElement('div');
+        toast.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; max-width: 400px;';
+        toast.innerHTML = `
+            <i class="fas ${iconClass} me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 5000);
+    }
+    </script>
+    
+    <style>
+    .delete-photo-btn {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: #dc3545;
+        color: white;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        z-index: 10;
+    }
+    
+    .delete-photo-btn:hover {
+        background: #c82333;
+    }
+
+    /* Cropper.js modal styling */
+    .img-container {
+        max-height: 400px;
+        overflow: hidden;
+    }
+    
+    .img-container img {
+        max-width: 100%;
+        height: auto;
+    }
+    
+    /* Custom cropper styling to match theme */
+    .cropper-view-box,
+    .cropper-face {
+        border-radius: 50%;
+    }
+    
+    .cropper-view-box {
+        box-shadow: 0 0 0 1px #39f;
+        outline: 0;
+    }
+    </style>
+{% endblock %}

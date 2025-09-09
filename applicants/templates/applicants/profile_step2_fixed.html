@@ -1,0 +1,510 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1>My Applicant Profile</h1>
+                <p>Fill out as much information as possible to receive more matches and make applying easier</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'applicant_dashboard' %}" class="btn btn-outline-primary">
+                    Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <!-- Progress Bar Card with Theme Colors -->
+    <div class="card mb-4 shadow-sm border-0" style="background: linear-gradient(135deg, #ffcc00 0%, #f9d423 100%);">
+        <div class="card-body p-4">
+            <h5 class="text-dark mb-3">
+                <i class="fas fa-chart-line"></i> Profile Completion: {{ completion_percentage }}%
+            </h5>
+            <div class="progress mb-4" style="height: 25px; background: rgba(255,255,255,0.3);">
+                <div class="progress-bar bg-dark" 
+                     role="progressbar" 
+                     style="width: {{ completion_percentage }}%;"
+                     aria-valuenow="{{ completion_percentage }}" 
+                     aria-valuemin="0" 
+                     aria-valuemax="100">
+                    <span class="fw-bold">{{ completion_percentage }}% Complete</span>
+                </div>
+            </div>
+            
+            <!-- Step Indicators -->
+            <div class="row text-center">
+                <div class="col-4">
+                    <a href="{% url 'profile_step1' %}" class="text-decoration-none">
+                        <div class="step-indicator {% if completion_status.step1 %}completed{% endif %} {% if current_step == 1 %}active{% endif %}">
+                            <div class="step-circle mb-2">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <small class="text-dark fw-bold">Basic Info</small>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-4">
+                    <a href="{% url 'profile_step2' %}" class="text-decoration-none">
+                        <div class="step-indicator {% if completion_status.step2 %}completed{% endif %} {% if current_step == 2 %}active{% endif %}">
+                            <div class="step-circle mb-2">
+                                <i class="fas fa-home"></i>
+                            </div>
+                            <small class="text-dark fw-bold">Housing Needs</small>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-4">
+                    <a href="{% url 'profile_step3' %}" class="text-decoration-none">
+                        <div class="step-indicator {% if completion_status.step3 %}completed{% endif %} {% if current_step == 3 %}active{% endif %}">
+                            <div class="step-circle mb-2">
+                                <i class="fas fa-briefcase"></i>
+                            </div>
+                            <small class="text-dark fw-bold">Employment</small>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Profile Form Card -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3 border-bottom">
+            <h5 class="mb-0">Step 2: Housing Needs and Preferences</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" class="doorway-form" enctype="multipart/form-data">
+                {% csrf_token %}
+                {% crispy form form.helper %}
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Include SortableJS for drag and drop -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+<!-- Include forms.js -->
+<script src="{% static 'js/forms.js' %}"></script>
+
+<!-- Page-specific JavaScript -->
+<script>
+(function() {
+    // Wait for DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+    
+    function init() {
+        // Prevent double initialization
+        if (window.profileStep2Initialized) {
+            console.log('Profile Step 2 already initialized');
+            return;
+        }
+        window.profileStep2Initialized = true;
+        
+        console.log('Initializing Profile Step 2');
+        
+        // Initialize all components
+        initPets();
+        initNeighborhoods();
+        initAmenities();
+    }
+    
+    // ========== PETS FUNCTIONALITY ==========
+    function initPets() {
+        console.log('Initializing pets system');
+        
+        const petsCheckbox = document.getElementById('has_pets');
+        const petsContainer = document.getElementById('pets-container');
+        const addPetBtn = document.getElementById('add-pet-btn');
+        const petsListContainer = document.getElementById('pets-list-container');
+        
+        if (!petsCheckbox || !petsContainer) {
+            console.log('Pets elements not found');
+            return;
+        }
+        
+        let petCount = 0;
+        const maxPets = 5;
+        
+        // Handle pets checkbox
+        petsCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                petsContainer.style.display = 'block';
+                if (petCount === 0) {
+                    addPet();
+                }
+            } else {
+                petsContainer.style.display = 'none';
+                petsListContainer.innerHTML = '';
+                petCount = 0;
+                if (addPetBtn) addPetBtn.style.display = 'inline-block';
+            }
+        });
+        
+        // Handle add pet button
+        if (addPetBtn) {
+            addPetBtn.addEventListener('click', function() {
+                if (this.disabled) return;
+                this.disabled = true;
+                addPet();
+                setTimeout(() => { this.disabled = false; }, 500);
+            });
+        }
+        
+        // Add pet function
+        function addPet() {
+            if (petCount >= maxPets) return;
+            
+            petCount++;
+            const petHTML = createPetForm(petCount);
+            petsListContainer.insertAdjacentHTML('beforeend', petHTML);
+            
+            if (petCount >= maxPets && addPetBtn) {
+                addPetBtn.style.display = 'none';
+            }
+        }
+        
+        // Create pet form HTML
+        function createPetForm(index) {
+            return '<div class="pet-container card mb-3" id="pet_' + index + '">' +
+                '<div class="card-header">' +
+                    '<h6 class="mb-0"><i class="fas fa-paw"></i> Pet ' + index + '</h6>' +
+                '</div>' +
+                '<div class="card-body">' +
+                    '<div class="row">' +
+                        '<div class="col-md-6 mb-3">' +
+                            '<label class="form-label">Pet Name</label>' +
+                            '<input type="text" name="pet_name_' + index + '" class="form-control">' +
+                        '</div>' +
+                        '<div class="col-md-6 mb-3">' +
+                            '<label class="form-label">Pet Type</label>' +
+                            '<select name="pet_type_' + index + '" class="form-select">' +
+                                '<option value="">Select type</option>' +
+                                '<option value="Dog">Dog</option>' +
+                                '<option value="Cat">Cat</option>' +
+                                '<option value="Bird">Bird</option>' +
+                                '<option value="Other">Other</option>' +
+                            '</select>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="mb-3">' +
+                        '<label class="form-label">Pet Photo</label>' +
+                        '<input type="file" name="pet_photo_' + index + '" accept="image/*" class="form-control">' +
+                    '</div>' +
+                    '<div class="mb-3">' +
+                        '<label class="form-label">Description</label>' +
+                        '<textarea name="pet_description_' + index + '" class="form-control" rows="2"></textarea>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }
+    }
+    
+    // ========== NEIGHBORHOODS FUNCTIONALITY ==========
+    function initNeighborhoods() {
+        console.log('Initializing neighborhoods system');
+        
+        const availableContainer = document.getElementById('available-neighborhoods');
+        const selectedContainer = document.getElementById('selected-neighborhoods');
+        const emptyMessage = document.getElementById('empty-message');
+        const inputsContainer = document.getElementById('neighborhood-preferences-inputs');
+        
+        if (!availableContainer || !selectedContainer) {
+            console.log('Neighborhood containers not found');
+            return;
+        }
+        
+        let selectedNeighborhoods = [];
+        
+        // Load existing preferences
+        {% if existing_ranked_preferences %}
+        {% for pref in existing_ranked_preferences %}
+        (function() {
+            var item = availableContainer.querySelector('[data-neighborhood-id="{{ pref.neighborhood.id }}"]');
+            if (item) item.style.display = 'none';
+            addNeighborhood('{{ pref.neighborhood.id }}', '{{ pref.neighborhood.name|escapejs }}');
+        })();
+        {% endfor %}
+        {% endif %}
+        
+        // Click handler for available neighborhoods
+        availableContainer.addEventListener('click', function(e) {
+            const item = e.target.closest('.neighborhood-item');
+            if (item && item.classList.contains('available') && item.style.display !== 'none') {
+                const id = item.dataset.neighborhoodId;
+                const name = item.querySelector('.neighborhood-name').textContent;
+                item.style.display = 'none';
+                addNeighborhood(id, name);
+            }
+        });
+        
+        // Click handler for removing neighborhoods
+        selectedContainer.addEventListener('click', function(e) {
+            if (e.target.classList.contains('fa-times')) {
+                const item = e.target.closest('.neighborhood-item');
+                if (item) {
+                    const id = item.dataset.neighborhoodId;
+                    removeNeighborhood(id);
+                }
+            }
+        });
+        
+        // Initialize SortableJS if available
+        if (typeof Sortable !== 'undefined') {
+            new Sortable(selectedContainer, {
+                animation: 150,
+                onEnd: updateInputs
+            });
+        }
+        
+        // Add neighborhood to selected
+        function addNeighborhood(id, name) {
+            selectedNeighborhoods.push({id: id, name: name});
+            if (emptyMessage) emptyMessage.style.display = 'none';
+            
+            const html = '<div class="neighborhood-item selected" data-neighborhood-id="' + id + '">' +
+                '<div class="d-flex align-items-center">' +
+                    '<span class="rank-number me-2">#' + selectedNeighborhoods.length + '</span>' +
+                    '<i class="fas fa-grip-lines drag-handle me-2"></i>' +
+                    '<span class="neighborhood-name flex-grow-1">' + name + '</span>' +
+                    '<i class="fas fa-times text-danger ms-2" style="cursor: pointer;"></i>' +
+                '</div>' +
+            '</div>';
+            
+            selectedContainer.insertAdjacentHTML('beforeend', html);
+            updateInputs();
+        }
+        
+        // Remove neighborhood from selected
+        function removeNeighborhood(id) {
+            selectedNeighborhoods = selectedNeighborhoods.filter(n => n.id != id);
+            
+            const availableItem = availableContainer.querySelector('[data-neighborhood-id="' + id + '"]');
+            if (availableItem) availableItem.style.display = 'block';
+            
+            const selectedItem = selectedContainer.querySelector('[data-neighborhood-id="' + id + '"]');
+            if (selectedItem) selectedItem.remove();
+            
+            if (selectedNeighborhoods.length === 0 && emptyMessage) {
+                emptyMessage.style.display = 'block';
+            }
+            
+            updateInputs();
+        }
+        
+        // Update hidden inputs and rankings
+        function updateInputs() {
+            const items = selectedContainer.querySelectorAll('.neighborhood-item');
+            inputsContainer.innerHTML = '';
+            
+            items.forEach(function(item, index) {
+                const rank = index + 1;
+                const id = item.dataset.neighborhoodId;
+                
+                // Update rank display
+                const rankEl = item.querySelector('.rank-number');
+                if (rankEl) rankEl.textContent = '#' + rank;
+                
+                // Create hidden input
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'neighborhood_rank_' + rank;
+                input.value = id;
+                inputsContainer.appendChild(input);
+            });
+        }
+    }
+    
+    // ========== AMENITIES FUNCTIONALITY ==========
+    function initAmenities() {
+        console.log('Initializing amenities system');
+        
+        const availableContainer = document.getElementById('available-amenities');
+        const selectedContainer = document.getElementById('selected-amenities');
+        const emptyMessage = document.getElementById('amenities-empty-message');
+        const inputsContainer = document.getElementById('amenity-preferences-inputs');
+        
+        if (!availableContainer || !selectedContainer) {
+            console.log('Amenity containers not found');
+            return;
+        }
+        
+        let selectedAmenities = [];
+        
+        // Load existing selections
+        {% if existing_selected_amenities %}
+        {% for amenity in existing_selected_amenities %}
+        (function() {
+            var item = availableContainer.querySelector('[data-amenity-id="{{ amenity.id }}"]');
+            if (item) item.style.display = 'none';
+            addAmenity('{{ amenity.id }}', '{{ amenity.name|escapejs }}');
+        })();
+        {% endfor %}
+        {% endif %}
+        
+        // Click handler for available amenities
+        availableContainer.addEventListener('click', function(e) {
+            const item = e.target.closest('.amenity-item');
+            if (item && item.classList.contains('available') && item.style.display !== 'none') {
+                const id = item.dataset.amenityId;
+                const name = item.querySelector('.amenity-name').textContent;
+                item.style.display = 'none';
+                addAmenity(id, name);
+            }
+        });
+        
+        // Click handler for removing amenities
+        selectedContainer.addEventListener('click', function(e) {
+            if (e.target.classList.contains('fa-times')) {
+                const item = e.target.closest('.amenity-item');
+                if (item) {
+                    const id = item.dataset.amenityId;
+                    removeAmenity(id);
+                }
+            }
+        });
+        
+        // Add amenity to selected
+        function addAmenity(id, name) {
+            selectedAmenities.push({id: id, name: name});
+            if (emptyMessage) emptyMessage.style.display = 'none';
+            
+            const html = '<div class="amenity-item selected" data-amenity-id="' + id + '">' +
+                '<div class="d-flex align-items-center">' +
+                    '<i class="fas fa-star text-warning me-2"></i>' +
+                    '<span class="amenity-name flex-grow-1">' + name + '</span>' +
+                    '<i class="fas fa-times text-danger ms-2" style="cursor: pointer;"></i>' +
+                '</div>' +
+            '</div>';
+            
+            selectedContainer.insertAdjacentHTML('beforeend', html);
+            updateInputs();
+        }
+        
+        // Remove amenity from selected
+        function removeAmenity(id) {
+            selectedAmenities = selectedAmenities.filter(a => a.id != id);
+            
+            const availableItem = availableContainer.querySelector('[data-amenity-id="' + id + '"]');
+            if (availableItem) availableItem.style.display = 'block';
+            
+            const selectedItem = selectedContainer.querySelector('[data-amenity-id="' + id + '"]');
+            if (selectedItem) selectedItem.remove();
+            
+            if (selectedAmenities.length === 0 && emptyMessage) {
+                emptyMessage.style.display = 'block';
+            }
+            
+            updateInputs();
+        }
+        
+        // Update hidden inputs
+        function updateInputs() {
+            inputsContainer.innerHTML = '';
+            selectedAmenities.forEach(function(amenity, index) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'amenity_selection_' + (index + 1);
+                input.value = amenity.id;
+                inputsContainer.appendChild(input);
+            });
+        }
+    }
+})();
+</script>
+
+<style>
+/* Neighborhood and Amenity item styles */
+.neighborhood-item, .amenity-item {
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.neighborhood-item.available, .amenity-item.available {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+}
+
+.neighborhood-item.available:hover, .amenity-item.available:hover {
+    background: #e9ecef;
+    border-color: #28a745;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.neighborhood-item.selected, .amenity-item.selected {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    cursor: default;
+}
+
+.neighborhood-item.selected:hover, .amenity-item.selected:hover {
+    background: #fff1b3;
+}
+
+.neighborhood-list, .amenity-list {
+    background: #fdfdfd;
+}
+
+.drag-handle {
+    cursor: move;
+    opacity: 0.5;
+}
+
+.drag-handle:hover {
+    opacity: 1;
+}
+
+.rank-number {
+    min-width: 30px;
+    text-align: center;
+    font-weight: bold;
+    color: #007bff;
+}
+
+/* Step indicators */
+.step-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: #666;
+    border: 2px solid rgba(0,0,0,0.1);
+}
+
+.step-indicator.active .step-circle {
+    background: #fff;
+    color: #000;
+    border-color: #000;
+}
+
+.step-indicator.completed .step-circle {
+    background: #28a745;
+    color: #fff;
+    border-color: #28a745;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container mt-3">
+    <h1 class="h5 fw-bold text-dark pb-2 mb-4 border-bottom">
+        Quick {{ profile_type }} Profile Update
+    </h1>
+
+    <!-- Success Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Progress Summary -->
+    <div class="card shadow-sm mb-4 border-warning">
+        <div class="card-header bg-warning bg-opacity-10">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h6 class="mb-0 text-warning-emphasis">
+                        <i class="bi bi-lightning-fill"></i> Focus: {{ focus_section }}
+                    </h6>
+                </div>
+                <div class="col-auto">
+                    <span class="badge bg-warning text-dark">{{ total_missing }} fields remaining</span>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <p class="mb-2 small text-muted">
+                Complete the <strong>{{ focus_section }}</strong> section to continue building your profile.
+            </p>
+            <div class="d-flex flex-wrap gap-2">
+                {% for field in focus_fields %}
+                    <span class="badge bg-light text-dark border">{{ field|title }}</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Update Form -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <h6 class="mb-0 text-secondary">
+                <i class="bi bi-pencil-square"></i> Update {{ focus_section }}
+            </h6>
+        </div>
+        <div class="card-body p-4">
+            <form method="post" id="quickUpdateForm">
+                {% csrf_token %}
+                
+                <!-- Show only focus fields -->
+                <div class="row">
+                    {% for field in form %}
+                        {% if field.name in focus_fields %}
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ field.id_for_label }}" class="form-label fw-bold">
+                                    {{ field.label }}
+                                    {% if field.field.required %}
+                                        <span class="text-danger">*</span>
+                                    {% endif %}
+                                </label>
+                                {{ field }}
+                                {% if field.help_text %}
+                                    <div class="form-text">{{ field.help_text }}</div>
+                                {% endif %}
+                                {% if field.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in field.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <div class="text-muted small">
+                        <i class="bi bi-info-circle"></i> Fill out as many fields as possible to improve your profile.
+                    </div>
+                    <div>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-check-circle"></i> Update & Continue
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tips Card -->
+    <div class="card shadow-sm mt-4 border-info">
+        <div class="card-header bg-info bg-opacity-10">
+            <h6 class="mb-0 text-info-emphasis">
+                <i class="bi bi-lightbulb"></i> Tips for {{ focus_section }}
+            </h6>
+        </div>
+        <div class="card-body">
+            {% if focus_section == 'License Information' %}
+                <ul class="small mb-0">
+                    <li>Make sure your license number is current and active</li>
+                    <li>Keep track of your license expiration date for renewals</li>
+                    <li>Years of experience helps clients trust your expertise</li>
+                </ul>
+            {% elif focus_section == 'Company Information' %}
+                <ul class="small mb-0">
+                    <li>Use your official business name as registered</li>
+                    <li>Include your complete business address</li>
+                    <li>Tax ID helps with official documentation</li>
+                </ul>
+            {% elif focus_section == 'Employment Information' %}
+                <ul class="small mb-0">
+                    <li>Employee ID should match your internal HR system</li>
+                    <li>Department helps with organizational clarity</li>
+                    <li>Accurate hire date is important for benefits and reviews</li>
+                </ul>
+            {% else %}
+                <p class="small mb-0 text-muted">
+                    Complete and accurate information helps us provide better service and builds trust with clients.
+                </p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="row mt-4">
+        <div class="col-12 d-flex justify-content-between">
+            <a href="{% if profile_type == 'Broker' %}{% url 'broker_progressive_profile' %}{% elif profile_type == 'Owner' %}{% url 'owner_progressive_profile' %}{% else %}{% url 'staff_progressive_profile' %}{% endif %}" 
+               class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Full Profile Form
+            </a>
+            
+            <a href="{% if profile_type == 'Broker' %}{% url 'broker_dashboard' %}{% elif profile_type == 'Owner' %}{% url 'owner_dashboard' %}{% else %}{% url 'staff_dashboard' %}{% endif %}" 
+               class="btn btn-outline-primary">
+                <i class="bi bi-house"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus on first empty field
+    const fields = document.querySelectorAll('#quickUpdateForm input, #quickUpdateForm select, #quickUpdateForm textarea');
+    for (let field of fields) {
+        if (!field.value && !field.disabled) {
+            field.focus();
+            break;
+        }
+    }
+    
+    // Form progress tracking
+    const form = document.getElementById('quickUpdateForm');
+    const updateButton = form.querySelector('button[type="submit"]');
+    
+    // Count filled fields
+    function updateProgress() {
+        const filledFields = Array.from(fields).filter(field => field.value.trim() !== '').length;
+        const totalFields = fields.length;
+        const percentage = Math.round((filledFields / totalFields) * 100);
+        
+        if (percentage > 0) {
+            updateButton.innerHTML = `<i class="bi bi-check-circle"></i> Update & Continue (${percentage}% filled)`;
+        }
+    }
+    
+    // Update progress on input
+    fields.forEach(field => {
+        field.addEventListener('input', updateProgress);
+        field.addEventListener('change', updateProgress);
+    });
+    
+    // Initial progress check
+    updateProgress();
+    
+    // Form submission with progress feedback
+    form.addEventListener('submit', function() {
+        updateButton.innerHTML = '<i class="bi bi-hourglass-split"></i> Updating...';
+        updateButton.disabled = true;
+    });
+});
+</script>
+
+{% endblock %}

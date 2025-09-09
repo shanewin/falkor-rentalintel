@@ -1,0 +1,564 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
+<!-- Cropper.js CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1>My Applicant Profile</h1>
+                <p>Fill out as much information as possible to receive more matches and make applying easier</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'applicant_dashboard' %}" class="btn btn-outline-primary">
+                    Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Progress Bar -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h6 class="mb-3">Profile Completion Progress ({{ completion_percentage }}% Complete)</h6>
+            <div class="progress mb-3" style="height: 6px;">
+                <div class="progress-bar" style="width: 33%; background-color: #ffcc00;"></div>
+            </div>
+            <div class="row text-center">
+                <div class="col-4">
+                    <a href="{% url 'profile_step1' %}" class="text-decoration-none">
+                        <div class="step" style="color: #ffcc00;">
+                            <div class="step-number text-white" style="background-color: #000000;">1</div>
+                            <small>Personal Info</small>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-4">
+                    <a href="{% url 'profile_step2' %}" class="text-decoration-none">
+                        <div class="step text-muted">
+                            <div class="step-number bg-light text-muted">2</div>
+                            <small>Housing Needs & Preferences</small>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-4">
+                    <a href="{% url 'profile_step3' %}" class="text-decoration-none">
+                        <div class="step text-muted">
+                            <div class="step-number bg-light text-muted">3</div>
+                            <small>Employment</small>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 1: Basic Information -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Step 1: Personal Information</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data" class="doorway-form">
+                {% csrf_token %}
+                {% crispy form form.helper %}
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Cropper.js JavaScript -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<script src="{% static 'js/image-cropper.js' %}"></script>
+
+{% block extra_js %}
+<script src="{% static 'js/forms.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+    
+    // Setup Universal Image Cropper for profile photo
+    setupUniversalCropper();
+    
+    // Setup rental checkbox
+    setupRentalCheckbox();
+    
+    // Setup previous addresses
+    setupPreviousAddresses();
+    
+    // Setup identification uploads
+    setupIdentificationUploads();
+    
+    // Load existing identification documents
+    loadExistingIdentificationDocuments();
+});
+
+// Setup Universal Image Cropper for profile photos
+function setupUniversalCropper() {
+    // Use the Universal Image Cropper with profile photo settings
+    const cropper = window.setupImageCropper('#id_profile_photo', '.profile-photo-container', '#crop-data', {
+        aspectRatio: 1, // Square for profile photos
+        outputWidth: 400,
+        outputHeight: 400,
+        outputQuality: 0.9,
+        modalTitle: 'Crop Your Profile Photo',
+        cropButtonText: 'Crop & Zoom',
+        previewButtonText: 'View Full Size'
+    });
+    
+    // Check if there's already an existing photo and show buttons
+    const existingPhoto = document.querySelector('.profile-photo-container .preview-image');
+    if (existingPhoto && cropper) {
+        // Load the existing image into the cropper
+        cropper.loadExistingImage(existingPhoto.src);
+    }
+}
+
+// Rental checkbox functionality
+function setupRentalCheckbox() {
+    const checkbox = document.getElementById('is_rental_checkbox');
+    const landlordFields = document.getElementById('landlord_fields');
+    const housingStatusField = document.querySelector('[name="housing_status"]');
+    
+    if (checkbox && landlordFields) {
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                landlordFields.classList.remove('d-none');
+                housingStatusField.value = 'rent';
+            } else {
+                landlordFields.classList.add('d-none');
+                housingStatusField.value = 'own';
+            }
+        });
+        
+        // Set initial state based on existing data
+        if (housingStatusField.value === 'rent') {
+            checkbox.checked = true;
+            landlordFields.classList.remove('d-none');
+        }
+    }
+}
+
+// Identification document uploads functionality
+function setupIdentificationUploads() {
+    const checkboxes = document.querySelectorAll('.id-type-checkbox');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const uploadSection = document.getElementById(this.value + '_upload');
+            if (uploadSection) {
+                if (this.checked) {
+                    uploadSection.style.display = 'block';
+                    
+                    // Initialize Universal Image Cropper for this section's upload fields
+                    initializeIdentificationCroppers(this.value);
+                } else {
+                    uploadSection.style.display = 'none';
+                }
+            }
+        });
+    });
+    
+    // Also check for already checked items and initialize their croppers
+    checkboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+            initializeIdentificationCroppers(checkbox.value);
+        }
+    });
+}
+
+// Initialize Universal Image Cropper for identification uploads
+function initializeIdentificationCroppers(idType) {
+    if (idType === 'passport') {
+        // Single upload for passport
+        const fileInput = document.querySelector('#id_passport_document');
+        if (fileInput && !fileInput.imageCropperInstance) {
+            const cropper = window.setupImageCropper('#id_passport_document', '.passport-container', '#crop-data-passport', {
+                aspectRatio: 1.4, // Passport aspect ratio
+                outputWidth: 600,
+                outputHeight: 430,
+                outputQuality: 0.9,
+                modalTitle: 'Crop Passport Image',
+                cropButtonText: 'Crop & Zoom',
+                previewButtonText: 'View Full Size',
+                isDocument: true, // Use rectangular preview for documents
+                saveCropData: true // Save cropped image data
+            });
+            // Store cropper instance on the input element
+            fileInput.imageCropperInstance = cropper;
+        }
+    } else if (idType === 'driver_license') {
+        // Front and back uploads for driver's license
+        const frontInput = document.querySelector('#id_driver_license_front');
+        if (frontInput && !frontInput.imageCropperInstance) {
+            const frontCropper = window.setupImageCropper('#id_driver_license_front', '.driver-license-front-container', '#crop-data-driver-front', {
+                aspectRatio: 1.6, // ID card aspect ratio
+                outputWidth: 600,
+                outputHeight: 375,
+                outputQuality: 0.9,
+                modalTitle: "Crop Driver's License (Front)",
+                cropButtonText: 'Crop & Zoom',
+                previewButtonText: 'View Full Size',
+                isDocument: true, // Use rectangular preview for documents
+                saveCropData: true // Save cropped image data
+            });
+            frontInput.imageCropperInstance = frontCropper;
+        }
+        
+        const backInput = document.querySelector('#id_driver_license_back');
+        if (backInput && !backInput.imageCropperInstance) {
+            const backCropper = window.setupImageCropper('#id_driver_license_back', '.driver-license-back-container', '#crop-data-driver-back', {
+                aspectRatio: 1.6, // ID card aspect ratio
+                outputWidth: 600,
+                outputHeight: 375,
+                outputQuality: 0.9,
+                modalTitle: "Crop Driver's License (Back)",
+                cropButtonText: 'Crop & Zoom',
+                previewButtonText: 'View Full Size',
+                isDocument: true, // Use rectangular preview for documents
+                saveCropData: true // Save cropped image data
+            });
+            backInput.imageCropperInstance = backCropper;
+        }
+    } else if (idType === 'state_id') {
+        // Front and back uploads for state ID
+        const frontInput = document.querySelector('#id_state_id_front');
+        if (frontInput && !frontInput.imageCropperInstance) {
+            const frontCropper = window.setupImageCropper('#id_state_id_front', '.state-id-front-container', '#crop-data-state-front', {
+                aspectRatio: 1.6, // ID card aspect ratio
+                outputWidth: 600,
+                outputHeight: 375,
+                outputQuality: 0.9,
+                modalTitle: 'Crop State ID (Front)',
+                cropButtonText: 'Crop & Zoom',
+                previewButtonText: 'View Full Size',
+                isDocument: true, // Use rectangular preview for documents
+                saveCropData: true // Save cropped image data
+            });
+            frontInput.imageCropperInstance = frontCropper;
+        }
+        
+        const backInput = document.querySelector('#id_state_id_back');
+        if (backInput && !backInput.imageCropperInstance) {
+            const backCropper = window.setupImageCropper('#id_state_id_back', '.state-id-back-container', '#crop-data-state-back', {
+                aspectRatio: 1.6, // ID card aspect ratio
+                outputWidth: 600,
+                outputHeight: 375,
+                outputQuality: 0.9,
+                modalTitle: 'Crop State ID (Back)',
+                cropButtonText: 'Crop & Zoom',
+                previewButtonText: 'View Full Size',
+                isDocument: true, // Use rectangular preview for documents
+                saveCropData: true // Save cropped image data
+            });
+            backInput.imageCropperInstance = backCropper;
+        }
+    }
+}
+
+// Load existing identification documents and display them
+function loadExistingIdentificationDocuments() {
+    // Get identification documents data from Django context
+    const identificationDocs = [
+        {% for doc in identification_documents %}
+        {
+            id_type: '{{ doc.id_type }}',
+            side: '{{ doc.side }}',
+            front_image: '{% if doc.document_image_front %}{{ doc.document_image_front.url }}{% endif %}',
+            back_image: '{% if doc.document_image_back %}{{ doc.document_image_back.url }}{% endif %}',
+            legacy_image: '{% if doc.document_image %}{{ doc.document_image.url }}{% endif %}'
+        },
+        {% endfor %}
+    ];
+    
+    console.log('Loading existing identification documents:', identificationDocs);
+    
+    // Group documents by type
+    const docsByType = {};
+    identificationDocs.forEach(doc => {
+        if (!docsByType[doc.id_type]) {
+            docsByType[doc.id_type] = {};
+        }
+        
+        // For documents that can have front/back, check both fields regardless of 'side'
+        if (doc.id_type === 'driver_license' || doc.id_type === 'state_id') {
+            if (doc.front_image) {
+                docsByType[doc.id_type].front = doc.front_image;
+            }
+            if (doc.back_image) {
+                docsByType[doc.id_type].back = doc.back_image;
+            }
+        }
+        // For single documents (like passport), use legacy_image or front_image
+        else if (doc.id_type === 'passport' && (doc.legacy_image || doc.front_image)) {
+            docsByType[doc.id_type].single = doc.legacy_image || doc.front_image;
+        }
+    });
+    
+    console.log('Documents grouped by type:', docsByType);
+    
+    // Process each document type
+    Object.keys(docsByType).forEach(docType => {
+        const checkbox = document.getElementById(`id_${docType}`);
+        if (checkbox) {
+            // Check the checkbox
+            checkbox.checked = true;
+            
+            // Show the upload section
+            const uploadSection = document.getElementById(`${docType}_upload`);
+            if (uploadSection) {
+                uploadSection.style.display = 'block';
+                
+                // Initialize croppers for this section
+                initializeIdentificationCroppers(docType);
+                
+                // Load existing images
+                setTimeout(() => {
+                    if (docType === 'passport' && docsByType[docType].single) {
+                        loadImageIntoContainer('.passport-container', docsByType[docType].single);
+                    } else if (docType === 'driver_license') {
+                        if (docsByType[docType].front) {
+                            loadImageIntoContainer('.driver-license-front-container', docsByType[docType].front);
+                        }
+                        if (docsByType[docType].back) {
+                            loadImageIntoContainer('.driver-license-back-container', docsByType[docType].back);
+                        }
+                    } else if (docType === 'state_id') {
+                        if (docsByType[docType].front) {
+                            loadImageIntoContainer('.state-id-front-container', docsByType[docType].front);
+                        }
+                        if (docsByType[docType].back) {
+                            loadImageIntoContainer('.state-id-back-container', docsByType[docType].back);
+                        }
+                    }
+                }, 200);
+            }
+        }
+    });
+}
+
+// Helper function to load an image into a container with cropper
+function loadImageIntoContainer(containerSelector, imageUrl) {
+    const container = document.querySelector(containerSelector);
+    if (container) {
+        // Look for existing preview image
+        let previewImg = container.querySelector('.preview-image');
+        
+        // If no preview image exists, create one
+        if (!previewImg) {
+            previewImg = document.createElement('img');
+            previewImg.className = 'preview-image';
+            previewImg.style.cssText = 'width: 200px; height: 125px; object-fit: cover; border-radius: 4px;';
+            
+            // Replace the placeholder content
+            const placeholder = container.querySelector('.image-placeholder');
+            if (placeholder) {
+                placeholder.innerHTML = '';
+                placeholder.appendChild(previewImg);
+            } else {
+                container.appendChild(previewImg);
+            }
+        }
+        
+        // Set the image source
+        previewImg.src = imageUrl;
+        previewImg.style.display = 'block';
+        
+        // Find the associated file input to get the cropper instance
+        let fileInput;
+        if (containerSelector === '.driver-license-front-container') {
+            fileInput = document.querySelector('#id_driver_license_front');
+        } else if (containerSelector === '.driver-license-back-container') {
+            fileInput = document.querySelector('#id_driver_license_back');
+        } else if (containerSelector === '.state-id-front-container') {
+            fileInput = document.querySelector('#id_state_id_front');
+        } else if (containerSelector === '.state-id-back-container') {
+            fileInput = document.querySelector('#id_state_id_back');
+        } else if (containerSelector === '.passport-container') {
+            fileInput = document.querySelector('#id_passport_document');
+        } else {
+            // Fallback to original logic
+            fileInput = container.closest('.id-upload-section, [id$="_upload"]')?.querySelector('input[type="file"]');
+        }
+        
+        if (fileInput && fileInput.imageCropperInstance) {
+            // Load existing image into the cropper which will show the buttons
+            fileInput.imageCropperInstance.loadExistingImage(imageUrl);
+        }
+    }
+}
+
+// Previous addresses functionality (reuse existing JS)
+function setupPreviousAddresses() {
+    // Reuse the previous address JavaScript from progressive_profile.html
+    let previousAddressCount = {{ previous_addresses.count|default:0 }};
+    const maxAddresses = 4;
+
+    // Load existing addresses
+    {% for prev_addr in previous_addresses %}
+    addPreviousAddressForm({{ prev_addr.order }}, {
+        street_address_1: "{{ prev_addr.street_address_1|default:'' }}",
+        street_address_2: "{{ prev_addr.street_address_2|default:'' }}",
+        city: "{{ prev_addr.city|default:'' }}",
+        state: "{{ prev_addr.state|default:'' }}",
+        zip_code: "{{ prev_addr.zip_code|default:'' }}",
+        length_at_address: "{{ prev_addr.length_at_address|default:'' }}",
+        housing_status: "{{ prev_addr.housing_status|default:'own' }}",
+        landlord_name: "{{ prev_addr.landlord_name|default:'' }}",
+        landlord_phone: "{{ prev_addr.landlord_phone|default:'' }}",
+        landlord_email: "{{ prev_addr.landlord_email|default:'' }}"
+    });
+    {% endfor %}
+
+    // Add new address button
+    const addBtn = document.getElementById('add-previous-address-btn');
+    if (addBtn) {
+        // Remove any existing event listeners by cloning the element
+        const newBtn = addBtn.cloneNode(true);
+        addBtn.parentNode.replaceChild(newBtn, addBtn);
+        
+        // Add single event listener
+        newBtn.addEventListener('click', function() {
+            if (previousAddressCount < maxAddresses) {
+                previousAddressCount++;
+                addPreviousAddressForm(previousAddressCount);
+                
+                if (previousAddressCount >= maxAddresses) {
+                    this.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    function addPreviousAddressForm(index, data = {}) {
+        const container = document.getElementById('previous-addresses-container');
+        const formHtml = createPreviousAddressForm(index, data);
+        container.insertAdjacentHTML('beforeend', formHtml);
+        
+        // Setup rental checkbox for this address
+        setupPreviousAddressRentalCheckbox(index);
+    }
+
+    function createPreviousAddressForm(index, data = {}) {
+        return `
+            <div class="previous-address-container card mb-3" data-index="${index}" id="previous_address_${index}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Previous Address ${index}</h6>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removePreviousAddress(${index})">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label">Street Address</label>
+                            <input type="text" class="form-control" name="prev_street_address_1_${index}" value="${data.street_address_1 || ''}" placeholder="123 Main Street">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Apt/Unit</label>
+                            <input type="text" class="form-control" name="prev_street_address_2_${index}" value="${data.street_address_2 || ''}" placeholder="Apt 4B">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">City</label>
+                            <input type="text" class="form-control" name="prev_city_${index}" value="${data.city || ''}" placeholder="New York">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">State</label>
+                            <input type="text" class="form-control" name="prev_state_${index}" value="${data.state || ''}" placeholder="NY" maxlength="2">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">ZIP Code</label>
+                            <input type="text" class="form-control" name="prev_zip_code_${index}" value="${data.zip_code || ''}" placeholder="10001">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">How long did you live there?</label>
+                            <input type="text" class="form-control" name="prev_length_at_address_${index}" value="${data.length_at_address || ''}" placeholder="e.g., 2 years">
+                        </div>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="prev_is_rental_${index}" name="prev_is_rental_${index}" ${data.housing_status === 'rent' ? 'checked' : ''}>
+                        <label class="form-check-label" for="prev_is_rental_${index}">
+                            Was this a rental?
+                        </label>
+                    </div>
+                    <input type="hidden" name="prev_housing_status_${index}" value="${data.housing_status || 'own'}">
+                    
+                    <div class="prev-landlord-fields ${data.housing_status === 'rent' ? '' : 'd-none'}" id="prev_landlord_fields_${index}">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Landlord Name</label>
+                                <input type="text" class="form-control" name="prev_landlord_name_${index}" value="${data.landlord_name || ''}" placeholder="Landlord's Name">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Landlord Phone</label>
+                                <input type="text" class="form-control" name="prev_landlord_phone_${index}" value="${data.landlord_phone || ''}" placeholder="(555) 555-5555">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Landlord Email</label>
+                                <input type="email" class="form-control" name="prev_landlord_email_${index}" value="${data.landlord_email || ''}" placeholder="landlord@email.com">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function setupPreviousAddressRentalCheckbox(index) {
+        const checkbox = document.getElementById(`prev_is_rental_${index}`);
+        const landlordFields = document.getElementById(`prev_landlord_fields_${index}`);
+        const housingStatusField = document.querySelector(`[name="prev_housing_status_${index}"]`);
+        
+        if (checkbox && landlordFields) {
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    landlordFields.classList.remove('d-none');
+                    housingStatusField.value = 'rent';
+                } else {
+                    landlordFields.classList.add('d-none');
+                    housingStatusField.value = 'own';
+                }
+            });
+        }
+    }
+
+    window.removePreviousAddress = function(index) {
+        document.getElementById(`previous_address_${index}`).remove();
+        previousAddressCount--;
+        
+        // Show add button if we're under the limit
+        if (previousAddressCount < maxAddresses) {
+            document.getElementById('add-previous-address-btn').style.display = 'inline-block';
+        }
+    };
+}
+</script>
+{% endblock %}
+{% endblock %}

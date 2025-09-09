@@ -1,0 +1,460 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Broker Leaderboard - Doorway Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Match the consistent admin dashboard theme */
+    :root {
+        --brand-black: #1a1a1a;
+        --brand-yellow: #ffcc00;
+        --brand-yellow-light: #ffd633;
+        --brand-yellow-dark: #e6b800;
+        --accent-gray: #6c757d;
+        --accent-light: #f8f9fa;
+        --white: #ffffff;
+        --border-color: #dee2e6;
+        --text-dark: #212529;
+        --text-muted: #6c757d;
+        --shadow: 0 2px 4px rgba(0,0,0,0.1);
+        --shadow-hover: 0 4px 8px rgba(0,0,0,0.15);
+        --border-radius: 8px;
+        --transition: all 0.2s ease;
+    }
+    
+    /* Dashboard Header */
+    .dashboard-header {
+        background: var(--brand-black);
+        color: var(--white);
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+    }
+    .dashboard-header h1 {
+        font-size: 2rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    .dashboard-header p {
+        color: rgba(255, 255, 255, 0.8);
+        margin: 0.5rem 0 0 0;
+    }
+    
+    /* Summary Stats Cards */
+    .stats-card {
+        background: var(--white);
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: var(--shadow);
+        border-left: 4px solid var(--brand-yellow);
+        transition: var(--transition);
+        margin-bottom: 1.5rem;
+    }
+    .stats-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-hover);
+    }
+    .stats-card h3 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--brand-black);
+        margin-bottom: 0.5rem;
+    }
+    .stats-card p {
+        color: var(--text-muted);
+        font-weight: 500;
+        text-transform: uppercase;
+        font-size: 0.875rem;
+        letter-spacing: 0.5px;
+        margin: 0;
+    }
+    
+    /* Leaderboard Table */
+    .leaderboard-container {
+        background: var(--white);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+    }
+    .leaderboard-header {
+        background: var(--brand-black);
+        color: var(--white);
+        padding: 1.5rem;
+        margin: 0;
+    }
+    .leaderboard-header h3 {
+        font-weight: 600;
+        font-size: 1.25rem;
+        margin: 0;
+    }
+    
+    /* Leaderboard Table Styling */
+    .leaderboard-table {
+        width: 100%;
+        margin: 0;
+        border-collapse: collapse;
+    }
+    .leaderboard-table thead th {
+        background: var(--accent-light);
+        color: var(--text-dark);
+        font-weight: 600;
+        padding: 1rem 0.75rem;
+        text-align: left;
+        border-bottom: 2px solid var(--border-color);
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .leaderboard-table tbody tr {
+        border-bottom: 1px solid var(--border-color);
+        transition: var(--transition);
+    }
+    .leaderboard-table tbody tr:hover {
+        background-color: rgba(255, 204, 0, 0.05);
+    }
+    .leaderboard-table tbody tr:last-child {
+        border-bottom: none;
+    }
+    .leaderboard-table td {
+        padding: 1rem 0.75rem;
+        vertical-align: middle;
+    }
+    
+    /* Rank Styling */
+    .rank {
+        font-weight: 700;
+        font-size: 1.125rem;
+        color: var(--brand-black);
+        width: 60px;
+        text-align: center;
+    }
+    .rank.top-3 {
+        background: var(--brand-yellow);
+        color: var(--brand-black);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        line-height: 40px;
+        display: inline-block;
+    }
+    
+    /* Broker Info */
+    .broker-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .broker-name {
+        font-weight: 600;
+        color: var(--brand-black);
+        margin-bottom: 0.25rem;
+    }
+    .broker-email {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+    }
+    
+    /* Performance Badge */
+    .performance-badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+    }
+    .performance-badge.elite {
+        background: linear-gradient(135deg, #ffd700, #ffed4a);
+        color: var(--brand-black);
+        border: 2px solid #ffd700;
+    }
+    .performance-badge.senior {
+        background: var(--brand-yellow);
+        color: var(--brand-black);
+    }
+    .performance-badge.active {
+        background: #28a745;
+        color: var(--white);
+    }
+    .performance-badge.new {
+        background: #17a2b8;
+        color: var(--white);
+    }
+    .performance-badge.starter {
+        background: var(--accent-gray);
+        color: var(--white);
+    }
+    
+    /* Metrics Columns */
+    .metric-value {
+        font-weight: 600;
+        color: var(--brand-black);
+    }
+    .metric-secondary {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        margin-top: 0.125rem;
+    }
+    .conversion-rate {
+        font-weight: 600;
+    }
+    .conversion-rate.excellent {
+        color: #28a745;
+    }
+    .conversion-rate.good {
+        color: var(--brand-yellow-dark);
+    }
+    .conversion-rate.average {
+        color: #fd7e14;
+    }
+    .conversion-rate.poor {
+        color: #dc3545;
+    }
+    
+    /* Activity Status */
+    .activity-status {
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    .activity-status.recent {
+        color: #28a745;
+    }
+    .activity-status.moderate {
+        color: var(--brand-yellow-dark);
+    }
+    .activity-status.inactive {
+        color: #dc3545;
+    }
+    
+    /* Total Score */
+    .total-score {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--brand-black);
+        text-align: center;
+    }
+    
+    /* No Data State */
+    .no-brokers {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: var(--text-muted);
+    }
+    .no-brokers i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .leaderboard-table {
+            font-size: 0.875rem;
+        }
+        .leaderboard-table th,
+        .leaderboard-table td {
+            padding: 0.75rem 0.5rem;
+        }
+        .broker-info {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.25rem;
+        }
+    }
+    
+    /* Back button */
+    .btn-outline-primary {
+        border-color: var(--brand-black);
+        color: var(--brand-black);
+        font-weight: 500;
+        padding: 0.5rem 1.5rem;
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+    }
+    .btn-outline-primary:hover {
+        background-color: var(--brand-black);
+        border-color: var(--brand-black);
+        color: var(--white);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1><i class="fas fa-trophy me-2"></i>Broker Leaderboard</h1>
+                <p>Track broker performance and activity metrics</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <!-- Summary Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="stats-card">
+                <h3>{{ summary_stats.total_brokers }}</h3>
+                <p>Total Brokers</p>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stats-card">
+                <h3>{{ summary_stats.active_brokers }}</h3>
+                <p>Active Brokers</p>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stats-card">
+                <h3>{{ summary_stats.total_applications }}</h3>
+                <p>Total Applications</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <h3>${{ summary_stats.total_revenue|floatformat:0 }}</h3>
+                <p>Total Revenue</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <h3>{{ summary_stats.average_conversion_rate }}%</h3>
+                <p>Avg Conversion Rate</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Broker Leaderboard -->
+    <div class="leaderboard-container">
+        <div class="leaderboard-header">
+            <h3><i class="fas fa-ranking-star me-2"></i>Broker Performance Rankings</h3>
+        </div>
+        
+        {% if leaderboard %}
+        <table class="leaderboard-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Broker</th>
+                    <th>Performance Level</th>
+                    <th>Applications</th>
+                    <th>Approved</th>
+                    <th>Conversion Rate</th>
+                    <th>Revenue</th>
+                    <th>Recent Activity</th>
+                    <th>Total Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for broker_data in leaderboard %}
+                <tr>
+                    <td class="rank {% if broker_data.rank <= 3 %}top-3{% endif %}">
+                        {{ broker_data.rank }}
+                    </td>
+                    <td>
+                        <div class="broker-info">
+                            <div>
+                                <div class="broker-name">{{ broker_data.broker_name }}</div>
+                                <div class="broker-email">{{ broker_data.broker_email }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="performance-badge {{ broker_data.performance_level.badge }}">
+                            <i class="{{ broker_data.performance_level.icon }} me-1"></i>
+                            {{ broker_data.performance_level.level }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="metric-value">{{ broker_data.total_applications }}</div>
+                        <div class="metric-secondary">{{ broker_data.recent_applications }} recent</div>
+                    </td>
+                    <td>
+                        <div class="metric-value">{{ broker_data.approved_applications }}</div>
+                        <div class="metric-secondary">{{ broker_data.rejected_applications }} rejected</div>
+                    </td>
+                    <td>
+                        <div class="conversion-rate 
+                            {% if broker_data.conversion_rate >= 75 %}excellent
+                            {% elif broker_data.conversion_rate >= 50 %}good
+                            {% elif broker_data.conversion_rate >= 25 %}average
+                            {% else %}poor{% endif %}">
+                            {{ broker_data.conversion_rate }}%
+                        </div>
+                    </td>
+                    <td>
+                        <div class="metric-value">${{ broker_data.revenue_generated|floatformat:0 }}</div>
+                    </td>
+                    <td>
+                        <div class="activity-status 
+                            {% if broker_data.days_since_activity == 0 or broker_data.days_since_activity == 1 %}recent
+                            {% elif broker_data.days_since_activity <= 7 %}moderate
+                            {% else %}inactive{% endif %}">
+                            {{ broker_data.activity_status }}
+                        </div>
+                    </td>
+                    <td class="total-score">{{ broker_data.total_score }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="no-brokers">
+            <i class="fas fa-users"></i>
+            <h4>No Brokers Found</h4>
+            <p>No active brokers are currently registered in the system.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Scoring Information -->
+    {% if leaderboard %}
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Scoring System</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2"><strong>Applications Created:</strong> 10 points each</li>
+                        <li class="mb-2"><strong>Applications Approved:</strong> 25 points each</li>
+                        <li class="mb-2"><strong>Conversion Rate Bonus:</strong> Up to 50 points</li>
+                        <li><strong>Recent Activity Bonus:</strong> Up to 25 points</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-medal me-2"></i>Performance Levels</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2"><span class="performance-badge elite">Elite Broker</span> 500+ points</li>
+                        <li class="mb-2"><span class="performance-badge senior">Senior Broker</span> 300+ points</li>
+                        <li class="mb-2"><span class="performance-badge active">Active Broker</span> 150+ points</li>
+                        <li class="mb-2"><span class="performance-badge new">New Broker</span> Some activity</li>
+                        <li><span class="performance-badge starter">Getting Started</span> No activity yet</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Back to Dashboard -->
+    <div class="text-center mt-4 mb-4">
+        <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Admin Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

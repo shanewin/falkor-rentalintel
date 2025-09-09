@@ -1,0 +1,306 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Section Progress Header -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Application for {{ application.apartment.building.name }} - Unit {{ application.apartment.unit_number }}</h4>
+        </div>
+        <div class="card-body">
+            <!-- Progress Bar -->
+            <div class="progress mb-3" style="height: 25px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: 20%;" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100">
+                    Section 1 of 5
+                </div>
+            </div>
+            
+            <!-- Section Navigation -->
+            <div class="d-flex justify-content-between">
+                <span class="badge bg-primary px-3 py-2">1. Personal Information</span>
+                <span class="badge bg-secondary px-3 py-2">2. Income</span>
+                <span class="badge bg-secondary px-3 py-2">3. Legal</span>
+                <span class="badge bg-secondary px-3 py-2">4. Review</span>
+                <span class="badge bg-secondary px-3 py-2">5. Payment</span>
+            </div>
+        </div>
+    </div>
+
+    <h1 class="mb-4">Personal Information</h1>
+
+    {% if form.errors %}
+        <div class="alert alert-danger">
+            <strong>Errors:</strong>
+            <ul>
+                {% for field, errors in form.errors.items %}
+                    <li>{{ field }}: {{ errors|join:", " }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <form method="post" class="card p-4 shadow-sm">
+        {% csrf_token %}
+
+        <!-- Basic Information -->
+        <h4 class="mb-3">Basic Information</h4>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name <span class="text-danger">*</span></label>
+                    {{ form.first_name }}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name <span class="text-danger">*</span></label>
+                    {{ form.last_name }}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.date_of_birth.id_for_label }}" class="form-label">Date of Birth <span class="text-danger">*</span></label>
+                    {{ form.date_of_birth }}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.ssn.id_for_label }}" class="form-label">Social Security Number <span class="text-danger">*</span></label>
+                    {{ form.ssn }}
+                    <div class="form-text">Format: XXX-XX-XXXX</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Information -->
+        <h4 class="mb-3 mt-4">Contact Information</h4>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.phone_number.id_for_label }}" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                    {{ form.phone_number }}
+                    <div class="form-text">Format: (XXX) XXX-XXXX</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.email.id_for_label }}" class="form-label">Email Address <span class="text-danger">*</span></label>
+                    {{ form.email }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Address -->
+        <h4 class="mb-3 mt-4">Current Address</h4>
+        
+        <div class="mb-3">
+            <label for="{{ form.street_address_1.id_for_label }}" class="form-label">Street Address <span class="text-danger">*</span></label>
+            {{ form.street_address_1 }}
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.street_address_2.id_for_label }}" class="form-label">Apartment/Unit (Optional)</label>
+            {{ form.street_address_2 }}
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label for="{{ form.city.id_for_label }}" class="form-label">City <span class="text-danger">*</span></label>
+                    {{ form.city }}
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label for="{{ form.state.id_for_label }}" class="form-label">State <span class="text-danger">*</span></label>
+                    {{ form.state }}
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label for="{{ form.zip_code.id_for_label }}" class="form-label">ZIP Code <span class="text-danger">*</span></label>
+                    {{ form.zip_code }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Housing Status and Rental History -->
+        <h4 class="mb-3 mt-4">Current Housing Information</h4>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.housing_status.id_for_label }}" class="form-label">Do you currently rent or own? <span class="text-danger">*</span></label>
+                    {{ form.housing_status }}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.length_at_current_address.id_for_label }}" class="form-label">How long at current address? <span class="text-danger">*</span></label>
+                    {{ form.length_at_current_address }}
+                    <div class="form-text">Example: 2 years, 6 months</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.is_rental_property.id_for_label }}" class="form-label">Is your current residence a rental property?</label>
+            {{ form.is_rental_property }}
+        </div>
+
+        <!-- Conditional Landlord Fields -->
+        <div id="landlord-fields" style="display: none;">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.current_landlord_name.id_for_label }}" class="form-label">Current Landlord Name</label>
+                        {{ form.current_landlord_name }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.current_landlord_phone.id_for_label }}" class="form-label">Landlord Phone Number</label>
+                        {{ form.current_landlord_phone }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.monthly_rent.id_for_label }}" class="form-label">Current Monthly Rent</label>
+                        {{ form.monthly_rent }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.reason_for_moving.id_for_label }}" class="form-label">Reason for Moving</label>
+                        {{ form.reason_for_moving }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Previous Addresses Section -->
+        <h4 class="mb-3 mt-4">Previous Addresses (Last 5 Years)</h4>
+        <div id="previous-addresses">
+            {% for address_form in previous_address_forms %}
+                <div class="card mb-3 previous-address-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="card-title mb-0">Previous Address {{ forloop.counter }}</h6>
+                            <button type="button" class="btn btn-sm btn-danger remove-address" data-address-id="{{ address_form.instance.id }}">Remove</button>
+                        </div>
+                        <!-- Previous address form fields would go here -->
+                        {{ address_form.as_p }}
+                    </div>
+                </div>
+            {% empty %}
+                <p class="text-muted">No previous addresses added yet.</p>
+            {% endfor %}
+        </div>
+        
+        <button type="button" id="add-address-btn" class="btn btn-outline-secondary mb-4">+ Add Previous Address</button>
+
+        <!-- Driver's License Information -->
+        <h4 class="mb-3 mt-4">Driver's License Information</h4>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.driver_license_number.id_for_label }}" class="form-label">Driver's License Number</label>
+                    {{ form.driver_license_number }}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.driver_license_state.id_for_label }}" class="form-label">Issuing State</label>
+                    {{ form.driver_license_state }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="d-flex justify-content-between mt-4">
+            <a href="{% url 'application_detail' application.id %}" class="btn btn-secondary">← Back to Overview</a>
+            <button type="submit" class="btn btn-primary">Save & Continue to Income →</button>
+        </div>
+    </form>
+</div>
+
+<!-- JavaScript for Conditional Fields and AJAX -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const isRentalCheckbox = document.getElementById('{{ form.is_rental_property.id_for_label }}');
+    const landlordFields = document.getElementById('landlord-fields');
+    
+    // Show/hide landlord fields based on rental property status
+    function toggleLandlordFields() {
+        if (isRentalCheckbox && isRentalCheckbox.checked) {
+            landlordFields.style.display = 'block';
+        } else {
+            landlordFields.style.display = 'none';
+        }
+    }
+    
+    // Initial check
+    toggleLandlordFields();
+    
+    // Listen for changes
+    if (isRentalCheckbox) {
+        isRentalCheckbox.addEventListener('change', toggleLandlordFields);
+    }
+    
+    // Add Previous Address AJAX functionality
+    const addAddressBtn = document.getElementById('add-address-btn');
+    if (addAddressBtn) {
+        addAddressBtn.addEventListener('click', function() {
+            fetch('{% url "add_previous_address" application.id %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload(); // Reload to show new address form
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    }
+    
+    // Remove Previous Address functionality
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-address')) {
+            const addressId = e.target.dataset.addressId;
+            if (addressId && confirm('Are you sure you want to remove this address?')) {
+                fetch(`{% url "remove_previous_address" application.id 0 %}`.replace('0', addressId), {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        e.target.closest('.previous-address-card').remove();
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        }
+    });
+});
+</script>
+
+{% endblock %}

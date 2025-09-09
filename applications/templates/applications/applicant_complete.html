@@ -1,0 +1,45 @@
+{% extends 'minimal_base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Complete Your Application</h2>
+    <p>Applicant: <strong>{{ application.applicant.first_name }} {{ application.applicant.last_name }}</strong></p>
+    <p>Property: <strong>{% if application.apartment %}{{ application.apartment.building.name }} - Unit {{ application.apartment.unit_number }}{% else %}{{ application.get_building_display }} - Unit {{ application.get_unit_display }}{% endif %}</strong></p>
+
+    {% if form.errors %}
+        <div class="alert alert-danger">
+            <strong>Errors:</strong>
+            <ul>
+                {% for field, errors in form.errors.items %}
+                    <li>{{ field }}: {{ errors|join:", " }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="card p-4 shadow-sm">
+        {% csrf_token %}
+
+        <h4>Upload Required Documents</h4>
+        <p>Please upload the required documents for your application:</p>
+
+        {% if application.required_documents %}
+            <ul class="list-group mb-3">
+                {% for doc in application.required_documents %}
+                    <li class="list-group-item">
+                        <label>{{ doc }}</label>
+                        <input type="hidden" name="document_type" value="{{ doc }}">  <!-- Ensure document type is paired -->
+                        <input type="file" name="files" class="form-control mt-2">
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-muted">No required documents specified.</p>
+        {% endif %}
+
+
+        <button type="submit" class="btn btn-primary w-100">Submit Application</button>
+    </form>
+</div>
+{% endblock %}

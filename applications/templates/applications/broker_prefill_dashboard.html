@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    
+    <!-- Broker Pre-Fill Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-1"><i class="fas fa-edit"></i> Pre-Fill Application</h4>
+                            <small>Fill out known information on behalf of the applicant</small>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-light btn-sm" onclick="window.close()">
+                                <i class="fas fa-times"></i> Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Application Info -->
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Property:</strong> 
+                            {% if application.apartment %}
+                                {{ application.apartment.building.name }} - Unit {{ application.apartment.unit_number }}
+                            {% else %}
+                                {{ application.get_building_display }}{% if application.get_unit_display %} - Unit {{ application.get_unit_display }}{% endif %}
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Applicant:</strong> 
+                            {% if application.applicant %}
+                                {{ application.applicant.email }}
+                            {% else %}
+                                <span class="text-muted">To be assigned</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Application Fee:</strong> ${{ application.application_fee_amount|floatformat:2 }}
+                        </div>
+                    </div>
+                    
+                    <!-- Instructions -->
+                    <div class="alert alert-info">
+                        <i class="fas fa-lightbulb"></i> 
+                        <strong>Instructions:</strong> Fill out any information you know about the applicant. 
+                        Leave fields blank if you don't know the information - the applicant can complete them later.
+                        All fields are optional from the broker's perspective.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pre-Fill Sections -->
+    <div class="row">
+        
+        <!-- Section 1: Personal Information -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100 shadow">
+                <div class="card-header {% if personal_info_status == 'completed' %}bg-success text-white{% elif personal_info_status == 'partial' %}bg-warning text-dark{% else %}bg-light{% endif %}">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user"></i> Personal Information
+                        {% if personal_info_status == 'completed' %}
+                            <i class="fas fa-check-circle float-end"></i>
+                        {% elif personal_info_status == 'partial' %}
+                            <i class="fas fa-clock float-end"></i>
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text small text-muted mb-3">
+                        Name, contact information, current and previous addresses, emergency contacts
+                    </p>
+                    
+                    <!-- Quick Status -->
+                    <div class="mb-3">
+                        <small class="text-muted">Fields completed:</small>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-success" style="width: {{ personal_info_progress }}%"></div>
+                        </div>
+                        <small class="text-muted">{{ personal_info_progress }}% complete</small>
+                    </div>
+                    
+                    <a href="{% url 'broker_prefill_section1' application.id %}" class="btn btn-primary btn-sm w-100">
+                        {% if personal_info_status == 'completed' %}
+                            <i class="fas fa-edit"></i> Review & Edit
+                        {% else %}
+                            <i class="fas fa-plus"></i> Start Pre-Filling
+                        {% endif %}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Income & Employment -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100 shadow">
+                <div class="card-header {% if income_status == 'completed' %}bg-success text-white{% elif income_status == 'partial' %}bg-warning text-dark{% else %}bg-light{% endif %}">
+                    <h5 class="mb-0">
+                        <i class="fas fa-dollar-sign"></i> Income & Employment
+                        {% if income_status == 'completed' %}
+                            <i class="fas fa-check-circle float-end"></i>
+                        {% elif income_status == 'partial' %}
+                            <i class="fas fa-clock float-end"></i>
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text small text-muted mb-3">
+                        Current employer, job title, salary, employment history, additional income sources
+                    </p>
+                    
+                    <!-- Quick Status -->
+                    <div class="mb-3">
+                        <small class="text-muted">Fields completed:</small>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-success" style="width: {{ income_progress }}%"></div>
+                        </div>
+                        <small class="text-muted">{{ income_progress }}% complete</small>
+                    </div>
+                    
+                    <a href="{% url 'section2_income' application.id %}" class="btn btn-primary btn-sm w-100">
+                        {% if income_status == 'completed' %}
+                            <i class="fas fa-edit"></i> Review & Edit
+                        {% else %}
+                            <i class="fas fa-plus"></i> Start Pre-Filling
+                        {% endif %}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Legal History -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100 shadow">
+                <div class="card-header {% if legal_status == 'completed' %}bg-success text-white{% elif legal_status == 'partial' %}bg-warning text-dark{% else %}bg-light{% endif %}">
+                    <h5 class="mb-0">
+                        <i class="fas fa-gavel"></i> Legal History
+                        {% if legal_status == 'completed' %}
+                            <i class="fas fa-check-circle float-end"></i>
+                        {% elif legal_status == 'partial' %}
+                            <i class="fas fa-clock float-end"></i>
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text small text-muted mb-3">
+                        Background questions, eviction history, criminal history, references
+                    </p>
+                    
+                    <div class="alert alert-warning py-2">
+                        <small><i class="fas fa-exclamation-triangle"></i> 
+                        <strong>Note:</strong> Most legal fields should be completed by the applicant directly</small>
+                    </div>
+                    
+                    <!-- Quick Status -->
+                    <div class="mb-3">
+                        <small class="text-muted">Fields completed:</small>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-success" style="width: {{ legal_progress }}%"></div>
+                        </div>
+                        <small class="text-muted">{{ legal_progress }}% complete</small>
+                    </div>
+                    
+                    <a href="{% url 'section3_legal' application.id %}" class="btn btn-outline-primary btn-sm w-100">
+                        {% if legal_status == 'completed' %}
+                            <i class="fas fa-edit"></i> Review References
+                        {% else %}
+                            <i class="fas fa-plus"></i> Add References Only
+                        {% endif %}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">Pre-Fill Complete</h6>
+                            <small class="text-muted">Return to the broker workflow to preview and send the application</small>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-outline-secondary me-2" onclick="refreshParentAndClose()">
+                                <i class="fas fa-sync"></i> Save & Return
+                            </button>
+                            <button type="button" class="btn btn-success" onclick="previewAndReturn()">
+                                <i class="fas fa-eye"></i> Preview Application
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+function refreshParentAndClose() {
+    // Refresh parent window's prefill status and preview if open
+    if (window.opener) {
+        if (window.opener.updatePreFillStatus) {
+            window.opener.updatePreFillStatus();
+        }
+        // Refresh preview iframe if it's open to show pre-filled data
+        const previewIframe = window.opener.document.getElementById('preview-iframe');
+        if (previewIframe && previewIframe.src) {
+            previewIframe.src = previewIframe.src; // Refresh iframe
+        }
+    }
+    window.close();
+}
+
+function previewAndReturn() {
+    // Open preview in parent window and close this window
+    if (window.opener && window.opener.openPreviewWindow) {
+        window.opener.openPreviewWindow();
+    }
+    window.close();
+}
+</script>
+
+{% endblock %}

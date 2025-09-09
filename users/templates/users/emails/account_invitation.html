@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Doorway - {{ role }} Account</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .email-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #ffcc00;
+        }
+        .header h1 {
+            color: #333;
+            margin: 0;
+        }
+        .role-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .badge-broker { background-color: #ffcc00; color: #333; }
+        .badge-staff { background-color: #6f42c1; color: white; }
+        .badge-owner { background-color: #fd7e14; color: white; }
+        
+        .credentials-box {
+            background-color: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .credentials-box h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .credential-item {
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        .credential-label {
+            font-weight: bold;
+            color: #495057;
+        }
+        .credential-value {
+            font-family: 'Courier New', monospace;
+            background-color: #e9ecef;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin-left: 10px;
+        }
+        .login-button {
+            display: inline-block;
+            background-color: #ffcc00;
+            color: #333;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .login-button:hover {
+            background-color: #e6b800;
+            color: #333;
+            text-decoration: none;
+        }
+        .security-note {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .security-note h4 {
+            margin-top: 0;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>Welcome to Doorway!</h1>
+            <div class="role-badge badge-{{ role|lower }}">
+                {{ role }} Account
+            </div>
+        </div>
+        
+        <p>Hello,</p>
+        
+        <p>Your <strong>{{ role }}</strong> account has been created for the Doorway rental management platform. You can now access the system using your temporary login credentials below.</p>
+        
+        <div class="credentials-box">
+            <h3>Your Login Credentials</h3>
+            <div class="credential-item">
+                <span class="credential-label">Email:</span>
+                <span class="credential-value">{{ user.email }}</span>
+            </div>
+            <div class="credential-item">
+                <span class="credential-label">Temporary Password:</span>
+                <span class="credential-value">{{ temporary_password }}</span>
+            </div>
+        </div>
+        
+        <div style="text-align: center;">
+            <a href="{{ login_url }}" class="login-button">
+                🚪 Log In to Doorway
+            </a>
+        </div>
+        
+        <div class="security-note">
+            <h4>🔒 Important Security Information</h4>
+            <ul>
+                <li>Please log in and change your password immediately</li>
+                <li>This temporary password will expire in 30 days</li>
+                <li>Keep your login credentials secure and do not share them</li>
+                <li>Log out completely when using shared computers</li>
+            </ul>
+        </div>
+        
+        {% if role == 'Broker' %}
+        <h3>As a Broker, you can:</h3>
+        <ul>
+            <li>Create and manage rental applications</li>
+            <li>Track application status and progress</li>
+            <li>Manage multiple applicants</li>
+            <li>Access building and apartment listings</li>
+            <li>Generate reports and analytics</li>
+        </ul>
+        {% elif role == 'Staff' %}
+        <h3>As a Staff member, you can:</h3>
+        <ul>
+            <li>Manage building and apartment listings</li>
+            <li>View application reports and analytics</li>
+            <li>Assist with broker and applicant support</li>
+            <li>Access admin tools and settings</li>
+        </ul>
+        {% elif role == 'Owner' %}
+        <h3>As a Property Owner, you can:</h3>
+        <ul>
+            <li>List and manage your properties</li>
+            <li>Review rental applications</li>
+            <li>Track occupancy and rent collection</li>
+            <li>Access tenant screening reports</li>
+            <li>Manage maintenance requests</li>
+        </ul>
+        {% endif %}
+        
+        <p>If you have any questions or need assistance getting started, please don't hesitate to contact our support team.</p>
+        
+        <p>Welcome to the team!</p>
+        
+        <div class="footer">
+            <p>This email was sent by Doorway Rental Management Platform<br>
+            If you did not expect this email, please contact support immediately.</p>
+        </div>
+    </div>
+</body>
+</html>
