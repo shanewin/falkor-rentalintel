@@ -35,12 +35,9 @@ ENV SECRET_KEY=dummy-secret-key-for-build \
 # Collect static files (with dummy env vars)
 RUN python manage.py collectstatic --noinput || true
 
-# Copy start script and make it executable
-COPY start.sh /app/start.sh
-RUN chmod +x /app/start.sh
-
-# Expose port
+# Expose port (Railway will override this)
 EXPOSE 8000
 
-# Use the start script
-CMD ["/app/start.sh"]
+# Railway will use the startCommand from railway.json
+# If no railway.json, fallback to this CMD
+CMD ["gunicorn", "realestate.wsgi:application", "--bind", "0.0.0.0:8000"]
