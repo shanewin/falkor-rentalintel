@@ -35,8 +35,12 @@ ENV SECRET_KEY=dummy-secret-key-for-build \
 # Collect static files (with dummy env vars)
 RUN python manage.py collectstatic --noinput || true
 
+# Copy start script and make it executable
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
 # Expose port
 EXPOSE 8000
 
-# Use gunicorn for production instead of runserver
-CMD ["sh", "-c", "python manage.py migrate && gunicorn realestate.wsgi:application --bind 0.0.0.0:${PORT:-8000}"]
+# Use the start script
+CMD ["/app/start.sh"]
