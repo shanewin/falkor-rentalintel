@@ -100,3 +100,5 @@ boto3==1.35.80
 twilio==9.3.7
 celery
 redis
+gunicorn==21.2.0
+dj-database-url==2.1.0
