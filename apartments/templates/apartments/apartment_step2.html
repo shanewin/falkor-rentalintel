@@ -3,22 +3,19 @@
 {% load crispy_forms_tags %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'buildings/css/buildings.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1>{{ step_title }}</h1>
-                <p>Apartment: <strong>{{ apartment.building.name }} - Unit {{ apartment.unit_number }}</strong></p>
-            </div>
-            <div class="col-md-4 text-end">
-                <a href="{% url 'apartments_list' %}" class="btn btn-outline-primary">
-                    Back to Apartments
-                </a>
-            </div>
+<div class="container mt-4">
+    <div class="row align-items-center mb-4">
+        <div class="col-md-8">
+            <h1 class="h3 fw-bold">{{ step_title }}</h1>
+            <p class="text-muted mb-0">Apartment: <strong>{{ apartment.building.name }} - Unit {{ apartment.unit_number }}</strong></p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'apartments_list' %}" class="btn btn-outline-primary">
+                Back to Apartments
+            </a>
         </div>
     </div>
 </div>

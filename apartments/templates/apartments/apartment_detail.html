@@ -8,17 +8,23 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mt-3">
-
-    <h1 class="h5 fw-bold text-dark pb-2 mb-4 border-bottom">
-        {% if apartment %}
-            Edit Apartment – Unit {{ apartment.unit_number }}
-        {% else %}
-            Create New Apartment
-        {% endif %}
-    </h1>
-
-    <h1 class="h5 fw-bold text-dark pb-2 mb-4 border-bottom">{{ apartment.building.name }} – Unit {{ apartment.unit_number }}</h1>
+<div class="container mt-4">
+    <div class="row align-items-center mb-4">
+        <div class="col-md-8">
+            <h1 class="h3 fw-bold">
+                {% if apartment %}
+                    {{ apartment.building.name }} – Unit {{ apartment.unit_number }}
+                {% else %}
+                    Create New Apartment
+                {% endif %}
+            </h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'apartments_list' %}" class="btn btn-outline-primary">
+                Back to Apartments
+            </a>
+        </div>
+    </div>
 
     {% if messages %}
         {% for message in messages %}
@@ -43,31 +49,45 @@
 
         <!-- Apartment Info Tab -->
         <div class="tab-pane fade show active" id="info" role="tabpanel">
-            <h3 class="h6 fw-bold text-secondary py-2 mt-4 mb-3 border-bottom">Edit Apartment Info</h3>
-            <form method="post">
-                {% csrf_token %}
-                {% crispy apartment_form %}
-            </form>
+            <div class="card shadow-sm mt-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Edit Apartment Info</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {% crispy apartment_form %}
+                    </form>
+                </div>
+            </div>
         </div>
 
         <!-- Images Tab -->
         <div class="tab-pane fade" id="images" role="tabpanel">
-            <h3 class="h6 fw-bold text-secondary py-2 mt-4 mb-3 border-bottom">Upload Apartment Images</h3>
-            <form method="post" enctype="multipart/form-data">
-                {% csrf_token %}
-                {{ image_form|crispy }}
-                <button type="submit" class="btn btn-primary" name="image_submit">Upload Image</button>
-            </form>
+            <div class="card shadow-sm mt-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Upload Apartment Images</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" class="mb-4">
+                        {% csrf_token %}
+                        {{ image_form|crispy }}
+                        <button type="submit" class="btn btn-primary" name="image_submit">Upload Image</button>
+                    </form>
 
-            <h5 class="mt-4">Uploaded Images:</h5>
-            <div class="d-flex flex-wrap">
-                {% for img in apartment.images.all %}
-                    <div class="m-2">
-                        <img src="{{ img.thumbnail_url }}" alt="Apartment Image" class="img-thumbnail" width="150" height="150">
+                    <h6 class="mt-4">Uploaded Images:</h6>
+                    <div class="row">
+                        {% for img in apartment.images.all %}
+                            <div class="col-md-3 mb-3">
+                                <div class="card">
+                                    <img src="{{ img.thumbnail_url }}" alt="Apartment Image" class="card-img-top" style="height: 150px; object-fit: cover;">
+                                </div>
+                            </div>
+                        {% empty %}
+                            <p class="text-muted">No images uploaded yet.</p>
+                        {% endfor %}
                     </div>
-                {% empty %}
-                    <p>No images uploaded yet.</p>
-                {% endfor %}
+                </div>
             </div>
         </div>
 
