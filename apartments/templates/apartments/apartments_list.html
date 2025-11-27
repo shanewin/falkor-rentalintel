@@ -512,8 +512,8 @@
         <div class="popover-header">Amenities & Pets</div>
         <div class="popover-body">
             <div class="form-check form-switch mb-3">
-                <input class="form-check-input" type="checkbox" id="petsAllowedSwitch" name="pets_allowed" value="1"
-                    {%if pets_allowed_checked %}checked{% endif %}>
+                <input class="form-check-input" type="checkbox" id="petsAllowedSwitch" name="pets_allowed" value="1" {%
+                    if pets_allowed_checked %}checked{% endif %}>
                 <label class="form-check-label" for="petsAllowedSwitch">Pets allowed</label>
             </div>
             <div class="multi-list two-col">
@@ -1150,7 +1150,7 @@
     document.getElementById('neighborhoodsValue').textContent = neighCount ? `${neighCount} selected` : 'Anywhere';
     const amenitiesCount = {{ selected_amenities| length }} + {{ pets_allowed_checked | yesno: '1,0' }};
     document.getElementById('amenitiesValue').textContent = amenitiesCount ? `${amenitiesCount} selected` : 'Any';
-    }
+        }
     initChipLabels();
 
     function updateApartmentsDisplay(data) {
@@ -1359,7 +1359,7 @@
     }
 
     updateDropdownLabels();
-});
+    });
 
     // Function to handle save/heart toggle
     function toggleSave(apartmentId, event) {
