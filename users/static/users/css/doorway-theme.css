@@ -8,15 +8,16 @@
    ================================================ */
 :root {
     /* Brand Colors */
-    --brand-yellow: #ffd60a;
-    /* Primary Accent */
-    --brand-black: #000814;
-    /* Primary Dark */
-    --brand-dark-gray: #1a1a1a;
-    /* Secondary Dark */
-    --brand-light-gray: #f8f9fa;
-    /* Background Light */
+    --brand-yellow: #ffd60a;       /* Primary Accent */
+    --brand-black: #000814;        /* Primary Dark */
+    --brand-dark-gray: #1a1a1a;    /* Secondary Dark */
+    --brand-light-gray: #f8f9fa;   /* Background Light */
     --brand-white: #ffffff;
+
+    /* Extended Brand Palette */
+    --brand-yellow-light: #ffd633;
+    --brand-yellow-dark: #e6c109;  /* Matches form-yellow-dark */
+    --accent-gray: #6c757d;
 
     /* Functional Colors */
     --text-dark: #2c3e50;
@@ -25,11 +26,14 @@
     --success: #28a745;
     --danger: #dc3545;
     --warning: #ffc107;
+    --info: #17a2b8;
+    --link-color: #007bff;
+    --link-hover-color: #0056b3;
 
     /* Form Specifics (Mapped to Brand) */
     --form-primary-black: var(--brand-black);
     --form-primary-yellow: var(--brand-yellow);
-    --form-yellow-dark: #e6c109;
+    --form-yellow-dark: var(--brand-yellow-dark);
     --form-text-dark: var(--text-dark);
     --form-text-muted: var(--text-muted);
     --form-border-color: var(--border-color);
@@ -50,6 +54,12 @@
     --form-transition: var(--transition);
     --form-shadow: var(--shadow-sm);
     --form-shadow-hover: var(--shadow-md);
+    
+    /* App Compatibility Aliases */
+    --white: var(--brand-white);
+    --shadow: var(--shadow-sm);
+    --shadow-hover: var(--shadow-md);
+    --accent-light: var(--brand-light-gray);
 }
 
 body {

@@ -5,7 +5,7 @@
     max-width: 400px;
     margin: 80px auto;
     padding: 30px;
-    background: white;
+    background: var(--brand-white);
     border-radius: 10px;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
 }
@@ -21,7 +21,7 @@
 }
 
 .login-header h2 {
-    color: #333;
+    color: var(--text-dark);
     font-weight: 600;
 }
 
@@ -31,23 +31,23 @@
 
 .form-label {
     font-weight: 500;
-    color: #555;
+    color: var(--text-muted);
     margin-bottom: 5px;
 }
 
 .btn-login {
     width: 100%;
     padding: 12px;
-    background-color: #ffcc00;
+    background-color: var(--brand-yellow);
     border: none;
-    color: #333;
+    color: var(--text-dark);
     font-weight: 600;
     border-radius: 5px;
     transition: all 0.3s;
 }
 
 .btn-login:hover {
-    background-color: #e6b800;
+    background-color: var(--brand-yellow-dark);
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(255, 204, 0, 0.3);
 }
@@ -56,11 +56,11 @@
     text-align: center;
     margin-top: 30px;
     padding-top: 20px;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--border-color);
 }
 
 .register-links a {
-    color: #007bff;
+    color: var(--link-color);
     text-decoration: none;
     font-weight: 500;
 }
@@ -88,7 +88,7 @@
     flex: 1;
     margin: 0 10px;
     padding: 15px;
-    border: 2px solid #ddd;
+    border: 2px solid var(--border-color);
     border-radius: 8px;
     text-align: center;
     cursor: pointer;
@@ -96,28 +96,28 @@
 }
 
 .role-card:hover {
-    border-color: #ffcc00;
-    background-color: #fff9e6;
+    border-color: var(--brand-yellow);
+    background-color: var(--form-bg-highlight);
 }
 
 .role-card i {
     font-size: 24px;
     margin-bottom: 5px;
-    color: #666;
+    color: var(--text-muted);
 }
 
 .role-card h6 {
     margin: 0;
-    color: #333;
+    color: var(--text-dark);
 }
 
 .btn-forgot {
     width: 100%;
     padding: 10px;
     border-radius: 5px;
-    border: 1px solid #ffcc00;
-    background-color: #fffdf5;
-    color: #333;
+    border: 1px solid var(--brand-yellow);
+    background-color: var(--form-bg-highlight);
+    color: var(--text-dark);
     font-weight: 600;
     text-decoration: none;
     display: inline-block;
@@ -126,8 +126,8 @@
 }
 
 .btn-forgot:hover {
-    background-color: #ffeb99;
-    color: #333;
+    background-color: var(--brand-yellow-light);
+    color: var(--text-dark);
     text-decoration: none;
     transform: translateY(-1px);
     box-shadow: 0 5px 12px rgba(255, 204, 0, 0.25);
@@ -138,7 +138,7 @@
     max-width: 500px;
     margin: 60px auto;
     padding: 30px;
-    background: white;
+    background: var(--brand-white);
     border-radius: 10px;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
 }
@@ -154,15 +154,15 @@
 }
 
 .register-header h2 {
-    color: #333;
+    color: var(--text-dark);
     font-weight: 600;
 }
 
 .applicant-badge {
     display: block;
     text-align: center;
-    background-color: #28a745;
-    color: white;
+    background-color: var(--success);
+    color: var(--brand-white);
     padding: 8px 20px;
     border-radius: 20px;
     font-weight: 500;
@@ -174,18 +174,18 @@
     text-align: center;
     margin-top: 20px;
     padding-top: 20px;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--border-color);
 }
 
 .benefits-list {
-    background-color: #f8f9fa;
+    background-color: var(--brand-light-gray);
     padding: 15px;
     border-radius: 8px;
     margin-bottom: 20px;
 }
 
 .benefits-list h6 {
-    color: #333;
+    color: var(--text-dark);
     font-weight: 600;
     margin-bottom: 10px;
 }
@@ -196,7 +196,7 @@
 }
 
 .benefits-list li {
-    color: #666;
+    color: var(--text-muted);
     margin-bottom: 5px;
 }
 

@@ -4,22 +4,7 @@
  */
 
 /* Import brand colors from buildings app */
-:root {
-    --brand-black: #1a1a1a;
-    --brand-yellow: #ffcc00;
-    --brand-yellow-light: #ffd633;
-    --brand-yellow-dark: #e6b800;
-    --accent-gray: #6c757d;
-    --accent-light: #f8f9fa;
-    --white: #ffffff;
-    --border-color: #dee2e6;
-    --text-dark: #212529;
-    --text-muted: #6c757d;
-    --shadow: 0 2px 4px rgba(0,0,0,0.1);
-    --shadow-hover: 0 4px 8px rgba(0,0,0,0.15);
-    --border-radius: 8px;
-    --transition: all 0.2s ease;
-}
+/* :root variables are now inherited from doorway-theme.css */
 
 /* ================================
    PAGE HEADER
