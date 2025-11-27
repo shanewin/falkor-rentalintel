@@ -7,6 +7,136 @@
 <link rel="stylesheet" href="{% static 'applicants/css/applicants.css' %}">
 <!-- Cropper.js CSS -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+<style>
+.slider-container {
+    position: relative;
+}
+
+/* Slider Styling */
+.amenity-slider {
+    width: 100%;
+    height: 8px;
+    border-radius: 5px;
+    background: #ddd;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.amenity-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #ddd;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.amenity-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #ddd;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* Slider colors for different states */
+.amenity-slider.nice-to-have {
+    background: linear-gradient(to right, #ddd, #ffc107);
+}
+
+.amenity-slider.nice-to-have::-webkit-slider-thumb {
+    border-color: #ffc107;
+    background: #fff;
+    box-shadow: 0 0 0 1px #ffc107;
+}
+
+.amenity-slider.very-important {
+    background: linear-gradient(to right, #ffc107, #fd7e14);
+}
+
+.amenity-slider.very-important::-webkit-slider-thumb {
+    border-color: #fd7e14;
+    background: #fff;
+    box-shadow: 0 0 0 1px #fd7e14;
+}
+
+.amenity-slider.must-have {
+    background: linear-gradient(to right, #fd7e14, #dc3545);
+}
+
+.amenity-slider.must-have::-webkit-slider-thumb {
+    border-color: #dc3545;
+    background: #fff;
+    box-shadow: 0 0 0 1px #dc3545;
+}
+
+.slider-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 5px;
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+/* Priority Legend */
+.priority-legend {
+    border: 1px solid #dee2e6;
+}
+
+.legend-item {
+    text-align: center;
+}
+
+.legend-color {
+    width: 40px;
+    height: 20px;
+    border-radius: 10px;
+    margin: 0 auto 8px;
+}
+
+.nice-to-have-legend {
+    background: linear-gradient(to right, #fff8e1, #ffc107);
+    border: 1px solid #ffc107;
+}
+
+.very-important-legend {
+    background: linear-gradient(to right, #fff3e0, #fd7e14);
+    border: 1px solid #fd7e14;
+}
+
+.must-have-legend {
+    background: linear-gradient(to right, #ffebee, #dc3545);
+    border: 1px solid #dc3545;
+}
+
+.unset-legend {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .amenities-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .amenity-slider-item {
+        padding: 12px;
+    }
+    
+    .priority-legend .row {
+        gap: 10px;
+    }
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -684,134 +814,5 @@ function loadExistingAmenityPreferences() {
 </script>
 
 
-.slider-container {
-    position: relative;
-}
 
-/* Slider Styling */
-.amenity-slider {
-    width: 100%;
-    height: 8px;
-    border-radius: 5px;
-    background: #ddd;
-    outline: none;
-    -webkit-appearance: none;
-    appearance: none;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.amenity-slider::-webkit-slider-thumb {
-    appearance: none;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: #fff;
-    border: 2px solid #ddd;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.amenity-slider::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: #fff;
-    border: 2px solid #ddd;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-/* Slider colors for different states */
-.amenity-slider.nice-to-have {
-    background: linear-gradient(to right, #ddd, #ffc107);
-}
-
-.amenity-slider.nice-to-have::-webkit-slider-thumb {
-    border-color: #ffc107;
-    background: #fff;
-    box-shadow: 0 0 0 1px #ffc107;
-}
-
-.amenity-slider.very-important {
-    background: linear-gradient(to right, #ffc107, #fd7e14);
-}
-
-.amenity-slider.very-important::-webkit-slider-thumb {
-    border-color: #fd7e14;
-    background: #fff;
-    box-shadow: 0 0 0 1px #fd7e14;
-}
-
-.amenity-slider.must-have {
-    background: linear-gradient(to right, #fd7e14, #dc3545);
-}
-
-.amenity-slider.must-have::-webkit-slider-thumb {
-    border-color: #dc3545;
-    background: #fff;
-    box-shadow: 0 0 0 1px #dc3545;
-}
-
-.slider-labels {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 5px;
-    font-size: 0.75rem;
-    color: #6c757d;
-}
-
-/* Priority Legend */
-.priority-legend {
-    border: 1px solid #dee2e6;
-}
-
-.legend-item {
-    text-align: center;
-}
-
-.legend-color {
-    width: 40px;
-    height: 20px;
-    border-radius: 10px;
-    margin: 0 auto 8px;
-}
-
-.nice-to-have-legend {
-    background: linear-gradient(to right, #fff8e1, #ffc107);
-    border: 1px solid #ffc107;
-}
-
-.very-important-legend {
-    background: linear-gradient(to right, #fff3e0, #fd7e14);
-    border: 1px solid #fd7e14;
-}
-
-.must-have-legend {
-    background: linear-gradient(to right, #ffebee, #dc3545);
-    border: 1px solid #dc3545;
-}
-
-.unset-legend {
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .amenities-grid {
-        grid-template-columns: 1fr;
-        gap: 15px;
-    }
-    
-    .amenity-slider-item {
-        padding: 12px;
-    }
-    
-    .priority-legend .row {
-        gap: 10px;
-    }
-}
-
-</style>
 {% endblock %}
