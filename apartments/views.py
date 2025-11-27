@@ -268,7 +268,7 @@ def apartments_list(request):
                         'building_address': f"{apartment.building.street_address_1}, {apartment.building.city}, {apartment.building.state}" if apartment.building else '',
                         'neighborhood': apartment.building.get_neighborhood_display() if apartment.building and apartment.building.neighborhood else '',
                         'status': apartment.get_status_display(),
-                        'image_url': apartment.images.first().image.url if apartment.images.exists() else '',
+                        'thumbnail_url': apartment.images.first().thumbnail_url() if apartment.images.exists() else '',
                         'all_images': all_images,
                         'detail_url': f'/apartments/{apartment.id}/overview/',
                         'latitude': float(apartment.building.latitude) if apartment.building and apartment.building.latitude else None,

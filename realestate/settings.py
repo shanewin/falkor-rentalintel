@@ -30,7 +30,11 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'ckeditor',
     'users',
-    'doc_analysis'
+    'doc_analysis',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
@@ -71,7 +75,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # Activity tracking middleware - must be after AuthenticationMiddleware
+    # Activity tracking middleware - must be after AuthenticationMiddleware
     'applicants.middleware.ActivityTrackingMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'realestate.urls'
@@ -118,8 +124,25 @@ def enable_vector_extension(sender, connection, **kwargs):
     with connection.cursor() as cursor:
         cursor.execute("SELECT * FROM pg_extension WHERE extname='vector';")
         if not cursor.fetchone():  # If 'vector' extension does not exist
-            cursor.execute("CREATE EXTENSION vector;")
+            cursor.execute("CREATE EXTENSION IF NOT EXISTS vector;")
 
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        }
+    }
+}
 
 
 AUTH_PASSWORD_VALIDATORS = [

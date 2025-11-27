@@ -7,6 +7,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('apartments.urls')),  # Apartments is now the homepage
     path('users/', include('users.urls')),
+    path('accounts/', include('allauth.urls')),
+
     path('buildings/', include('buildings.urls')),
     path('apartments/', include('apartments.urls')),  # Keep apartments also accessible at /apartments/
     path('applications/', include('applications.urls')),

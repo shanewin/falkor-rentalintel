@@ -1,0 +1,593 @@
+/* ================================================
+   DOORWAY THEME - Unified Application Styling
+   Combines: base-layout.css, doorway-forms.css, and applicant styles
+   ================================================ */
+
+/* ================================================
+   1. Variables & Theme
+   ================================================ */
+:root {
+    /* Brand Colors */
+    --brand-yellow: #ffd60a;
+    /* Primary Accent */
+    --brand-black: #000814;
+    /* Primary Dark */
+    --brand-dark-gray: #1a1a1a;
+    /* Secondary Dark */
+    --brand-light-gray: #f8f9fa;
+    /* Background Light */
+    --brand-white: #ffffff;
+
+    /* Functional Colors */
+    --text-dark: #2c3e50;
+    --text-muted: #6c757d;
+    --border-color: #dee2e6;
+    --success: #28a745;
+    --danger: #dc3545;
+    --warning: #ffc107;
+
+    /* Form Specifics (Mapped to Brand) */
+    --form-primary-black: var(--brand-black);
+    --form-primary-yellow: var(--brand-yellow);
+    --form-yellow-dark: #e6c109;
+    --form-text-dark: var(--text-dark);
+    --form-text-muted: var(--text-muted);
+    --form-border-color: var(--border-color);
+    --form-bg-light: var(--brand-light-gray);
+    --form-bg-highlight: #fffef8;
+    --form-focus-shadow: rgba(255, 214, 10, 0.25);
+    --form-btn-shadow: rgba(0, 0, 0, 0.3);
+
+    /* Layout */
+    --border-radius: 8px;
+    --transition: all 0.2s ease;
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.15);
+    --shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+    /* Legacy Variable Mappings for Backward Compatibility */
+    --form-border-radius: var(--border-radius);
+    --form-transition: var(--transition);
+    --form-shadow: var(--shadow-sm);
+    --form-shadow-hover: var(--shadow-md);
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--brand-light-gray);
+    color: var(--text-dark);
+    margin: 0;
+    padding: 0;
+}
+
+/* ================================================
+   2. Global Layout & Navbar (from base-layout.css)
+   ================================================ */
+/* Bootstrap 5 Navbar Overrides */
+.navbar-doorway {
+    background-color: var(--brand-yellow) !important;
+    box-shadow: var(--shadow-sm);
+}
+
+.navbar-doorway .navbar-brand img {
+    height: 60px;
+    width: auto;
+    max-width: 250px;
+}
+
+.navbar-doorway .navbar-brand,
+.navbar-doorway .navbar-nav .nav-link {
+    color: var(--brand-black);
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.navbar-doorway .navbar-nav .nav-link:hover,
+.navbar-doorway .navbar-nav .nav-link:focus,
+.navbar-doorway .navbar-nav .nav-link.active {
+    color: #333333;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+}
+
+.navbar-doorway .navbar-toggler {
+    border-color: rgba(0, 0, 0, 0.2);
+    padding: 4px 8px;
+}
+
+.navbar-doorway .navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%280, 0, 0, 0.8%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+/* User Profile Dropdown */
+.navbar-user-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.navbar-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.navbar-avatar-fallback {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    color: #000;
+}
+
+.dropdown-toggle::after {
+    margin-left: 8px;
+}
+
+.dropdown-menu {
+    margin-top: 10px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.dropdown-item {
+    padding: 10px 20px;
+    font-weight: 500;
+}
+
+.dropdown-item:hover {
+    background-color: var(--brand-yellow);
+    color: var(--brand-black);
+}
+
+.dropdown-divider {
+    margin: 5px 0;
+}
+
+.dropdown-item.text-danger {
+    color: var(--danger) !important;
+}
+
+.dropdown-item.text-danger:hover {
+    background-color: var(--danger);
+    color: white !important;
+}
+
+/* Main Content Wrapper */
+.content {
+    padding: 20px;
+    margin-top: 86px;
+    /* Height of larger navbar */
+    min-height: calc(100vh - 86px);
+}
+
+/* Preview Mode */
+.preview-mode .navbar {
+    display: none !important;
+}
+
+.preview-mode .content {
+    margin-top: 0 !important;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* ================================================
+   3. Applicant Specific Styles (from applicant_base.html)
+   ================================================ */
+/* Clean header without side navigation */
+.applicant-header {
+    background: linear-gradient(135deg, var(--brand-black) 0%, var(--brand-dark-gray) 100%);
+    color: white;
+    padding: 1rem 0;
+    box-shadow: var(--shadow-sm);
+}
+
+.applicant-header h1 {
+    margin: 0;
+    font-weight: 600;
+    font-size: 1.5rem;
+}
+
+.applicant-header .subtitle {
+    margin: 0;
+    opacity: 0.8;
+    font-size: 0.9rem;
+}
+
+/* Main content area for applicant pages */
+.applicant-content {
+    min-height: calc(100vh - 140px);
+    padding: 2rem 0;
+}
+
+/* Property hero section */
+.property-hero {
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.property-hero-image {
+    height: 300px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+}
+
+.property-hero-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+    color: white;
+    padding: 2rem;
+}
+
+.property-hero-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.property-hero-subtitle {
+    font-size: 1.1rem;
+    margin: 0.5rem 0 0 0;
+    opacity: 0.9;
+}
+
+/* Application progress */
+.application-progress {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 2rem;
+}
+
+.progress-bar {
+    background-color: var(--brand-yellow);
+    height: 8px;
+    border-radius: 4px;
+}
+
+.section-nav {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.section-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 25px;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: var(--transition);
+}
+
+.section-badge.active {
+    background-color: var(--brand-yellow);
+    color: var(--brand-black);
+}
+
+.section-badge:not(.active) {
+    background-color: #e9ecef;
+    color: #6c757d;
+}
+
+.section-badge:not(.active):hover {
+    background-color: #dee2e6;
+    color: var(--brand-black);
+}
+
+/* Application Form Styling */
+.application-form {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.form-section-title {
+    color: var(--brand-black);
+    font-weight: 600;
+    font-size: 1.3rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--brand-yellow);
+}
+
+/* Property details sidebar */
+.property-sidebar {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 2rem;
+}
+
+.property-sidebar h5 {
+    color: var(--brand-black);
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.amenity-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+
+.amenity-icon {
+    color: var(--brand-yellow);
+    margin-right: 0.75rem;
+    font-size: 1.1rem;
+}
+
+/* Footer */
+.applicant-footer {
+    background-color: var(--brand-black);
+    color: white;
+    text-align: center;
+    padding: 1rem 0;
+    margin-top: 3rem;
+}
+
+/* ================================================
+   4. Form Elements & Controls (from doorway-forms.css)
+   ================================================ */
+/* Page Header */
+.page-header {
+    background: var(--brand-black);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+}
+
+.page-header h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    margin: 0;
+    color: white;
+}
+
+.page-header p {
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0.5rem 0 0 0;
+}
+
+/* Buttons */
+.btn-primary,
+.btn-doorway-primary {
+    background-color: var(--brand-yellow);
+    border-color: var(--brand-yellow);
+    color: var(--brand-black);
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    border-radius: 8px;
+    transition: var(--transition);
+}
+
+.btn-primary:hover,
+.btn-doorway-primary:hover {
+    background-color: var(--form-yellow-dark);
+    border-color: var(--form-yellow-dark);
+    color: var(--brand-black);
+    transform: translateY(-1px);
+}
+
+.btn-outline-primary {
+    border-color: var(--brand-yellow);
+    color: var(--brand-black);
+    font-weight: 500;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--brand-yellow);
+    border-color: var(--brand-yellow);
+    color: var(--brand-black);
+}
+
+.page-header .btn-primary {
+    background-color: var(--brand-yellow);
+    border-color: var(--brand-yellow);
+    color: var(--brand-black);
+}
+
+.page-header .btn-outline-primary {
+    background-color: transparent;
+    border-color: white;
+    color: white;
+}
+
+.page-header .btn-outline-primary:hover {
+    background-color: white;
+    border-color: white;
+    color: var(--brand-black);
+}
+
+/* Stats Cards */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+    border-left: 4px solid var(--brand-yellow);
+    transition: var(--transition);
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--brand-black);
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    letter-spacing: 0.5px;
+}
+
+.stat-icon {
+    font-size: 1.5rem;
+    color: var(--brand-yellow);
+    margin-bottom: 0.5rem;
+}
+
+/* Tables */
+.table-container {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.table-header {
+    background: var(--brand-black);
+    color: white;
+    padding: 1rem 1.5rem;
+    font-weight: 600;
+}
+
+.table thead th {
+    background: var(--brand-light-gray);
+    border-bottom: 2px solid var(--border-color);
+    font-weight: 600;
+    color: var(--text-dark);
+    padding: 1rem;
+}
+
+.table tbody td {
+    padding: 1rem;
+    vertical-align: middle;
+    border-top: 1px solid var(--border-color);
+}
+
+.table tbody tr:hover {
+    background-color: rgba(255, 214, 10, 0.05);
+}
+
+/* Form Controls */
+.form-label {
+    color: var(--brand-black);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.form-control,
+.form-select {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 0.75rem;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--brand-yellow);
+    box-shadow: 0 0 0 0.2rem rgba(255, 214, 10, 0.25);
+}
+
+/* Doorway Form Specifics (Legacy Support) */
+.doorway-form label {
+    font-weight: 600 !important;
+    color: var(--text-dark) !important;
+    font-size: 14px !important;
+    margin-bottom: 6px !important;
+    display: block !important;
+    position: relative !important;
+}
+
+.doorway-form label::after {
+    content: "" !important;
+    display: block !important;
+    width: 30px !important;
+    height: 1px !important;
+    background-color: var(--brand-yellow) !important;
+    margin-top: 4px !important;
+}
+
+.doorway-form .form-check-label::after,
+.doorway-form .amenity-label::after {
+    display: none !important;
+}
+
+/* Cards */
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+}
+
+.card-header {
+    background-color: var(--brand-black);
+    color: white;
+    border-radius: 12px 12px 0 0 !important;
+    font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .property-hero-image {
+        height: 200px;
+    }
+
+    .property-hero-title {
+        font-size: 1.5rem;
+    }
+
+    .section-nav {
+        flex-direction: column;
+    }
+
+    .section-badge {
+        text-align: center;
+    }
+
+    .content {
+        padding: 15px;
+    }
+}
+/* Utility Classes */
+.progress-custom {
+    height: 25px;
+    width: 150px;
+}

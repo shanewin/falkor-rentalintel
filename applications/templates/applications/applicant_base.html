@@ -1,302 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Property Application{% endblock %}</title>
-    
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+
     {% load static %}
     <!-- Applications CSS -->
     <link rel="stylesheet" href="{% static 'applications/css/applications.css' %}">
-    
+
     <!-- Applicant-specific styles -->
-    <style>
-        :root {
-            --brand-yellow: #ffd60a;
-            --brand-black: #000814;
-            --brand-dark-gray: #1a1a1a;
-            --brand-light-gray: #f8f9fa;
-            --border-color: #dee2e6;
-        }
-        
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--brand-light-gray);
-            margin: 0;
-            padding: 0;
-        }
-        
-        /* Clean header without side navigation */
-        .applicant-header {
-            background: linear-gradient(135deg, var(--brand-black) 0%, var(--brand-dark-gray) 100%);
-            color: white;
-            padding: 1rem 0;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        .applicant-header h1 {
-            margin: 0;
-            font-weight: 600;
-            font-size: 1.5rem;
-        }
-        
-        .applicant-header .subtitle {
-            margin: 0;
-            opacity: 0.8;
-            font-size: 0.9rem;
-        }
-        
-        /* Main content area */
-        .applicant-content {
-            min-height: calc(100vh - 140px);
-            padding: 2rem 0;
-        }
-        
-        /* Property hero section */
-        .property-hero {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            overflow: hidden;
-            margin-bottom: 2rem;
-        }
-        
-        .property-hero-image {
-            height: 300px;
-            background-size: cover;
-            background-position: center;
-            position: relative;
-        }
-        
-        .property-hero-overlay {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(transparent, rgba(0,0,0,0.8));
-            color: white;
-            padding: 2rem;
-        }
-        
-        .property-hero-title {
-            font-size: 2rem;
-            font-weight: 700;
-            margin: 0;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-        }
-        
-        .property-hero-subtitle {
-            font-size: 1.1rem;
-            margin: 0.5rem 0 0 0;
-            opacity: 0.9;
-        }
-        
-        /* Application progress */
-        .application-progress {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-            margin-bottom: 2rem;
-        }
-        
-        .progress-bar {
-            background-color: var(--brand-yellow);
-            height: 8px;
-            border-radius: 4px;
-        }
-        
-        .section-nav {
-            display: flex;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-top: 1rem;
-        }
-        
-        .section-badge {
-            padding: 0.5rem 1rem;
-            border-radius: 25px;
-            text-decoration: none;
-            font-weight: 500;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-        }
-        
-        .section-badge.active {
-            background-color: var(--brand-yellow);
-            color: var(--brand-black);
-        }
-        
-        .section-badge:not(.active) {
-            background-color: #e9ecef;
-            color: #6c757d;
-        }
-        
-        .section-badge:not(.active):hover {
-            background-color: #dee2e6;
-            color: var(--brand-black);
-        }
-        
-        /* Form styling */
-        .application-form {
-            background: white;
-            border-radius: 12px;
-            padding: 2rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-        }
-        
-        .form-section-title {
-            color: var(--brand-black);
-            font-weight: 600;
-            font-size: 1.3rem;
-            margin-bottom: 1.5rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid var(--brand-yellow);
-        }
-        
-        .form-label {
-            color: var(--brand-black);
-            font-weight: 500;
-            margin-bottom: 0.5rem;
-        }
-        
-        .form-control, .form-select {
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            padding: 0.75rem;
-            font-size: 1rem;
-            transition: border-color 0.3s ease;
-        }
-        
-        .form-control:focus, .form-select:focus {
-            border-color: var(--brand-yellow);
-            box-shadow: 0 0 0 0.2rem rgba(255, 214, 10, 0.25);
-        }
-        
-        /* Buttons */
-        .btn-primary {
-            background-color: var(--brand-yellow);
-            border-color: var(--brand-yellow);
-            color: var(--brand-black);
-            font-weight: 600;
-            padding: 0.75rem 2rem;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-primary:hover {
-            background-color: #e6c109;
-            border-color: #e6c109;
-            color: var(--brand-black);
-            transform: translateY(-1px);
-        }
-        
-        .btn-secondary {
-            background-color: #6c757d;
-            border-color: #6c757d;
-            color: white;
-            font-weight: 500;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-        }
-        
-        .btn-outline-primary {
-            border-color: var(--brand-yellow);
-            color: var(--brand-black);
-            font-weight: 500;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-        }
-        
-        .btn-outline-primary:hover {
-            background-color: var(--brand-yellow);
-            border-color: var(--brand-yellow);
-            color: var(--brand-black);
-        }
-        
-        /* Cards */
-        .card {
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-        }
-        
-        .card-header {
-            background-color: var(--brand-black);
-            color: white;
-            border-radius: 12px 12px 0 0 !important;
-            font-weight: 600;
-        }
-        
-        /* Property details sidebar */
-        .property-sidebar {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-            margin-bottom: 2rem;
-        }
-        
-        .property-sidebar h5 {
-            color: var(--brand-black);
-            font-weight: 600;
-            margin-bottom: 1rem;
-        }
-        
-        .amenity-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 0.75rem;
-            padding: 0.5rem;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-        }
-        
-        .amenity-icon {
-            color: var(--brand-yellow);
-            margin-right: 0.75rem;
-            font-size: 1.1rem;
-        }
-        
-        /* Footer */
-        .applicant-footer {
-            background-color: var(--brand-black);
-            color: white;
-            text-align: center;
-            padding: 1rem 0;
-            margin-top: 3rem;
-        }
-        
-        /* Responsive design */
-        @media (max-width: 768px) {
-            .property-hero-image {
-                height: 200px;
-            }
-            
-            .property-hero-title {
-                font-size: 1.5rem;
-            }
-            
-            .section-nav {
-                flex-direction: column;
-            }
-            
-            .section-badge {
-                text-align: center;
-            }
-        }
-    </style>
-    
+    <link rel="stylesheet" href="{% static 'users/css/doorway-theme.css' %}">
+
     {% block extra_css %}{% endblock %}
 </head>
+
 <body>
     <!-- Clean header without side navigation -->
     <header class="applicant-header">
@@ -304,7 +30,8 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h1><i class="fas fa-home me-2"></i>{% block header_title %}Property Application{% endblock %}</h1>
-                    <p class="subtitle mb-0">{% block header_subtitle %}Complete your rental application{% endblock %}</p>
+                    <p class="subtitle mb-0">{% block header_subtitle %}Complete your rental application{% endblock %}
+                    </p>
                 </div>
                 <div class="text-end">
                     {% block header_actions %}
@@ -322,15 +49,15 @@
     <main class="applicant-content">
         <div class="container">
             {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                        <i class="fas fa-info-circle me-2"></i>
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                <i class="fas fa-info-circle me-2"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
             {% endif %}
-            
+
             {% block content %}{% endblock %}
         </div>
     </main>
@@ -347,7 +74,8 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     {% block extra_js %}{% endblock %}
 </body>
+
 </html>

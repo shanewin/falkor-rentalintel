@@ -2,11 +2,12 @@
 {% load user_extras %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Doorway{% endblock %}</title>
-    
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome for icons -->
@@ -16,14 +17,13 @@
     <!-- Select2 CSS and JS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    
-    <link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
-    <link rel="stylesheet" href="{% static 'css/base-layout.css' %}">
-    
+
+    <link rel="stylesheet" href="{% static 'users/css/doorway-theme.css' %}">
+
     <!-- Custom CSS (if needed) -->
     {% block extra_css %}{% endblock %}
 </head>
-<body{% if preview_mode %} class="preview-mode"{% endif %}>
+<body{% if preview_mode %} class="preview-mode" {% endif %}>
     <!-- Bootstrap 5 Responsive Navbar -->
     <nav class="navbar navbar-expand-lg navbar-doorway fixed-top">
         <div class="container-fluid">
@@ -31,150 +31,157 @@
             <a class="navbar-brand" href="{% url 'apartments_list' %}">
                 <img src="{% static 'images/falkor-horizontal-transparent-blacktext.png' %}" alt="Falkor">
             </a>
-            
+
             <!-- Mobile Toggle Button -->
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar"
+                aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            
+
             <!-- Collapsible Navigation -->
             <div class="collapse navbar-collapse" id="mainNavbar">
                 <!-- Main Navigation Links -->
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     {% if user.is_authenticated %}
-                        <!-- Dashboard Link Based on Role -->
-                        {% if user.is_superuser or user.is_staff %}
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'admin_dashboard' %}">
-                                    <i class="fas fa-tachometer-alt"></i> Dashboard
-                                </a>
-                            </li>
-                            {% if user.is_superuser %}
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{% url 'admin_user_management' %}">
-                                        <i class="fas fa-users-cog"></i> User Management
-                                    </a>
-                                </li>
-                            {% endif %}
-                        {% elif user.is_broker %}
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'broker_dashboard' %}">
-                                    <i class="fas fa-briefcase"></i> Dashboard
-                                </a>
-                            </li>
-                        {% elif user.is_applicant %}
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'applicant_dashboard' %}">
-                                    <i class="fas fa-user"></i> Dashboard
-                                </a>
-                            </li>
-                        {% elif user.is_owner %}
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'owner_dashboard' %}">
-                                    <i class="fas fa-building"></i> Dashboard
-                                </a>
-                            </li>
-                        {% endif %}
-                        
-                        <!-- Common Navigation Items -->
-                        {% if user.is_superuser or user.is_staff or user.is_broker %}
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'buildings_list' %}">Buildings</a>
-                            </li>
-                        {% endif %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'apartments_list' %}">Apartments</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'applications_list' %}">Applications</a>
-                        </li>
-                        {% if user.is_superuser or user.is_staff or user.is_broker %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'applicants_list' %}">Applicants</a>
-                        </li>
-                        {% endif %}
+                    <!-- Dashboard Link Based on Role -->
+                    {% if user.is_superuser or user.is_staff %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'admin_dashboard' %}">
+                            <i class="fas fa-tachometer-alt"></i> Dashboard
+                        </a>
+                    </li>
+                    {% if user.is_superuser %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'admin_user_management' %}">
+                            <i class="fas fa-users-cog"></i> User Management
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% elif user.is_broker %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'broker_dashboard' %}">
+                            <i class="fas fa-briefcase"></i> Dashboard
+                        </a>
+                    </li>
+                    {% elif user.is_applicant %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'applicant_dashboard' %}">
+                            <i class="fas fa-user"></i> Dashboard
+                        </a>
+                    </li>
+                    {% elif user.is_owner %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'owner_dashboard' %}">
+                            <i class="fas fa-building"></i> Dashboard
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    <!-- Common Navigation Items -->
+                    {% if user.is_superuser or user.is_staff or user.is_broker %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'buildings_list' %}">Buildings</a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'apartments_list' %}">Apartments</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'applications_list' %}">Applications</a>
+                    </li>
+                    {% if user.is_superuser or user.is_staff or user.is_broker %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'applicants_list' %}">Applicants</a>
+                    </li>
+                    {% endif %}
                     {% endif %}
                 </ul>
-                
+
                 <!-- Right Side - User Profile/Login -->
                 <ul class="navbar-nav ms-auto">
                     {% if user.is_authenticated %}
-                        {% get_user_profile_info user as profile_info %}
-                        {% get_user_avatar_url user 200 as avatar_url %}
-                        {% get_user_initials user as user_initials %}
-                        {% get_user_profile_url user as profile_url %}
-                        
-                        <!-- User Profile Dropdown -->
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle navbar-user-section" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                {% if avatar_url %}
-                                    <img src="{{ avatar_url }}" alt="Profile" class="navbar-avatar">
-                                {% else %}
-                                    <div class="navbar-avatar-fallback">{{ user_initials }}</div>
-                                {% endif %}
-                                <span class="d-none d-lg-inline">{{ profile_info.display_name }}</span>
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                                <li>
-                                    <div class="dropdown-item-text">
-                                        <strong>{{ profile_info.display_name }}</strong><br>
-                                        <small class="text-muted">{{ user.email }}</small>
-                                    </div>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                {% if profile_url %}
-                                    <li>
-                                        <a class="dropdown-item" href="{{ profile_url }}">
-                                            <i class="fas fa-user-circle"></i> My Profile
-                                        </a>
-                                    </li>
-                                {% endif %}
-                                <li>
-                                    <a class="dropdown-item" href="{% url 'password_change' %}">
-                                        <i class="fas fa-key"></i> Change Password
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <a class="dropdown-item text-danger" href="{% url 'logout' %}">
-                                        <i class="fas fa-sign-out-alt"></i> Logout
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
+                    {% get_user_profile_info user as profile_info %}
+                    {% get_user_avatar_url user 200 as avatar_url %}
+                    {% get_user_initials user as user_initials %}
+                    {% get_user_profile_url user as profile_url %}
+
+                    <!-- User Profile Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle navbar-user-section" href="#" id="userDropdown" role="button"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            {% if avatar_url %}
+                            <img src="{{ avatar_url }}" alt="Profile" class="navbar-avatar">
+                            {% else %}
+                            <div class="navbar-avatar-fallback">{{ user_initials }}</div>
+                            {% endif %}
+                            <span class="d-none d-lg-inline">{{ profile_info.display_name }}</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li>
+                                <div class="dropdown-item-text">
+                                    <strong>{{ profile_info.display_name }}</strong><br>
+                                    <small class="text-muted">{{ user.email }}</small>
+                                </div>
+                            </li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            {% if profile_url %}
+                            <li>
+                                <a class="dropdown-item" href="{{ profile_url }}">
+                                    <i class="fas fa-user-circle"></i> My Profile
+                                </a>
+                            </li>
+                            {% endif %}
+                            <li>
+                                <a class="dropdown-item" href="{% url 'password_change' %}">
+                                    <i class="fas fa-key"></i> Change Password
+                                </a>
+                            </li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li>
+                                <a class="dropdown-item text-danger" href="{% url 'logout' %}">
+                                    <i class="fas fa-sign-out-alt"></i> Logout
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
                     {% else %}
-                        <!-- Not Authenticated - Show Login/Register -->
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'login' %}">
-                                <i class="fas fa-sign-in-alt"></i> Login
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'register_applicant' %}">
-                                <i class="fas fa-user-plus"></i> Create Account
-                            </a>
-                        </li>
+                    <!-- Not Authenticated - Show Login/Register -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'register_applicant' %}">
+                            <i class="fas fa-user-plus"></i> Create Account
+                        </a>
+                    </li>
                     {% endif %}
                 </ul>
             </div>
         </div>
     </nav>
-    
+
     <!-- Main Content Area -->
     <div class="content">
         {% block content %}{% endblock %}
     </div>
-    
+
     <!-- Bootstrap JS and dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
-    
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             $('.select2').select2();
         });
     </script>
-    
+
     {% block extra_js %}{% endblock %}
-</body>
+    </body>
+
 </html>

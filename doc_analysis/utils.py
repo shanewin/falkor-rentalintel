@@ -4,7 +4,10 @@ import pytesseract
 import requests
 import json
 from pdf2image import convert_from_path
-import magic
+try:
+    import magic
+except ImportError:
+    magic = None
 from pydantic import BaseModel, Field
 from typing_extensions import Literal, Optional
 # import ollama  # Removed - using external APIs or basic fallback
@@ -91,7 +94,11 @@ def extract_text_and_metadata(pdf_path):
         data["metadata"] = doc.metadata or {}
 
         # ✅ Detect file type (to check for tampering)
-        data["file_type"] = magic.from_file(pdf_path, mime=True)
+        # ✅ Detect file type (to check for tampering)
+        if magic:
+            data["file_type"] = magic.from_file(pdf_path, mime=True)
+        else:
+            data["file_type"] = "application/pdf"  # Fallback
 
         doc.close()
 
