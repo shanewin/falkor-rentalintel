@@ -879,6 +879,16 @@ class ApplicantActivity(models.Model):
         blank=True,
         help_text="User who triggered this activity (broker, admin, or the applicant themselves)"
     )
+
+    # Link to specific application (optional)
+    application = models.ForeignKey(
+        'applications.Application',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='activities',
+        help_text="Related application for this activity"
+    )
     
     # System context
     ip_address = models.GenericIPAddressField(null=True, blank=True)

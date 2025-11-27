@@ -251,7 +251,8 @@ def track_application_activities(sender, instance, created, **kwargs):
                             'application_id': instance.id,
                             'old_status': previous_status,
                             'new_status': instance.status,
-                        }
+                        },
+                        application=instance
                     )
                 else:
                     # Regular update

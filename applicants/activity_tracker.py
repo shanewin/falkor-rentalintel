@@ -157,7 +157,8 @@ class ActivityTracker:
         metadata=None,
         request=None,
         force_track=False,
-        async_mode=None
+        async_mode=None,
+        application=None
     ):
         """
         Record an applicant activity for audit trail and analytics.
@@ -240,7 +241,8 @@ class ActivityTracker:
                 triggered_by=triggered_by,
                 metadata=metadata or {},
                 ip_address=ip_address,
-                user_agent=user_agent
+                user_agent=user_agent,
+                application=application
             )
             
             logger.info(f"Tracked activity (sync): {activity}")
@@ -399,7 +401,8 @@ class ActivityTracker:
             description=description,
             triggered_by=applicant.user if hasattr(applicant, 'user') else None,
             metadata=metadata,
-            request=request
+            request=request,
+            application=application
         )
     
     @staticmethod
@@ -419,7 +422,7 @@ class ActivityTracker:
         return ApplicantActivity.objects.filter(
             applicant=applicant
         ).select_related(
-            'triggered_by'
+            'triggered_by', 'application'
         ).order_by('-created_at')[:limit]
     
     @staticmethod
