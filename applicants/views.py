@@ -1,47 +1,79 @@
-from django.shortcuts import render, get_object_or_404, redirect, render
+from django.shortcuts import render, get_object_or_404, redirect
 from .models import Applicant, ApplicantPhoto, PetPhoto, ApplicantCRM, ApplicationHistory, InteractionLog
 from .forms import ApplicantForm, ApplicantPhotoForm, PetForm, PetPhotoForm
 from applications.models import Application
 from apartments.models import Apartment, ApartmentAmenity
 from django.contrib import messages
 from django.http import JsonResponse
-
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.db.models import Q
 
 from .forms import InteractionLogForm
 from django.utils.timezone import now
-
-from django.shortcuts import render
 from applicants.models import Applicant, Amenity, Neighborhood
+from applications.nudge_service import NudgeService
 
-from django.utils.timezone import now
-
-from .forms import InteractionLogForm
 import random
 
-# Single-page edit form removed - now using step-based profile editing system
+# Permission Helper
+def user_is_broker_or_admin(user):
+    return user.is_authenticated and (
+        user.is_superuser or 
+        user.is_staff or 
+        getattr(user, 'is_broker', False) or 
+        getattr(user, 'is_owner', False)
+    )
 
-
-
+@login_required
+@user_passes_test(user_is_broker_or_admin)
 def delete_applicant_photo(request, photo_id):
     photo = get_object_or_404(ApplicantPhoto, id=photo_id)
+    # Security check: Ensure user has access to this applicant
+    applicant = photo.applicant
+    if not (request.user.is_superuser or request.user.is_staff or 
+            applicant.assigned_broker == request.user or 
+            applicant.applications.filter(building__brokers=request.user).exists()):
+         messages.error(request, "You do not have permission to modify this applicant.")
+         return redirect('applicant_overview', applicant_id=applicant.id)
+
     applicant_id = photo.applicant.id
     photo.delete()
     messages.success(request, "Applicant photo deleted successfully!")
     return redirect('applicant_overview', applicant_id=applicant_id)
 
 
-
+@login_required
+@user_passes_test(user_is_broker_or_admin)
 def delete_pet_photo(request, photo_id):
     photo = get_object_or_404(PetPhoto, id=photo_id)
+    # Security check
+    applicant = photo.pet.applicant
+    if not (request.user.is_superuser or request.user.is_staff or 
+            applicant.assigned_broker == request.user or 
+            applicant.applications.filter(building__brokers=request.user).exists()):
+         messages.error(request, "You do not have permission to modify this applicant.")
+         return redirect('applicant_overview', applicant_id=applicant.id)
+
     applicant_id = photo.pet.applicant.id
     photo.delete()
     messages.success(request, "Pet photo deleted successfully!")
     return redirect('applicant_overview', applicant_id=applicant_id)
 
 
-
+@login_required
+@user_passes_test(user_is_broker_or_admin)
 def applicant_overview(request, applicant_id):
     applicant = get_object_or_404(Applicant, id=applicant_id)
+
+    # Permission Check: Broker can only view assigned or relevant applicants
+    if not (request.user.is_superuser or request.user.is_staff):
+        has_access = (
+            applicant.assigned_broker == request.user or
+            applicant.applications.filter(building__brokers=request.user).exists()
+        )
+        if not has_access:
+            messages.error(request, "You do not have permission to view this applicant.")
+            return redirect('applicants_list')
 
     # Get the first submitted application (if it exists)
     application = applicant.applications.filter(submitted_by_applicant=True).first()
@@ -58,22 +90,16 @@ def applicant_overview(request, applicant_id):
         logger = logging.getLogger(__name__)
         logger.error(f"Error finding matching apartments for applicant {applicant_id}: {str(e)}")
 
-    # Restrict AI insights to business users only
+    # Restrict AI insights to business users only (redundant with decorator but good for safety)
     smart_insights = None
-    if request.user.is_authenticated and (
-        request.user.is_superuser or 
-        request.user.is_broker or 
-        request.user.is_staff or
-        getattr(request.user, 'is_owner', False)
-    ):
-        try:
-            from applicants.smart_insights import SmartInsights
-            smart_insights = SmartInsights.analyze_applicant(applicant)
-        except Exception as e:
-            # Log error but don't break the page
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Error generating smart insights for applicant {applicant_id}: {str(e)}")
+    try:
+        from applicants.smart_insights import SmartInsights
+        smart_insights = SmartInsights.analyze_applicant(applicant)
+    except Exception as e:
+        # Log error but don't break the page
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error generating smart insights for applicant {applicant_id}: {str(e)}")
 
     return render(request, 'applicants/applicant_overview.html', {
         'applicant': applicant,
@@ -83,17 +109,26 @@ def applicant_overview(request, applicant_id):
     })
 
 
-
-
-
+@login_required
+@user_passes_test(user_is_broker_or_admin)
 def applicants_list(request):
     # Optimize queries for list display
-    applicants = Applicant.objects.select_related(
+    base_qs = Applicant.objects.select_related(
         'user',
     ).prefetch_related(
         'neighborhood_preferences',
         'applications',
-    ).all()
+    )
+    
+    # Filter based on permissions
+    if request.user.is_superuser or request.user.is_staff:
+        applicants = base_qs.all()
+    else:
+        # Brokers see assigned applicants OR applicants who applied to their buildings
+        applicants = base_qs.filter(
+            Q(assigned_broker=request.user) |
+            Q(applications__building__brokers=request.user)
+        ).distinct()
     
     # Initialize CRM records for workflow
     for applicant in applicants:
@@ -106,12 +141,20 @@ def applicants_list(request):
     return render(request, "applicants/applicants_list.html", context)
 
 
-
 def get_applicant_data(request, applicant_id):
     # API endpoint for applicant data export
+    if not request.user.is_authenticated:
+         return JsonResponse({"error": "Unauthorized"}, status=401)
+
     try:
         applicant = Applicant.objects.get(id=applicant_id)
         
+        # Permission check
+        if not (request.user.is_superuser or request.user.is_staff or request.user == applicant.user or 
+                applicant.assigned_broker == request.user or 
+                applicant.applications.filter(building__brokers=request.user).exists()):
+             return JsonResponse({"error": "Permission denied"}, status=403)
+
         # Get field completion status
         completion_status = applicant.get_field_completion_status()
         
@@ -263,10 +306,22 @@ def get_applicant_data(request, applicant_id):
         return JsonResponse({"error": f"An error occurred: {str(e)}"}, status=500)
 
 
-
+@login_required
+@user_passes_test(user_is_broker_or_admin)
 def applicant_crm(request, applicant_id):
     # Broker communication and activity hub
     applicant = get_object_or_404(Applicant, id=applicant_id)
+    
+    # Permission Check
+    if not (request.user.is_superuser or request.user.is_staff):
+        has_access = (
+            applicant.assigned_broker == request.user or
+            applicant.applications.filter(building__brokers=request.user).exists()
+        )
+        if not has_access:
+            messages.error(request, "You do not have permission to view this applicant's CRM.")
+            return redirect('applicants_list')
+
     crm, created = ApplicantCRM.objects.get_or_create(applicant=applicant)
     history = crm.history.all()
     logs = crm.logs.all().order_by('-created_at')
@@ -275,21 +330,29 @@ def applicant_crm(request, applicant_id):
     from .activity_tracker import ActivityTracker
     recent_activities = ActivityTracker.get_recent_activities(applicant, limit=50)
     activity_summary = ActivityTracker.get_activity_summary(applicant, days=30)
+    
+    # Calculate Engagement Score (Simple heuristic)
+    # 0-100 score based on activity count
+    activity_count = activity_summary.get('total_activities', 0)
+    engagement_score = min(100, activity_count * 2) # 50 activities = 100%
 
     if request.method == "POST":
         if "contact_method" in request.POST:
-            # Track outbound communications
+            # Track outbound communications via NudgeService
             contact_method = request.POST.get("contact_method")
             message = request.POST.get("message", "")
 
-            if message.strip():
-                InteractionLog.objects.create(
-                    crm=crm,
-                    broker=request.user if request.user.is_authenticated else None,
-                    note=f"[{contact_method.upper()} SENT] {message}",
-                    created_at=now(),
-                    is_message=True  # Distinguish from notes
-                )
+            success, error_msg = NudgeService.send_nudge(
+                target=applicant,
+                user=request.user,
+                nudge_type=contact_method,
+                custom_message=message
+            )
+
+            if success:
+                messages.success(request, f"{contact_method.upper()} sent successfully!")
+            else:
+                messages.error(request, f"Failed to send {contact_method}: {error_msg}")
 
             return redirect('applicant_crm', applicant_id=applicant.id)
 
@@ -301,9 +364,13 @@ def applicant_crm(request, applicant_id):
                 new_log.broker = request.user if request.user.is_authenticated else None
                 new_log.crm = crm
                 new_log.save()
+                messages.success(request, "Note added successfully.")
                 return redirect('applicant_crm', applicant_id=applicant.id)
     else:
         log_form = InteractionLogForm()
+    
+    # Get Quick Actions
+    quick_actions = NudgeService.get_quick_actions(applicant)
 
     return render(request, 'applicants/applicant_crm.html', {
         'applicant': applicant,
@@ -313,6 +380,6 @@ def applicant_crm(request, applicant_id):
         'log_form': log_form,
         'recent_activities': recent_activities,
         'activity_summary': activity_summary,
+        'quick_actions': quick_actions,
+        'engagement_score': engagement_score,
     })
-
-
