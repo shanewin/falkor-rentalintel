@@ -22,9 +22,40 @@ class BrokerProfile(models.Model):
     )
     
     # Personal Information
-    first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
-    phone_number = models.CharField(max_length=20)
+    _first_name = models.CharField(max_length=100, db_column="first_name")
+    _last_name = models.CharField(max_length=100, db_column="last_name")
+    _phone_number = models.CharField(max_length=20, db_column="phone_number")
+    
+    @property
+    def first_name(self):
+        return self.user.first_name if self.user.first_name else self._first_name
+        
+    @first_name.setter
+    def first_name(self, value):
+        self.user.first_name = value
+        self.user.save()
+        self._first_name = value
+        
+    @property
+    def last_name(self):
+        return self.user.last_name if self.user.last_name else self._last_name
+        
+    @last_name.setter
+    def last_name(self, value):
+        self.user.last_name = value
+        self.user.save()
+        self._last_name = value
+        
+    @property
+    def phone_number(self):
+        return self.user.phone_number if self.user.phone_number else self._phone_number
+        
+    @phone_number.setter
+    def phone_number(self, value):
+        self.user.phone_number = value
+        self.user.save()
+        self._phone_number = value
+
     mobile_phone = models.CharField(max_length=20, blank=True, null=True)
     professional_email = models.EmailField(help_text="Professional email if different from account email", blank=True, null=True)
     
@@ -173,12 +204,43 @@ class OwnerProfile(models.Model):
     owner_type = models.CharField(max_length=20, choices=OWNER_TYPE_CHOICES, default='individual')
     
     # Name fields (adapt based on owner type)
-    first_name = models.CharField(max_length=100, help_text="First name or company representative")
-    last_name = models.CharField(max_length=100, help_text="Last name or company name if business")
+    _first_name = models.CharField(max_length=100, help_text="First name or company representative", db_column="first_name")
+    _last_name = models.CharField(max_length=100, help_text="Last name or company name if business", db_column="last_name")
+    
+    @property
+    def first_name(self):
+        return self.user.first_name if self.user.first_name else self._first_name
+        
+    @first_name.setter
+    def first_name(self, value):
+        self.user.first_name = value
+        self.user.save()
+        self._first_name = value
+        
+    @property
+    def last_name(self):
+        return self.user.last_name if self.user.last_name else self._last_name
+        
+    @last_name.setter
+    def last_name(self, value):
+        self.user.last_name = value
+        self.user.save()
+        self._last_name = value
+
     company_name = models.CharField(max_length=200, blank=True, null=True, help_text="Company name if applicable")
     
     # Contact Information
-    primary_phone = models.CharField(max_length=20)
+    _primary_phone = models.CharField(max_length=20, db_column="primary_phone")
+    
+    @property
+    def primary_phone(self):
+        return self.user.phone_number if self.user.phone_number else self._primary_phone
+        
+    @primary_phone.setter
+    def primary_phone(self, value):
+        self.user.phone_number = value
+        self.user.save()
+        self._primary_phone = value
     secondary_phone = models.CharField(max_length=20, blank=True, null=True)
     business_email = models.EmailField(blank=True, null=True)
     
@@ -289,8 +351,29 @@ class StaffProfile(models.Model):
     )
     
     # Personal Information
-    first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
+    # Personal Information
+    _first_name = models.CharField(max_length=100, db_column="first_name")
+    _last_name = models.CharField(max_length=100, db_column="last_name")
+    
+    @property
+    def first_name(self):
+        return self.user.first_name if self.user.first_name else self._first_name
+        
+    @first_name.setter
+    def first_name(self, value):
+        self.user.first_name = value
+        self.user.save()
+        self._first_name = value
+        
+    @property
+    def last_name(self):
+        return self.user.last_name if self.user.last_name else self._last_name
+        
+    @last_name.setter
+    def last_name(self, value):
+        self.user.last_name = value
+        self.user.save()
+        self._last_name = value
     employee_id = models.CharField(max_length=20, unique=True, blank=True, null=True)
     
     # Contact Information
@@ -412,7 +495,7 @@ class StaffProfile(models.Model):
     last_login = models.DateTimeField(blank=True, null=True)
     
     class Meta:
-        ordering = ['department', 'last_name']
+        ordering = ['department', '_last_name']
         verbose_name = 'Staff Profile'
         verbose_name_plural = 'Staff Profiles'
     
@@ -443,11 +526,43 @@ class AdminProfile(models.Model):
     )
     
     # ONLY basic fields as specified
-    first_name = models.CharField(max_length=100, blank=True)
-    last_name = models.CharField(max_length=100, blank=True)
+    _first_name = models.CharField(max_length=100, blank=True, db_column="first_name")
+    _last_name = models.CharField(max_length=100, blank=True, db_column="last_name")
+    
+    @property
+    def first_name(self):
+        return self.user.first_name if self.user.first_name else self._first_name
+        
+    @first_name.setter
+    def first_name(self, value):
+        self.user.first_name = value
+        self.user.save()
+        self._first_name = value
+        
+    @property
+    def last_name(self):
+        return self.user.last_name if self.user.last_name else self._last_name
+        
+    @last_name.setter
+    def last_name(self, value):
+        self.user.last_name = value
+        self.user.save()
+        self._last_name = value
+
     position = models.CharField(max_length=100, blank=True, help_text="Job title or position")
     profile_photo = CloudinaryField('image', blank=True, null=True)
-    phone_number = models.CharField(max_length=20, blank=True)
+    
+    _phone_number = models.CharField(max_length=20, blank=True, db_column="phone_number")
+    
+    @property
+    def phone_number(self):
+        return self.user.phone_number if self.user.phone_number else self._phone_number
+        
+    @phone_number.setter
+    def phone_number(self, value):
+        self.user.phone_number = value
+        self.user.save()
+        self._phone_number = value
     bio = models.TextField(blank=True, null=True)
     emergency_contact_name = models.CharField(max_length=100, blank=True, null=True)
     emergency_contact_phone = models.CharField(max_length=20, blank=True, null=True)

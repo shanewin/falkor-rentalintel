@@ -19,10 +19,15 @@ class BrokerProfileForm(forms.ModelForm):
         required=False
     )
     
+    # Explicitly define fields that are now properties
+    first_name = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First Name'}))
+    last_name = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Last Name'}))
+    phone_number = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(555) 555-5555'}))
+
     class Meta:
         model = BrokerProfile
         fields = [
-            'profile_photo', 'first_name', 'last_name', 'mobile_phone', 'professional_email',
+            'profile_photo', 'mobile_phone', 'professional_email',
             'business_name', 'business_address_1', 'business_city', 'business_state', 'business_zip',
             'broker_license_number', 'license_state', 'license_expiration', 'years_experience',
             'job_title', 'specializations', 'territories', 
@@ -141,11 +146,16 @@ class BrokerProfileForm(forms.ModelForm):
 class OwnerProfileForm(forms.ModelForm):
     profile_photo = CloudinaryFileField(required=False)
     
+    # Explicitly define fields that are now properties
+    first_name = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First Name'}))
+    last_name = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Last Name'}))
+    primary_phone = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(555) 555-5555'}))
+
     class Meta:
         model = OwnerProfile
         fields = [
-            'profile_photo', 'owner_type', 'first_name', 'last_name', 'company_name',
-            'primary_phone', 'secondary_phone', 'business_email',
+            'profile_photo', 'owner_type', 'company_name',
+            'secondary_phone', 'business_email',
             'address_1', 'address_2', 'city', 'state', 'zip_code',
             'mailing_same_as_primary', 'mailing_address_1', 'mailing_address_2', 
             'mailing_city', 'mailing_state', 'mailing_zip',
@@ -293,10 +303,14 @@ class OwnerProfileForm(forms.ModelForm):
 class StaffProfileForm(forms.ModelForm):
     profile_photo = CloudinaryFileField(required=False)
     
+    # Explicitly define fields that are now properties
+    first_name = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First Name'}))
+    last_name = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Last Name'}))
+
     class Meta:
         model = StaffProfile
         fields = [
-            'profile_photo', 'first_name', 'last_name', 'employee_id',
+            'profile_photo', 'employee_id',
             'office_phone', 'office_extension', 'mobile_phone', 'office_email',
             'department', 'job_title', 'employment_start_date', 'employment_type',
             'office_building', 'office_floor', 'office_room', 
@@ -447,10 +461,15 @@ class AdminProfileForm(forms.ModelForm):
         help_text='This email is used for login and system notifications'
     )
     
+    # Explicitly define fields that are now properties
+    first_name = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your first name'}))
+    last_name = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your last name'}))
+    phone_number = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(555) 123-4567'}))
+
     class Meta:
         model = AdminProfile
         fields = [
-            'email', 'first_name', 'last_name', 'position', 'phone_number', 'bio'
+            'email', 'position', 'bio'
         ]
         labels = {
             'first_name': 'First Name:',

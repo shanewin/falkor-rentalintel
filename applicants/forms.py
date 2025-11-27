@@ -259,10 +259,15 @@ class ApplicantBasicInfoForm(forms.ModelForm):
     state_id_front = SecureImageField(required=False)
     state_id_back = SecureImageField(required=False)
     
+    # Explicitly define fields that are now properties
+    first_name = forms.CharField(max_length=50, required=True, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First Name'}))
+    last_name = forms.CharField(max_length=50, required=True, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Last Name'}))
+    phone_number = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(555) 555-5555'}))
+    email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'email@example.com'}))
+
     class Meta:
         model = Applicant
         fields = [
-            'first_name', 'last_name', 'phone_number', 'email',
             'street_address_1', 'street_address_2', 'city', 'state', 'zip_code',
             'current_address_years', 'current_address_months',
             'housing_status', 'current_landlord_name', 'current_landlord_phone', 'current_landlord_email',
@@ -1604,11 +1609,16 @@ class ApplicantEmploymentForm(forms.ModelForm):
 
 # Original single-page form (keep for backward compatibility)
 class ApplicantForm(forms.ModelForm):
+    # Explicitly define fields that are now properties
+    first_name = forms.CharField(max_length=50, required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    last_name = forms.CharField(max_length=50, required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    phone_number = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': 'form-control'}))
+
     class Meta:
         model = Applicant
         fields = [
-            'first_name', 'last_name', 'date_of_birth',
-            'phone_number', 'email',
+            'date_of_birth',
             'street_address_1', 'street_address_2', 'city', 'state', 'zip_code',
             'housing_status', 'current_landlord_name', 'current_landlord_phone', 'current_landlord_email',
             'desired_move_in_date', 'number_of_bedrooms', 'number_of_bathrooms', 'max_rent_budget', 'open_to_roommates',

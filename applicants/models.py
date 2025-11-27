@@ -39,6 +39,11 @@ class NeighborhoodPreference(models.Model):
         return f"{self.applicant} - {self.neighborhood} (Rank {self.preference_rank})"
 
 
+class ApplicantManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().select_related('user')
+
+
 class Applicant(models.Model):
     # Link to User account (optional - can be created later)
     user = models.OneToOneField(
@@ -49,12 +54,67 @@ class Applicant(models.Model):
         related_name='applicant_profile'
     )
     
-    first_name = models.CharField(max_length=100, default="John")
-    last_name = models.CharField(max_length=100, default="Doe")
-    date_of_birth = models.DateField(null=True, blank=True)
+    objects = ApplicantManager()  # Use custom manager for optimization
+    
+    # Shadow fields (kept for backward compatibility and orphan records)
+    _first_name = models.CharField(max_length=100, default="John", db_column="first_name")
+    _last_name = models.CharField(max_length=100, default="Doe", db_column="last_name")
+    _email = models.EmailField(default="john@example.com", db_column="email")
+    _phone_number = models.CharField(max_length=20, default="555-555-5555", db_column="phone_number")
 
-    phone_number = models.CharField(max_length=20, blank=True, null=True)
-    email = models.EmailField(unique=True)
+    @property
+    def first_name(self):
+        if self.user and self.user.first_name:
+            return self.user.first_name
+        return self._first_name
+
+    @first_name.setter
+    def first_name(self, value):
+        if self.user:
+            self.user.first_name = value
+            self.user.save()
+        self._first_name = value
+
+    @property
+    def last_name(self):
+        if self.user and self.user.last_name:
+            return self.user.last_name
+        return self._last_name
+
+    @last_name.setter
+    def last_name(self, value):
+        if self.user:
+            self.user.last_name = value
+            self.user.save()
+        self._last_name = value
+
+    @property
+    def email(self):
+        if self.user and self.user.email:
+            return self.user.email
+        return self._email
+
+    @email.setter
+    def email(self, value):
+        if self.user:
+            self.user.email = value
+            self.user.save()
+        self._email = value
+
+    @property
+    def phone_number(self):
+        if self.user and self.user.phone_number:
+            return self.user.phone_number
+        return self._phone_number
+
+    @phone_number.setter
+    def phone_number(self, value):
+        if self.user:
+            self.user.phone_number = value
+            self.user.save()
+        self._phone_number = value
+
+    date_of_birth = models.DateField(null=True, blank=True)
 
     # Address Details
     street_address_1 = models.CharField(max_length=255, blank=True, null=True)

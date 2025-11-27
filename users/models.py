@@ -35,6 +35,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     email_verified = models.BooleanField(default=False, verbose_name="Email Verified")
     email_verified_at = models.DateTimeField(null=True, blank=True, verbose_name="Email Verified At")
 
+    # Identity Fields (Consolidated from profiles)
+    first_name = models.CharField(max_length=100, blank=True, verbose_name="First Name")
+    last_name = models.CharField(max_length=100, blank=True, verbose_name="Last Name")
+    phone_number = models.CharField(max_length=20, blank=True, verbose_name="Phone Number")
+
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
 
