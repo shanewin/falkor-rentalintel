@@ -191,9 +191,12 @@ STATIC_ROOT = BASE_DIR / 'static_root'
 
 STATICFILES_DIRS = [
     BASE_DIR / 'staticfiles',  # ensure collected assets are served in dev
+    BASE_DIR / 'static',       # Global static assets (css/doorway-theme.css)
     BASE_DIR / 'apartments/static/apartments',
     BASE_DIR / 'applicants/static/applicants',
     BASE_DIR / 'buildings/static/buildings',
+    BASE_DIR / 'applications/static/applications',
+    BASE_DIR / 'users/static/users',
 ]
 
 

@@ -5,7 +5,8 @@ We follow a strict **1-File-Per-App** consolidation strategy to maintain modular
 
 | App | CSS File Path | Purpose |
 | :--- | :--- | :--- |
-| **Global Theme** | `users/static/users/css/doorway-theme.css` | **Source of Truth**. Defines `:root` variables, reset, and global utilities. |
+| **Global Theme** | `static/css/doorway-theme.css` | **Source of Truth**. Defines `:root` variables, reset, and global utilities. |
+| **Shared Utility** | `static/css/photo-upload.css` | Cloudinary widget styling. |
 | **Users** | `users/static/users/css/users.css` | Login, Registration, Role Selection, Profile settings. |
 | **Apartments** | `apartments/static/apartments/css/apartments.css` | Apartment listings, details, and map views. |
 | **Applications** | `applications/static/applications/css/applications.css` | Application forms, status tracking, and management. |
@@ -77,9 +78,12 @@ The static files configuration in `realestate/settings.py` controls how these fi
   ```python
   STATICFILES_DIRS = [
       BASE_DIR / 'staticfiles',
+      BASE_DIR / 'static',       # Global static assets
       BASE_DIR / 'apartments/static/apartments',
       BASE_DIR / 'applicants/static/applicants',
       BASE_DIR / 'buildings/static/buildings',
+      BASE_DIR / 'applications/static/applications',
+      BASE_DIR / 'users/static/users',
   ]
   ```
-  *Note: The `users` app is NOT in this list, so its assets are resolved via standard app discovery (e.g., `users/static/users/...`).*
+  *Note: All app static directories are explicitly listed to allow flattened access if needed, though namespaced access is preferred.*

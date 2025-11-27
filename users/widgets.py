@@ -12,7 +12,7 @@ class CloudinaryPhotoUploadWidget(forms.ClearableFileInput):
     
     class Media:
         css = {
-            'all': ('users/css/photo-upload.css',)
+            'all': ('css/photo-upload.css',)
         }
         js = (
             'https://upload-widget.cloudinary.com/global/all.js',
@@ -89,7 +89,7 @@ class CloudinaryDirectUploadWidget(forms.HiddenInput):
     
     class Media:
         css = {
-            'all': ('users/css/photo-upload.css',)
+            'all': ('css/photo-upload.css',)
         }
         js = (
             'https://upload-widget.cloudinary.com/global/all.js',
