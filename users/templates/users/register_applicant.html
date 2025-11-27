@@ -1,296 +1,194 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Create Account - Doorway{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
-<link rel="stylesheet" href="{% static 'users/css/users.css' %}">
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Phone number formatting
-        const phoneInput = document.getElementById('{{ form.phone_number.id_for_label }}');
-
-        if (phoneInput) {
-            phoneInput.addEventListener('input', function (e) {
-                let value = e.target.value.replace(/\D/g, ''); // Remove all non-digits
-
-                if (value.length >= 10) {
-                    value = value.substring(0, 10); // Limit to 10 digits
-                }
-
-                if (value.length >= 6) {
-                    value = `(${value.substring(0, 3)}) ${value.substring(3, 6)}-${value.substring(6)}`;
-                } else if (value.length >= 3) {
-                    value = `(${value.substring(0, 3)}) ${value.substring(3)}`;
-                } else if (value.length > 0) {
-                    value = `(${value}`;
-                }
-
-                e.target.value = value;
-            });
-
-            // Handle backspace and delete to work properly with formatted text
-            phoneInput.addEventListener('keydown', function (e) {
-                if (e.key === 'Backspace' || e.key === 'Delete') {
-                    let value = e.target.value.replace(/\D/g, '');
-                    if (value.length <= 1) {
-                        e.target.value = '';
-                        e.preventDefault();
-                    }
-                }
-            });
-
-            // Update placeholder
-            phoneInput.placeholder = '(555) 123-4567';
-        }
-
-        // SMS opt-in logic
-        const smsOptIn = document.getElementById('{{ form.sms_opt_in.id_for_label }}');
-        const verifyPhone = document.getElementById('{{ form.verify_phone.id_for_label }}');
-        const tcpaConsent = document.getElementById('{{ form.tcpa_consent.id_for_label }}');
-        const smsSection = document.querySelector('.sms-preferences-section');
-
-        // Show/hide SMS section based on phone number
-        if (phoneInput && smsSection) {
-            function toggleSmsSection() {
-                const phoneValue = phoneInput.value.replace(/\D/g, '');
-                if (phoneValue.length >= 10) {
-                    smsSection.style.display = 'block';
-                } else {
-                    smsSection.style.display = 'none';
-                    // Uncheck boxes if phone is removed
-                    if (smsOptIn) smsOptIn.checked = false;
-                    if (verifyPhone) verifyPhone.checked = false;
-                    if (tcpaConsent) tcpaConsent.checked = false;
-                }
-            }
-
-            phoneInput.addEventListener('input', toggleSmsSection);
-            toggleSmsSection(); // Check initial state
-        }
-
-        // Auto-check TCPA when SMS opt-in is checked
-        if (smsOptIn && tcpaConsent) {
-            smsOptIn.addEventListener('change', function () {
-                if (this.checked) {
-                    // Show TCPA disclaimer prominently
-                    const tcpaDiv = tcpaConsent.closest('.form-check');
-                    if (tcpaDiv) {
-                        tcpaDiv.style.backgroundColor = '#fff3cd';
-                        setTimeout(() => {
-                            tcpaDiv.style.backgroundColor = '';
-                        }, 2000);
-                    }
-                }
-            });
-        }
-
-        // Recommend verification when phone is entered
-        if (phoneInput && verifyPhone) {
-            phoneInput.addEventListener('blur', function () {
-                const phoneValue = this.value.replace(/\D/g, '');
-                if (phoneValue.length === 10 && !verifyPhone.checked) {
-                    // Subtly highlight the verify option
-                    const verifyLabel = document.querySelector(`label[for="${verifyPhone.id}"]`);
-                    if (verifyLabel) {
-                        verifyLabel.style.color = '#28a745';
-                        setTimeout(() => {
-                            verifyLabel.style.color = '';
-                        }, 3000);
-                    }
-                }
-            });
-        }
-    });
-</script>
-{% endblock %}
+{% block title %}Create Applicant Account - Doorway{% endblock %}
 
 {% block content %}
-<div class="register-container">
-    <div class="register-header">
-        <img src="{% static 'images/falkor-horizontal-transparent-blacktext.png' %}" alt="Falkor Logo">
-        <h2>Create Applicant Account</h2>
-        <p class="text-muted">Join Doorway to find your perfect home</p>
-    </div>
-
-    <div class="mb-4">
-        {% load socialaccount %}
-        <a href="{% provider_login_url 'google' %}"
-            class="btn btn-outline-dark w-100 d-flex align-items-center justify-content-center gap-2"
-            style="border-color: #dadce0; color: #3c4043; font-weight: 500; padding: 12px; background-color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-            <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="20px" height="20px"
-                style="display: block;">
-                <path fill="#EA4335"
-                    d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z">
-                </path>
-                <path fill="#4285F4"
-                    d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z">
-                </path>
-                <path fill="#FBBC05"
-                    d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z">
-                </path>
-                <path fill="#34A853"
-                    d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z">
-                </path>
-            </svg>
-            <span>Sign up with Google</span>
-        </a>
-        <div class="position-relative mt-4 mb-3">
-            <hr class="text-muted">
-            <span class="position-absolute top-50 start-50 translate-middle bg-white px-2 text-muted small">Or register
-                with email</span>
-        </div>
-    </div>
-    {% if messages %}
-    {% for message in messages %}
-    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-    {% endfor %}
-    {% endif %}
-
-    <div class="benefits-list">
-        <h6>With your account, you can:</h6>
-        <ul>
-            <li>Complete rental applications online</li>
-            <li>Upload required documents securely</li>
-            <li>Track your application status</li>
-            <li>Manage your profile information</li>
-            <li>Pre-fill future applications automatically</li>
-        </ul>
-    </div>
-
-    <form method="POST" class="doorway-form">
-        {% csrf_token %}
-
-        {% if form.non_field_errors %}
-        <div class="alert alert-danger">
-            {{ form.non_field_errors.0 }}
-        </div>
-        {% endif %}
-
-        <div class="form-row">
-            <div class="form-group">
-                <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
-                {{ form.first_name }}
-                {% if form.first_name.errors %}
-                <div class="text-danger small mt-1">{{ form.first_name.errors.0 }}</div>
-                {% endif %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="text-center mb-4">
+                <img src="{% static 'images/falkor-horizontal-transparent-blacktext.png' %}" alt="Falkor Logo" class="img-fluid mb-3" style="max-width: 200px;">
+                <h2 class="h3">Create Applicant Account</h2>
+                <p class="text-muted">Join Doorway to find your perfect home</p>
             </div>
 
-            <div class="form-group">
-                <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
-                {{ form.last_name }}
-                {% if form.last_name.errors %}
-                <div class="text-danger small mt-1">{{ form.last_name.errors.0 }}</div>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label for="{{ form.email.id_for_label }}" class="form-label">Email Address</label>
-            {{ form.email }}
-            {% if form.email.errors %}
-            <div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>
-            {% endif %}
-        </div>
-
-        <div class="form-group">
-            <label for="{{ form.phone_number.id_for_label }}" class="form-label">
-                Phone Number
-                <small class="text-muted">(Optional)</small>
-            </label>
-            {{ form.phone_number }}
-            {% if form.phone_number.help_text %}
-            <small class="form-text text-muted">{{ form.phone_number.help_text }}</small>
-            {% endif %}
-            {% if form.phone_number.errors %}
-            <div class="text-danger small mt-1">{{ form.phone_number.errors.0 }}</div>
-            {% endif %}
-        </div>
-
-        <!-- SMS Opt-in Section -->
-        <div class="sms-preferences-section"
-            style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h6 class="mb-3">
-                <i class="fas fa-mobile-alt"></i> SMS Notifications
-            </h6>
-
-            <!-- Verify Phone Checkbox -->
-            <div class="form-check mb-2">
-                {{ form.verify_phone }}
-                <label class="form-check-label" for="{{ form.verify_phone.id_for_label }}">
-                    <strong>{{ form.verify_phone.label }}</strong>
-                    {% if form.verify_phone.help_text %}
-                    <br><small class="text-muted">{{ form.verify_phone.help_text }}</small>
-                    {% endif %}
-                </label>
-                {% if form.verify_phone.errors %}
-                <div class="text-danger small mt-1">{{ form.verify_phone.errors.0 }}</div>
-                {% endif %}
-            </div>
-
-            <!-- SMS Updates Checkbox -->
-            <div class="form-check mb-2">
-                {{ form.sms_opt_in }}
-                <label class="form-check-label" for="{{ form.sms_opt_in.id_for_label }}">
-                    {{ form.sms_opt_in.label }}
-                    {% if form.sms_opt_in.help_text %}
-                    <br><small class="text-muted">{{ form.sms_opt_in.help_text }}</small>
-                    {% endif %}
-                </label>
-                {% if form.sms_opt_in.errors %}
-                <div class="text-danger small mt-1">{{ form.sms_opt_in.errors.0 }}</div>
-                {% endif %}
-            </div>
-
-            <!-- TCPA Consent -->
-            <div class="form-check" style="border-top: 1px solid #dee2e6; padding-top: 10px; margin-top: 10px;">
-                {{ form.tcpa_consent }}
-                <label class="form-check-label" for="{{ form.tcpa_consent.id_for_label }}">
-                    {{ form.tcpa_consent.label }}
-                </label>
-                {% if form.tcpa_consent.help_text %}
-                <div class="tcpa-disclaimer"
-                    style="background-color: white; padding: 10px; border-left: 3px solid #ffc107; margin-top: 10px; font-size: 0.875rem; color: #6c757d;">
-                    <i class="fas fa-info-circle text-warning"></i>
-                    {{ form.tcpa_consent.help_text|safe }}
+            <div class="mb-4">
+                {% load socialaccount %}
+                <a href="{% provider_login_url 'google' %}"
+                    class="btn btn-outline-dark w-100 d-flex align-items-center justify-content-center gap-2 shadow-sm"
+                    style="border-color: #dadce0; color: #3c4043; font-weight: 500; padding: 12px; background-color: #fff;">
+                    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="20px" height="20px"
+                        style="display: block;">
+                        <path fill="#EA4335"
+                            d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z">
+                        </path>
+                        <path fill="#4285F4"
+                            d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z">
+                        </path>
+                        <path fill="#FBBC05"
+                            d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z">
+                        </path>
+                        <path fill="#34A853"
+                            d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z">
+                        </path>
+                    </svg>
+                    <span>Sign up with Google</span>
+                </a>
+                <div class="position-relative mt-4 mb-3">
+                    <hr class="text-muted">
+                    <span class="position-absolute top-50 start-50 translate-middle bg-white px-2 text-muted small">Or register with email</span>
                 </div>
-                {% endif %}
-                {% if form.tcpa_consent.errors %}
-                <div class="text-danger small mt-1">{{ form.tcpa_consent.errors.0 }}</div>
-                {% endif %}
+            </div>
+
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <div class="mb-4">
+                        <h6 class="fw-bold">With your account, you can:</h6>
+                        <ul class="list-unstyled text-muted small">
+                            <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Complete rental applications online</li>
+                            <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Upload required documents securely</li>
+                            <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Track your application status</li>
+                            <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Manage your profile information</li>
+                            <li class="mb-0"><i class="fas fa-check text-success me-2"></i>Pre-fill future applications automatically</li>
+                        </ul>
+                    </div>
+
+                    <form method="POST">
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors.0 }}
+                        </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
+                                {{ form.first_name }}
+                                {% if form.first_name.errors %}
+                                <div class="text-danger small mt-1">{{ form.first_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
+                                {{ form.last_name }}
+                                {% if form.last_name.errors %}
+                                <div class="text-danger small mt-1">{{ form.last_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.email.id_for_label }}" class="form-label">Email Address</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                            <div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.phone_number.id_for_label }}" class="form-label">
+                                Phone Number <small class="text-muted">(Optional)</small>
+                            </label>
+                            {{ form.phone_number }}
+                            {% if form.phone_number.help_text %}
+                            <div class="form-text">{{ form.phone_number.help_text }}</div>
+                            {% endif %}
+                            {% if form.phone_number.errors %}
+                            <div class="text-danger small mt-1">{{ form.phone_number.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- SMS Opt-in Section -->
+                        <div class="bg-light p-3 rounded mb-3">
+                            <h6 class="mb-3">
+                                <i class="fas fa-mobile-alt"></i> SMS Notifications
+                            </h6>
+
+                            <div class="form-check mb-2">
+                                {{ form.verify_phone }}
+                                <label class="form-check-label" for="{{ form.verify_phone.id_for_label }}">
+                                    <strong>{{ form.verify_phone.label }}</strong>
+                                    {% if form.verify_phone.help_text %}
+                                    <br><small class="text-muted">{{ form.verify_phone.help_text }}</small>
+                                    {% endif %}
+                                </label>
+                                {% if form.verify_phone.errors %}
+                                <div class="text-danger small mt-1">{{ form.verify_phone.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="form-check mb-2">
+                                {{ form.sms_opt_in }}
+                                <label class="form-check-label" for="{{ form.sms_opt_in.id_for_label }}">
+                                    {{ form.sms_opt_in.label }}
+                                    {% if form.sms_opt_in.help_text %}
+                                    <br><small class="text-muted">{{ form.sms_opt_in.help_text }}</small>
+                                    {% endif %}
+                                </label>
+                                {% if form.sms_opt_in.errors %}
+                                <div class="text-danger small mt-1">{{ form.sms_opt_in.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="form-check border-top pt-2 mt-2">
+                                {{ form.tcpa_consent }}
+                                <label class="form-check-label" for="{{ form.tcpa_consent.id_for_label }}">
+                                    {{ form.tcpa_consent.label }}
+                                </label>
+                                {% if form.tcpa_consent.help_text %}
+                                <div class="alert alert-warning d-flex align-items-center mt-2 p-2 small" role="alert">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <div>{{ form.tcpa_consent.help_text|safe }}</div>
+                                </div>
+                                {% endif %}
+                                {% if form.tcpa_consent.errors %}
+                                <div class="text-danger small mt-1">{{ form.tcpa_consent.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.password.id_for_label }}" class="form-label">Password</label>
+                            {{ form.password }}
+                            {% if form.password.errors %}
+                            <div class="text-danger small mt-1">{{ form.password.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.password_confirm.id_for_label }}" class="form-label">Confirm Password</label>
+                            {{ form.password_confirm }}
+                            {% if form.password_confirm.errors %}
+                            <div class="text-danger small mt-1">{{ form.password_confirm.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-user-plus me-2"></i>Create Account
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <p>Already have an account? <a href="{% url 'login' %}" class="text-decoration-none fw-bold">Sign in here</a></p>
             </div>
         </div>
-
-        <div class="form-group">
-            <label for="{{ form.password.id_for_label }}" class="form-label">Password</label>
-            {{ form.password }}
-            {% if form.password.errors %}
-            <div class="text-danger small mt-1">{{ form.password.errors.0 }}</div>
-            {% endif %}
-        </div>
-
-        <div class="form-group">
-            <label for="{{ form.password_confirm.id_for_label }}" class="form-label">Confirm Password</label>
-            {{ form.password_confirm }}
-            {% if form.password_confirm.errors %}
-            <div class="text-danger small mt-1">{{ form.password_confirm.errors.0 }}</div>
-            {% endif %}
-        </div>
-
-        <button type="submit" class="btn btn-doorway-primary">
-            <i class="fas fa-user-plus"></i> Create Account
-        </button>
-    </form>
-
-    <div class="login-link">
-        <p>Already have an account? <a href="{% url 'login' %}">Sign in here</a></p>
     </div>
 </div>
 {% endblock %}

@@ -3,15 +3,13 @@
 
 {% block title %}Applicant Dashboard - Doorway{% endblock %}
 
-{% block extra_css %}{% endblock %}
-
 {% block content %}
-<div class="page-header">
+<div class="bg-light py-4 mb-4 border-bottom">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-md-8">
-                <h1><i class="fas fa-user"></i> Applicant Dashboard</h1>
-                <p>
+                <h1 class="h3 mb-1"><i class="fas fa-user me-2"></i>Applicant Dashboard</h1>
+                <p class="text-muted mb-0">
                     {% if applicant %}
                     Welcome, {{ applicant.first_name }} {{ applicant.last_name }}
                     {% else %}
@@ -19,9 +17,9 @@
                     {% endif %}
                 </p>
             </div>
-            <div class="col-md-4 text-end">
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
                 <a href="{% url 'profile_step1' %}" class="btn btn-primary">
-                    <i class="fas fa-user-edit"></i> Update Profile
+                    <i class="fas fa-user-edit me-2"></i>Update Profile
                 </a>
             </div>
         </div>
@@ -42,80 +40,96 @@
     {% endif %}
 
     <!-- Stats Grid -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon"><i class="fas fa-user-circle"></i></div>
-            <div class="stat-number">{{ completion_percentage }}%</div>
-            <div class="stat-label">Profile Complete</div>
+    <div class="row mb-4">
+        <div class="col-6 col-md-3 mb-3">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body text-center">
+                    <div class="text-primary fs-2 mb-2"><i class="fas fa-user-circle"></i></div>
+                    <div class="h3 mb-0 fw-bold">{{ completion_percentage }}%</div>
+                    <div class="text-muted small">Profile Complete</div>
+                </div>
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon"><i class="fas fa-file-alt"></i></div>
-            <div class="stat-number">{{ applications.count|default:"0" }}</div>
-            <div class="stat-label">Applications</div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body text-center">
+                    <div class="text-primary fs-2 mb-2"><i class="fas fa-file-alt"></i></div>
+                    <div class="h3 mb-0 fw-bold">{{ applications.count|default:"0" }}</div>
+                    <div class="text-muted small">Applications</div>
+                </div>
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon"><i class="fas fa-clock"></i></div>
-            <div class="stat-number">{{ pending_applications|default:"0" }}</div>
-            <div class="stat-label">Pending</div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body text-center">
+                    <div class="text-warning fs-2 mb-2"><i class="fas fa-clock"></i></div>
+                    <div class="h3 mb-0 fw-bold">{{ pending_applications|default:"0" }}</div>
+                    <div class="text-muted small">Pending</div>
+                </div>
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-            <div class="stat-number">{{ approved_applications|default:"0" }}</div>
-            <div class="stat-label">Approved</div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body text-center">
+                    <div class="text-success fs-2 mb-2"><i class="fas fa-check-circle"></i></div>
+                    <div class="h3 mb-0 fw-bold">{{ approved_applications|default:"0" }}</div>
+                    <div class="text-muted small">Approved</div>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Profile Progress - Only show if incomplete -->
     {% if profile_incomplete %}
-    <div class="alert alert-warning d-flex align-items-center mb-4">
-        <i class="fas fa-exclamation-triangle me-3"></i>
+    <div class="alert alert-warning d-flex align-items-center mb-4 shadow-sm" role="alert">
+        <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
         <div class="flex-grow-1">
             <strong>Complete your profile</strong> to get better matches and faster application processing.
             {% if next_steps %}
-            <div class="mt-2">
-                <small>Next steps: {{ next_steps|join:", " }}</small>
+            <div class="mt-1 small">
+                Next steps: {{ next_steps|join:", " }}
             </div>
             {% endif %}
         </div>
         <div class="ms-3">
-            <a href="{% url 'profile_step1' %}" class="btn btn-outline-warning btn-sm">
-                <i class="fas fa-edit"></i> Complete Profile
+            <a href="{% url 'profile_step1' %}" class="btn btn-warning text-dark btn-sm fw-bold">
+                <i class="fas fa-edit me-1"></i>Complete Profile
             </a>
         </div>
     </div>
     {% endif %}
 
     <!-- Quick Actions -->
-    <div class="table-container mb-4">
-        <div class="table-header">
-            <i class="fas fa-bolt"></i> Quick Actions
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white fw-bold py-3">
+            <i class="fas fa-bolt me-2 text-warning"></i>Quick Actions
         </div>
-        <div class="p-4">
+        <div class="card-body p-4">
             <div class="row">
                 <div class="col-md-6 col-lg-3 mb-3">
-                    <a href="{% url 'profile_step1' %}" class="btn btn-outline-primary w-100">
-                        <i class="fas fa-user-edit"></i><br>
-                        <small>{% if applicant %}Update Profile{% else %}Create Profile{% endif %}</small>
+                    <a href="{% url 'profile_step1' %}" class="btn btn-outline-primary w-100 h-100 py-3">
+                        <i class="fas fa-user-edit fa-2x mb-2"></i><br>
+                        <span class="fw-bold">{% if applicant %}Update Profile{% else %}Create Profile{% endif %}</span>
                     </a>
                 </div>
                 {% if applicant %}
                 <div class="col-md-6 col-lg-3 mb-3">
-                    <a href="{% url 'applicant_overview' applicant.id %}" class="btn btn-outline-secondary w-100">
-                        <i class="fas fa-eye"></i><br>
-                        <small>View Public Profile</small>
+                    <a href="{% url 'applicant_overview' applicant.id %}" class="btn btn-outline-secondary w-100 h-100 py-3">
+                        <i class="fas fa-eye fa-2x mb-2"></i><br>
+                        <span class="fw-bold">View Public Profile</span>
                     </a>
                 </div>
                 {% endif %}
                 <div class="col-md-6 col-lg-3 mb-3">
-                    <a href="{% url 'apartments_list' %}" class="btn btn-outline-secondary w-100">
-                        <i class="fas fa-home"></i><br>
-                        <small>Browse Apartments</small>
+                    <a href="{% url 'apartments_list' %}" class="btn btn-outline-secondary w-100 h-100 py-3">
+                        <i class="fas fa-home fa-2x mb-2"></i><br>
+                        <span class="fw-bold">Browse Apartments</span>
                     </a>
                 </div>
                 <div class="col-md-6 col-lg-3 mb-3">
-                    <a href="{% url 'buildings_list' %}" class="btn btn-outline-secondary w-100">
-                        <i class="fas fa-building"></i><br>
-                        <small>View Buildings</small>
+                    <a href="{% url 'buildings_list' %}" class="btn btn-outline-secondary w-100 h-100 py-3">
+                        <i class="fas fa-building fa-2x mb-2"></i><br>
+                        <span class="fw-bold">View Buildings</span>
                     </a>
                 </div>
             </div>
@@ -123,178 +137,186 @@
     </div>
 
     <!-- Smart Apartment Matches Section -->
-    <div class="table-container mb-4">
-        <div class="table-header">
-            <i class="fas fa-lightbulb"></i> Smart Apartment Matches
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-lightbulb me-2 text-warning"></i>Smart Apartment Matches</span>
             {% if has_matches %}
-            <span class="badge bg-primary ms-2">{{ apartment_matches|length }}</span>
+            <span class="badge bg-primary rounded-pill">{{ apartment_matches|length }}</span>
             {% endif %}
         </div>
 
-        {% if not can_show_matches %}
-        <!-- Show message when missing required preferences -->
-        <div class="p-5 text-center">
-            <i class="fas fa-info-circle fa-3x text-muted mb-3"></i>
-            <h4>Set Your Housing Preferences</h4>
-            <p class="mb-3 text-muted">We need a few key details to find your perfect apartment:</p>
-            <ul class="list-unstyled mb-3">
-                {% if not applicant.max_rent_budget %}
-                <li><i class="fas fa-dollar-sign text-muted me-2"></i>Maximum rent budget</li>
-                {% endif %}
-                {% if not applicant.desired_move_in_date %}
-                <li><i class="fas fa-calendar text-muted me-2"></i>Desired move-in date</li>
-                {% endif %}
-            </ul>
-            <a href="{% url 'profile_step1' %}" class="btn btn-primary">
-                <i class="fas fa-edit"></i> Complete Your Profile
-            </a>
-        </div>
-        {% elif has_matches %}
-        <!-- Show matches when available -->
-        <div class="p-4">
-            <p class="text-muted mb-3">
-                Based on your preferences, we found {{ apartment_matches|length }} apartment{% if
-                apartment_matches|length != 1 %}s{% endif %} that match your needs.
-            </p>
-            <div class="row">
-                {% for match in apartment_matches %}
-                <div class="col-md-4 mb-3">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h6 class="card-title">{{ match.apartment.building.name }}</h6>
-                            <p class="card-text text-muted small mb-2">
-                                Unit {{ match.apartment.unit_number }} • {{ match.apartment.bedrooms }} bed / {{
-                                match.apartment.bathrooms }} bath
-                            </p>
-                            <p class="card-text">
-                                <strong>${{ match.apartment.rent|floatformat:0 }}/mo</strong>
-                            </p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="badge bg-success">{{ match.match_score }}% Match</span>
-                                <a href="{% url 'apartment_detail' match.apartment.id %}"
-                                    class="btn btn-sm btn-outline-primary">
-                                    View Details
-                                </a>
+        <div class="card-body p-0">
+            {% if not can_show_matches %}
+            <!-- Show message when missing required preferences -->
+            <div class="p-5 text-center">
+                <i class="fas fa-info-circle fa-3x text-muted mb-3"></i>
+                <h4>Set Your Housing Preferences</h4>
+                <p class="mb-3 text-muted">We need a few key details to find your perfect apartment:</p>
+                <ul class="list-unstyled mb-4 d-inline-block text-start">
+                    {% if not applicant.max_rent_budget %}
+                    <li class="mb-2"><i class="fas fa-dollar-sign text-muted me-2" style="width: 20px; text-align: center;"></i>Maximum rent budget</li>
+                    {% endif %}
+                    {% if not applicant.desired_move_in_date %}
+                    <li class="mb-2"><i class="fas fa-calendar text-muted me-2" style="width: 20px; text-align: center;"></i>Desired move-in date</li>
+                    {% endif %}
+                </ul>
+                <div class="d-block">
+                    <a href="{% url 'profile_step1' %}" class="btn btn-primary">
+                        <i class="fas fa-edit me-2"></i>Complete Your Profile
+                    </a>
+                </div>
+            </div>
+            {% elif has_matches %}
+            <!-- Show matches when available -->
+            <div class="p-4">
+                <p class="text-muted mb-3">
+                    Based on your preferences, we found <strong>{{ apartment_matches|length }} apartment{% if apartment_matches|length != 1 %}s{% endif %}</strong> that match your needs.
+                </p>
+                <div class="row">
+                    {% for match in apartment_matches %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100 border hover-shadow transition-all">
+                            <div class="card-body">
+                                <h6 class="card-title fw-bold text-truncate">{{ match.apartment.building.name }}</h6>
+                                <p class="card-text text-muted small mb-2">
+                                    Unit {{ match.apartment.unit_number }} • {{ match.apartment.bedrooms }} bed / {{ match.apartment.bathrooms }} bath
+                                </p>
+                                <p class="card-text text-primary fw-bold">
+                                    ${{ match.apartment.rent|floatformat:0 }}/mo
+                                </p>
+                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                    <span class="badge bg-success">{{ match.match_score }}% Match</span>
+                                    <a href="{% url 'apartment_detail' match.apartment.id %}" class="btn btn-sm btn-outline-primary">
+                                        View Details
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
+                <div class="text-center mt-3">
+                    <a href="{% url 'apartments_list' %}" class="btn btn-primary">
+                        <i class="fas fa-search me-2"></i>Browse All Apartments
+                    </a>
+                </div>
             </div>
-            <div class="text-center mt-3">
-                <a href="{% url 'apartments_list' %}" class="btn btn-primary">
-                    <i class="fas fa-search"></i> Browse All Apartments
-                </a>
+            {% else %}
+            <!-- Has preferences but no matches found -->
+            <div class="p-5 text-center">
+                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                <h4>No Matches Found</h4>
+                <p class="mb-3 text-muted">We couldn't find apartments matching your exact criteria. Try:</p>
+                <ul class="list-unstyled mb-4 d-inline-block text-start">
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Increasing your budget range</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Being more flexible with move-in dates</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Adjusting bedroom/bathroom requirements</li>
+                </ul>
+                <div class="d-block">
+                    <a href="{% url 'apartments_list' %}" class="btn btn-primary">
+                        <i class="fas fa-search me-2"></i>Browse All Apartments
+                    </a>
+                </div>
             </div>
+            {% endif %}
         </div>
-        {% else %}
-        <!-- Has preferences but no matches found -->
-        <div class="p-5 text-center">
-            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-            <h4>No Matches Found</h4>
-            <p class="mb-3 text-muted">We couldn't find apartments matching your exact criteria. Try:</p>
-            <ul class="list-unstyled mb-3 text-muted">
-                <li><i class="fas fa-check me-2"></i>Increasing your budget range</li>
-                <li><i class="fas fa-check me-2"></i>Being more flexible with move-in dates</li>
-                <li><i class="fas fa-check me-2"></i>Adjusting bedroom/bathroom requirements</li>
-            </ul>
-            <a href="{% url 'apartments_list' %}" class="btn btn-primary">
-                <i class="fas fa-search"></i> Browse All Apartments
-            </a>
-        </div>
-        {% endif %}
     </div>
 
     <!-- Applications -->
-    <div class="table-container">
-        <div class="table-header">
-            <i class="fas fa-file-alt"></i> Your Applications
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white fw-bold py-3">
+            <i class="fas fa-file-alt me-2 text-primary"></i>Your Applications
         </div>
 
-        {% if applications %}
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Property</th>
-                    <th>Unit Details</th>
-                    <th>Submitted</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for application in applications %}
-                <tr>
-                    <td>
-                        <div class="fw-bold">
-                            {% if application.apartment %}
-                            {{ application.apartment.building.name }}
-                            {% elif application.manual_building_address %}
-                            {{ application.manual_building_address }}
-                            {% else %}
-                            Application #{{ application.id }}
-                            {% endif %}
-                        </div>
-                        {% if application.broker %}
-                        <small class="text-muted">Broker: {{ application.broker.email }}</small>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if application.apartment %}
-                        Unit {{ application.apartment.unit_number }}<br>
-                        <small class="text-muted">${{ application.apartment.rent_price }}/month</small>
-                        {% elif application.manual_unit_number %}
-                        Unit {{ application.manual_unit_number }}
-                        {% else %}
-                        <span class="text-muted">—</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ application.created_at|date:"M d, Y" }}</td>
-                    <td>
-                        {% if application.status == 'NEW' %}
-                        <span class="badge badge-yellow">{{ application.get_status_display }}</span>
-                        {% elif application.status == 'PENDING' %}
-                        <span class="badge bg-info text-dark">{{ application.get_status_display }}</span>
-                        {% elif application.status == 'APPROVED' %}
-                        <span class="badge bg-success">{{ application.get_status_display }}</span>
-                        {% elif application.status == 'REJECTED' %}
-                        <span class="badge bg-danger">{{ application.get_status_display }}</span>
-                        {% else %}
-                        <span class="badge bg-secondary">{{ application.get_status_display }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a href="{% url 'v2_application_overview' application.id %}"
-                            class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-eye"></i> View
-                        </a>
-                        {% if not application.submitted_by_applicant %}
-                        <a href="{% url 'applicant_complete' application.unique_link %}" class="btn btn-primary btn-sm">
-                            <i class="fas fa-edit"></i> Complete
-                        </a>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <div class="p-5 text-center">
-            <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
-            <h4>No Applications Yet</h4>
-            <p class="mb-3 text-muted">Your rental applications will appear here once a broker creates them for you.</p>
-
-            {% if profile_incomplete %}
-            <div class="alert alert-info">
-                <i class="fas fa-lightbulb"></i>
-                <strong>Tip:</strong> Complete your profile to help brokers find you and create applications faster!
+        <div class="card-body p-0">
+            {% if applications %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4">Property</th>
+                            <th>Unit Details</th>
+                            <th>Submitted</th>
+                            <th>Status</th>
+                            <th class="pe-4 text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for application in applications %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold">
+                                    {% if application.apartment %}
+                                    {{ application.apartment.building.name }}
+                                    {% elif application.manual_building_address %}
+                                    {{ application.manual_building_address }}
+                                    {% else %}
+                                    Application #{{ application.id }}
+                                    {% endif %}
+                                </div>
+                                {% if application.broker %}
+                                <small class="text-muted">Broker: {{ application.broker.email }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if application.apartment %}
+                                Unit {{ application.apartment.unit_number }}<br>
+                                <small class="text-muted">${{ application.apartment.rent_price }}/month</small>
+                                {% elif application.manual_unit_number %}
+                                Unit {{ application.manual_unit_number }}
+                                {% else %}
+                                <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ application.created_at|date:"M d, Y" }}</td>
+                            <td>
+                                {% if application.status == 'NEW' %}
+                                <span class="badge bg-warning text-dark">{{ application.get_status_display }}</span>
+                                {% elif application.status == 'PENDING' %}
+                                <span class="badge bg-info text-dark">{{ application.get_status_display }}</span>
+                                {% elif application.status == 'APPROVED' %}
+                                <span class="badge bg-success">{{ application.get_status_display }}</span>
+                                {% elif application.status == 'REJECTED' %}
+                                <span class="badge bg-danger">{{ application.get_status_display }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ application.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-4 text-end">
+                                <a href="{% url 'v2_application_overview' application.id %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                {% if not application.submitted_by_applicant %}
+                                <a href="{% url 'applicant_complete' application.unique_link %}" class="btn btn-primary btn-sm ms-1">
+                                    <i class="fas fa-edit"></i> Complete
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-            <a href="{% url 'profile_step1' %}" class="btn btn-primary">
-                <i class="fas fa-user-edit"></i> Complete Your Profile
-            </a>
+            {% else %}
+            <div class="p-5 text-center">
+                <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                <h4>No Applications Yet</h4>
+                <p class="mb-3 text-muted">Your rental applications will appear here once a broker creates them for you.</p>
+
+                {% if profile_incomplete %}
+                <div class="alert alert-info d-inline-block text-start mb-3">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    <strong>Tip:</strong> Complete your profile to help brokers find you and create applications faster!
+                </div>
+                <div class="d-block">
+                    <a href="{% url 'profile_step1' %}" class="btn btn-primary">
+                        <i class="fas fa-user-edit me-2"></i>Complete Your Profile
+                    </a>
+                </div>
+                {% endif %}
+            </div>
             {% endif %}
         </div>
-        {% endif %}
     </div>
 </div>
 
