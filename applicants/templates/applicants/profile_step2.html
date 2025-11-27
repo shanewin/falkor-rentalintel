@@ -4,6 +4,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
+<link rel="stylesheet" href="{% static 'applicants/css/applicants.css' %}">
 <!-- Cropper.js CSS -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
 {% endblock %}
@@ -40,7 +41,7 @@
         <div class="card-body">
             <h6 class="mb-3">Profile Completion Progress ({{ completion_percentage }}% Complete)</h6>
             <div class="progress mb-3" style="height: 6px;">
-                <div class="progress-bar" style="width: 66%; background-color: #ffcc00;"></div>
+                <div class="progress-bar progress-bar-custom" style="width: 66%;"></div>
             </div>
             <div class="row text-center">
                 <div class="col-4">
@@ -53,8 +54,8 @@
                 </div>
                 <div class="col-4">
                     <a href="{% url 'profile_step2' %}" class="text-decoration-none">
-                        <div class="step" style="color: #ffcc00;">
-                            <div class="step-number text-white" style="background-color: #000000;">2</div>
+                        <div class="step step-active">
+                            <div class="step-number step-number-active">2</div>
                             <small>Housing Needs & Preferences</small>
                         </div>
                     </a>
@@ -682,121 +683,6 @@ function loadExistingAmenityPreferences() {
 }
 </script>
 
-<style>
-/* Neighborhood item styles */
-.neighborhood-item {
-    padding: 10px;
-    margin-bottom: 8px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.neighborhood-item.available {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-}
-
-.neighborhood-item.available:hover {
-    background: #e9ecef;
-    border-color: #28a745;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.neighborhood-item.selected {
-    background: #fff3cd;
-    border: 1px solid #ffeaa7;
-    cursor: default;
-}
-
-.neighborhood-item.selected:hover {
-    background: #fff1b3;
-}
-
-.neighborhood-list {
-    background: #fdfdfd;
-}
-
-.drag-handle {
-    cursor: move;
-    opacity: 0.5;
-}
-
-.drag-handle:hover {
-    opacity: 1;
-}
-
-.rank-number {
-    min-width: 30px;
-    text-align: center;
-    font-weight: bold;
-    color: #007bff;
-}
-
-/* Amenities Slider Styles */
-.amenities-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
-}
-
-.amenity-slider-item {
-    border: 2px solid #e9ecef;
-    border-radius: 8px;
-    padding: 15px;
-    transition: all 0.3s ease;
-    background: #ffffff;
-}
-
-.amenity-slider-item.unset {
-    border-color: #e9ecef;
-    background: #f8f9fa;
-}
-
-.amenity-slider-item.nice-to-have {
-    border-color: #ffc107;
-    background: #fff8e1;
-}
-
-.amenity-slider-item.very-important {
-    border-color: #fd7e14;
-    background: #fff3e0;
-}
-
-.amenity-slider-item.must-have {
-    border-color: #dc3545;
-    background: #ffebee;
-}
-
-.amenity-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-.amenity-name {
-    font-weight: 500;
-    font-size: 1rem;
-}
-
-.priority-label {
-    font-size: 0.875rem;
-    font-weight: 600;
-}
-
-.amenity-slider-item.nice-to-have .priority-label {
-    color: #e65100;
-}
-
-.amenity-slider-item.very-important .priority-label {
-    color: #d84315;
-}
-
-.amenity-slider-item.must-have .priority-label {
-    color: #c62828;
-}
 
 .slider-container {
     position: relative;

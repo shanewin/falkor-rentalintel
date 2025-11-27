@@ -1,0 +1,210 @@
+/* Users App Specific Styles */
+
+/* Login Page Styles */
+.login-container {
+    max-width: 400px;
+    margin: 80px auto;
+    padding: 30px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.login-header img {
+    max-width: 200px;
+    margin-bottom: 20px;
+}
+
+.login-header h2 {
+    color: #333;
+    font-weight: 600;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    font-weight: 500;
+    color: #555;
+    margin-bottom: 5px;
+}
+
+.btn-login {
+    width: 100%;
+    padding: 12px;
+    background-color: #ffcc00;
+    border: none;
+    color: #333;
+    font-weight: 600;
+    border-radius: 5px;
+    transition: all 0.3s;
+}
+
+.btn-login:hover {
+    background-color: #e6b800;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 204, 0, 0.3);
+}
+
+.register-links {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.register-links a {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.register-links a:hover {
+    text-decoration: underline;
+}
+
+.alert {
+    margin-bottom: 20px;
+}
+
+.form-check {
+    margin-top: 15px;
+    margin-bottom: 20px;
+}
+
+.role-selector {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+}
+
+.role-card {
+    flex: 1;
+    margin: 0 10px;
+    padding: 15px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.role-card:hover {
+    border-color: #ffcc00;
+    background-color: #fff9e6;
+}
+
+.role-card i {
+    font-size: 24px;
+    margin-bottom: 5px;
+    color: #666;
+}
+
+.role-card h6 {
+    margin: 0;
+    color: #333;
+}
+
+.btn-forgot {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ffcc00;
+    background-color: #fffdf5;
+    color: #333;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+    transition: all 0.3s;
+}
+
+.btn-forgot:hover {
+    background-color: #ffeb99;
+    color: #333;
+    text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 5px 12px rgba(255, 204, 0, 0.25);
+}
+
+/* Registration Page Styles */
+.register-container {
+    max-width: 500px;
+    margin: 60px auto;
+    padding: 30px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}
+
+.register-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.register-header img {
+    max-width: 180px;
+    margin-bottom: 20px;
+}
+
+.register-header h2 {
+    color: #333;
+    font-weight: 600;
+}
+
+.applicant-badge {
+    display: block;
+    text-align: center;
+    background-color: #28a745;
+    color: white;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-weight: 500;
+    margin: 0 auto 20px auto;
+    max-width: 200px;
+}
+
+.login-link {
+    text-align: center;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.benefits-list {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.benefits-list h6 {
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.benefits-list ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.benefits-list li {
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.form-row {
+    display: flex;
+    gap: 15px;
+}
+
+.form-row .form-group {
+    flex: 1;
+}

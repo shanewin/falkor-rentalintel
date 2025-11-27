@@ -276,6 +276,24 @@ class Apartment(models.Model):
             return check_date >= availability.available_date and not availability.is_reserved
         return self.status == 'available'
 
+    @property
+    def all_images(self):
+        """
+        Return a combined list of apartment images and building images.
+        Apartment images come first.
+        """
+        apartment_imgs = list(self.images.all())
+        building_imgs = list(self.building.images.all()) if self.building else []
+        return apartment_imgs + building_imgs
+
+    @property
+    def total_image_count(self):
+        """Return the total number of images (apartment + building)"""
+        count = self.images.count()
+        if self.building:
+            count += self.building.images.count()
+        return count
+
 
 
 
@@ -283,6 +301,7 @@ class ApartmentImage(models.Model):
     apartment = models.ForeignKey('Apartment', on_delete=models.CASCADE, related_name='images')
     image = CloudinaryField('image')
 
+    @property
     def thumbnail_url(self):
         url, _ = cloudinary_url(
             self.image.public_id,

@@ -4,6 +4,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
+<link rel="stylesheet" href="{% static 'applicants/css/applicants.css' %}">
 <!-- Cropper.js CSS -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
 {% endblock %}
@@ -40,13 +41,13 @@
         <div class="card-body">
             <h6 class="mb-3">Profile Completion Progress ({{ completion_percentage }}% Complete)</h6>
             <div class="progress mb-3" style="height: 6px;">
-                <div class="progress-bar" style="width: 33%; background-color: #ffcc00;"></div>
+                <div class="progress-bar progress-bar-custom" style="width: 33%;"></div>
             </div>
             <div class="row text-center">
                 <div class="col-4">
                     <a href="{% url 'profile_step1' %}" class="text-decoration-none">
-                        <div class="step" style="color: #ffcc00;">
-                            <div class="step-number text-white" style="background-color: #000000;">1</div>
+                        <div class="step step-active">
+                            <div class="step-number step-number-active">1</div>
                             <small>Personal Info</small>
                         </div>
                     </a>

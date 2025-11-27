@@ -1,4 +1,7 @@
-{% extends 'base.html' %}
+#!/usr/bin/env python3
+"""Redesign CTA banner with clean, modern styling"""
+
+content = '''{% extends 'base.html' %}
 {% load static %}
 
 {% block extra_css %}
@@ -179,3 +182,9 @@ function clearFilter(type){document.getElementById(type+'Form').reset();}
 function applyFilters(){const params=new URLSearchParams(window.location.search);['priceForm','bedsForm','bathsForm','neighborhoodsForm','amenitiesForm'].forEach(formId=>{const form=document.getElementById(formId);if(form){const formData=new FormData(form);for(let[key,value]of formData.entries()){if(value)params.set(key,value);}}});window.location.href='?'+params.toString();}
 </script>
 {% endblock %}
+'''
+
+with open('apartments/templates/apartments/apartments_list.html', 'w') as f:
+    f.write(content)
+
+print("Redesigned CTA with clean styling")

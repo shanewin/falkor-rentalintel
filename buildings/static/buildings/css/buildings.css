@@ -1,9 +1,9 @@
 /* 
- * Applications App - Professional Design System
- * Matching Buildings App Black & Yellow Brand Colors
+ * Buildings App - Professional Design System
+ * Consistent with Applications App
  */
 
-/* Import brand colors from buildings app */
+/* Import brand colors */
 :root {
     --brand-black: #1a1a1a;
     --brand-yellow: #ffcc00;
@@ -299,6 +299,34 @@
 }
 
 /* ================================
+   UTILITY CLASSES
+   ================================ */
+.border-left-success {
+    border-left: 4px solid #28a745 !important;
+}
+
+.border-left-brand {
+    border-left: 4px solid var(--brand-yellow) !important;
+}
+
+.progress-bar-sm {
+    height: 6px;
+}
+
+.progress-bar-md {
+    height: 20px;
+}
+
+.progress-bar-lg {
+    height: 25px;
+}
+
+.step-number-circle {
+    width: 40px;
+    height: 40px;
+}
+
+/* ================================
    RESPONSIVE DESIGN
    ================================ */
 @media (max-width: 768px) {
@@ -330,110 +358,49 @@
     }
 }
 
-@media (max-width: 480px) {
-    .btn {
-        width: 100%;
-        margin-bottom: 0.5rem;
-    }
-    
-    .btn:last-child {
-        margin-bottom: 0;
-    }
-    
-    .card-body {
-        padding: 1rem;
-    }
-}
-
 /* ================================
-   TIMELINE STYLES (from broker_confirmation.html)
+   CAROUSEL & IMAGES
    ================================ */
-.timeline {
-    position: relative;
-    padding-left: 30px;
+.carousel-container {
+    margin-bottom: 2rem;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.timeline-item {
-    position: relative;
-    margin-bottom: 20px;
+.carousel-item img {
+    width: 100%;
+    height: 500px;
+    object-fit: cover;
 }
 
-.timeline-item:not(:last-child)::before {
-    content: '';
-    position: absolute;
-    left: -22px;
-    top: 25px;
-    width: 2px;
-    height: calc(100% + 5px);
-    background-color: #dee2e6;
+.carousel-control-prev,
+.carousel-control-next {
+    width: 5%;
 }
 
-.timeline-item.active:not(:last-child)::before {
-    background-color: var(--brand-yellow);
+.carousel-indicators {
+    margin-bottom: 1rem;
 }
 
-.timeline-marker {
-    position: absolute;
-    left: -30px;
-    top: 0;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background-color: #dee2e6;
-    border: 2px solid #fff;
+.no-image-placeholder {
+    background-color: #f8f9fa;
+    height: 400px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 8px;
-    color: white;
+    color: #6c757d;
+    font-size: 1.25rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
 }
 
-.timeline-marker.bg-success {
-    background-color: #28a745;
+.building-hero-image {
+    height: 500px; 
+    object-fit: cover;
 }
 
-.timeline-content h6 {
-    margin-bottom: 2px;
-    font-size: 0.9rem;
-}
-
-.activity-item {
-    border-left: 3px solid var(--border-color);
-    padding-left: 10px;
-}
-
-.activity-item:last-child {
-    border-left-color: transparent;
-}
-
-/* ================================
-   UTILITY CLASSES
-   ================================ */
-.border-left-success {
-    border-left: 4px solid #28a745 !important;
-}
-
-.border-left-brand {
-    border-left: 4px solid var(--brand-yellow) !important;
-}
-
-.progress-bar-sm {
-    height: 6px;
-}
-
-.progress-bar-md {
-    height: 20px;
-}
-
-.progress-bar-lg {
-    height: 25px;
-}
-
-.iframe-preview {
-    border: none;
-}
-
-.step-number-circle {
-    width: 40px;
-    height: 40px;
+.building-card-image {
+    height: 200px; 
+    object-fit: cover;
 }

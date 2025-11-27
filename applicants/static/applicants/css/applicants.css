@@ -169,3 +169,137 @@ h5 {
 .text-center {
     text-align: center;
 }
+
+/* Progress Bar Styles */
+.progress-bar-custom {
+    background-color: #ffcc00;
+}
+
+.step-active {
+    color: #ffcc00;
+}
+
+.step-number-active {
+    background-color: #000000;
+    color: #ffffff;
+}
+
+.step-number-inactive {
+    background-color: #f8f9fa;
+    color: #6c757d;
+}
+
+/* Neighborhood item styles from profile_step2.html */
+.neighborhood-item {
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.neighborhood-item.available {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+}
+
+.neighborhood-item.available:hover {
+    background: #e9ecef;
+    border-color: #28a745;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.neighborhood-item.selected {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    cursor: default;
+}
+
+.neighborhood-item.selected:hover {
+    background: #fff1b3;
+}
+
+.neighborhood-list {
+    background: #fdfdfd;
+}
+
+.drag-handle {
+    cursor: move;
+    opacity: 0.5;
+}
+
+.drag-handle:hover {
+    opacity: 1;
+}
+
+.rank-number {
+    min-width: 30px;
+    text-align: center;
+    font-weight: bold;
+    color: #007bff;
+}
+
+/* Amenities Slider Styles from profile_step2.html */
+.amenities-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.amenity-slider-item {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    transition: all 0.3s ease;
+    background: #ffffff;
+}
+
+.amenity-slider-item.unset {
+    border-color: #e9ecef;
+    background: #f8f9fa;
+}
+
+.amenity-slider-item.nice-to-have {
+    border-color: #ffc107;
+    background: #fff8e1;
+}
+
+.amenity-slider-item.very-important {
+    border-color: #fd7e14;
+    background: #fff3e0;
+}
+
+.amenity-slider-item.must-have {
+    border-color: #dc3545;
+    background: #ffebee;
+}
+
+.amenity-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.amenity-name {
+    font-weight: 500;
+    font-size: 1rem;
+}
+
+.priority-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.amenity-slider-item.nice-to-have .priority-label {
+    color: #e65100;
+}
+
+.amenity-slider-item.very-important .priority-label {
+    color: #d84315;
+}
+
+.amenity-slider-item.must-have .priority-label {
+    color: #c62828;
+}

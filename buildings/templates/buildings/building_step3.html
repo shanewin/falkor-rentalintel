@@ -3,6 +3,7 @@
 {% load crispy_forms_tags %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'buildings/css/buildings.css' %}">
 <link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
 {% endblock %}
 
@@ -37,7 +38,7 @@
     <div class="card mb-4">
         <div class="card-body">
             <h6 class="mb-3">Building Setup Progress</h6>
-            <div class="progress mb-3" style="height: 6px;">
+            <div class="progress mb-3 progress-bar-sm">
                 <div class="progress-bar bg-yellow" style="width: 75%"></div>
             </div>
             <div class="row text-center">

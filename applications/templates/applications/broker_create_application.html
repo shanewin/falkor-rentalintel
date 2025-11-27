@@ -37,7 +37,7 @@
     <div class="card mb-4">
         <div class="card-body">
             <h6 class="mb-3">Application Creation Progress</h6>
-            <div class="progress mb-3" style="height: 6px;">
+            <div class="progress mb-3 progress-bar-sm">
                 <div class="progress-bar bg-yellow" style="width: 25%"></div>
             </div>
             <div class="row text-center">
@@ -113,7 +113,7 @@
                         </div>
 
                         <!-- Manual Property Entry -->
-                        <div id="manual-property-section" style="display: none;">
+                        <div id="manual-property-section" class="d-none">
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group-enhanced">
@@ -148,7 +148,7 @@
             </div>
 
             <!-- Step 2: Applicant Selection -->
-            <div class="step-section" id="step-applicant" style="display: none;">
+            <div class="step-section d-none" id="step-applicant">
                 <div class="card">
                     <div class="card-header">
                         <h5 class="mb-0">Step 2: Applicant Selection</h5>
@@ -192,7 +192,7 @@
                         </div>
 
                         <!-- New Applicant Creation -->
-                        <div id="new-applicant-section" style="display: none;">
+                        <div id="new-applicant-section" class="d-none">
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle"></i>
                                 <strong>Quick Applicant Creation:</strong> Just enter basic contact info. The applicant will provide full details when they complete the application.
@@ -238,7 +238,7 @@
                         </div>
 
                         <!-- No Applicant Option -->
-                        <div id="no-applicant-section" style="display: none;">
+                        <div id="no-applicant-section" class="d-none">
                             <div class="alert alert-warning">
                                 <i class="fas fa-exclamation-triangle"></i>
                                 <strong>No Applicant Selected:</strong> You can add applicant details later and send the application link when ready.
@@ -258,7 +258,7 @@
             </div>
 
             <!-- Step 3: Application Customization -->
-            <div class="step-section" id="step-customize" style="display: none;">
+            <div class="step-section d-none" id="step-customize">
                 <div class="card">
                     <div class="card-header">
                         <h5 class="mb-0">Step 3: Application Customization</h5>
@@ -311,14 +311,14 @@
             </div>
 
             <!-- Step 4: Review & Send -->
-            <div class="step-section" id="step-review" style="display: none;">
+            <div class="step-section d-none" id="step-review">
                 <div class="card">
                     <div class="card-header">
                         <h5 class="mb-0">Step 4: Review & Send Application</h5>
                     </div>
                     <div class="card-body">
                         <!-- Application Summary -->
-                        <div class="card mb-4" style="border-left: 4px solid var(--brand-yellow);">
+                        <div class="card mb-4 border-left-brand">
                             <div class="card-header">
                                 <h6 class="mb-0"><i class="fas fa-clipboard-list"></i> Application Summary</h6>
                             </div>
@@ -369,7 +369,7 @@
                             </div>
                             
                             <!-- Contact validation alerts -->
-                            <div class="alert alert-info mt-3" id="contact-validation" style="display: none;">
+                            <div class="alert alert-info mt-3 d-none" id="contact-validation">
                                 <i class="fas fa-info-circle"></i> <span id="contact-message"></span>
                             </div>
                         </div>
@@ -417,7 +417,7 @@
                             </div>
                             
                             <!-- Pre-Fill Status Section -->
-                            <div id="prefill-status-container" style="display: none;" class="alert alert-light border mb-3">
+                            <div id="prefill-status-container" class="alert alert-light border mb-3 d-none">
                                 <h6 class="small mb-2"><i class="fas fa-info-circle"></i> Pre-Fill Status</h6>
                                 <div class="row small" id="prefill-status-content">
                                     <div class="col-md-6">
@@ -434,7 +434,7 @@
                             </div>
                             
                             <!-- Embedded Preview iframe -->
-                            <div id="preview-iframe-container" style="display: none;" class="border rounded">
+                            <div id="preview-iframe-container" class="border rounded d-none">
                                 <div class="bg-light p-2 small text-muted border-bottom">
                                     <i class="fas fa-info-circle"></i> This is how the application will appear to the applicant
                                 </div>
@@ -472,11 +472,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const manualSection = document.getElementById('manual-property-section');
             
             if (this.value === 'existing') {
-                existingSection.style.display = 'block';
-                manualSection.style.display = 'none';
+                existingSection.classList.remove('d-none');
+                manualSection.classList.add('d-none');
             } else {
-                existingSection.style.display = 'none';
-                manualSection.style.display = 'block';
+                existingSection.classList.add('d-none');
+                manualSection.classList.remove('d-none');
             }
             updateSummary();
         });
@@ -490,17 +490,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const noneSection = document.getElementById('no-applicant-section');
             
             // Hide all sections
-            existingSection.style.display = 'none';
-            newSection.style.display = 'none';
-            noneSection.style.display = 'none';
+            existingSection.classList.add('d-none');
+            newSection.classList.add('d-none');
+            noneSection.classList.add('d-none');
             
             // Show relevant section
             if (this.value === 'existing') {
-                existingSection.style.display = 'block';
+                existingSection.classList.remove('d-none');
             } else if (this.value === 'new') {
-                newSection.style.display = 'block';
+                newSection.classList.remove('d-none');
             } else {
-                noneSection.style.display = 'block';
+                noneSection.classList.remove('d-none');
             }
             updateSummary();
         });
@@ -514,11 +514,11 @@ document.addEventListener('DOMContentLoaded', function() {
 function goToStep(stepName) {
     // Hide all steps
     document.querySelectorAll('.step-section').forEach(section => {
-        section.style.display = 'none';
+        section.classList.add('d-none');
     });
     
     // Show target step
-    document.getElementById('step-' + stepName).style.display = 'block';
+    document.getElementById('step-' + stepName).classList.remove('d-none');
     
     // Update progress bar
     const steps = ['property', 'applicant', 'customize', 'review'];
@@ -656,21 +656,21 @@ function updateContactValidation() {
     if (!hasEmail && !hasPhone) {
         contactMessage.textContent = 'No contact information available. Application will be saved as draft only.';
         contactValidation.className = 'alert alert-warning mt-3';
-        contactValidation.style.display = 'block';
+        contactValidation.classList.remove('d-none');
     } else if (hasEmail && hasPhone) {
         contactMessage.textContent = 'Both email and SMS options are available.';
         contactValidation.className = 'alert alert-success mt-3';
-        contactValidation.style.display = 'block';
+        contactValidation.classList.remove('d-none');
     } else if (hasEmail) {
         contactMessage.textContent = 'Only email option is available.';
         contactValidation.className = 'alert alert-info mt-3';
-        contactValidation.style.display = 'block';
+        contactValidation.classList.remove('d-none');
     } else if (hasPhone) {
         contactMessage.textContent = 'Only SMS option is available.';
         contactValidation.className = 'alert alert-info mt-3';
-        contactValidation.style.display = 'block';
+        contactValidation.classList.remove('d-none');
     } else {
-        contactValidation.style.display = 'none';
+        contactValidation.classList.add('d-none');
     }
 }
 
@@ -695,23 +695,23 @@ function togglePreviewIframe() {
     const iframe = document.getElementById('preview-iframe');
     const toggleText = document.getElementById('iframe-toggle-text');
     
-    if (container.style.display === 'none') {
+    if (container.classList.contains('d-none')) {
         if (!tempApplicationId) {
             // Create a temporary application first
             createTempApplication(() => {
                 const previewUrl = `/applications/${tempApplicationId}/preview/`;
                 iframe.src = previewUrl;
-                container.style.display = 'block';
+                container.classList.remove('d-none');
                 toggleText.textContent = 'Hide Preview';
             });
         } else {
             const previewUrl = `/applications/${tempApplicationId}/preview/`;
             iframe.src = previewUrl;
-            container.style.display = 'block';
+            container.classList.remove('d-none');
             toggleText.textContent = 'Hide Preview';
         }
     } else {
-        container.style.display = 'none';
+        container.classList.add('d-none');
         toggleText.textContent = 'Show Preview Below';
     }
 }
@@ -761,15 +761,15 @@ function showPreFillStatus() {
     const container = document.getElementById('prefill-status-container');
     const toggleText = document.getElementById('prefill-status-text');
     
-    if (container.style.display === 'none') {
+    if (container.classList.contains('d-none')) {
         // Update status if we have an application
         if (tempApplicationId) {
             updatePreFillStatus();
         }
-        container.style.display = 'block';
+        container.classList.remove('d-none');
         toggleText.textContent = 'Hide Status';
     } else {
-        container.style.display = 'none';
+        container.classList.add('d-none');
         toggleText.textContent = 'View Status';
     }
 }

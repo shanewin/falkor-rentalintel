@@ -198,6 +198,7 @@ class BuildingImage(models.Model):
     building = models.ForeignKey('Building', on_delete=models.CASCADE, related_name='images')
     image = CloudinaryField('image', blank=True, null=True)
 
+    @property
     def thumbnail_url(self):
         url, _ = cloudinary_url(
             self.image.public_id,

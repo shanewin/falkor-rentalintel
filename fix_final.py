@@ -1,4 +1,7 @@
-{% extends 'base.html' %}
+#!/usr/bin/env python3
+"""Replace broken Cloudinary images with working placeholders and fix map"""
+
+content = '''{% extends 'base.html' %}
 {% load static %}
 
 {% block extra_css %}
@@ -19,63 +22,11 @@
 .image-count-badge{position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,0.7);color:#fff;padding:4px 10px;border-radius:8px;font-size:0.85rem;font-weight:600;}
 .carousel-control-prev,.carousel-control-next{width:40px;}
 .carousel-control-prev-icon,.carousel-control-next-icon{background-color:rgba(0,0,0,0.5);border-radius:50%;padding:10px;}
-.cta-banner{background:#000;border-radius:20px;padding:48px 40px;color:#fff;margin-bottom:32px;position:relative;overflow:hidden;}
-.cta-banner::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,rgba(255,204,0,0.1) 0%,rgba(255,204,0,0.05) 100%);pointer-events:none;}
-.cta-banner h3{font-size:2rem;font-weight:800;margin-bottom:16px;}
-.cta-banner p{font-size:1.1rem;opacity:0.9;max-width:700px;margin:0 auto 32px;}
-.smart-matches-section{background:#f8f9fa;border-radius:20px;padding:32px;margin-bottom:32px;}
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
-
-{% if not user.is_authenticated %}
-<div class="cta-banner text-center">
-<div style="position:relative;z-index:1;">
-<div class="mb-3"><span class="badge" style="background:#ffcc00;color:#000;font-size:0.9rem;padding:8px 16px;border-radius:20px;font-weight:700;">AI-POWERED MATCHING</span></div>
-<h3>Find Your Perfect NYC Apartment</h3>
-<p>Create a free account and let our smart matching algorithm find apartments tailored to your budget, preferences, and lifestyle.</p>
-<div class="d-flex gap-3 justify-content-center flex-wrap">
-<a href="{% url 'register_applicant' %}" class="btn btn-lg rounded-pill px-5" style="background:#ffcc00;border:none;color:#000;font-weight:700;box-shadow:0 4px 12px rgba(255,204,0,0.3);">Get Started Free</a>
-<a href="{% url 'login' %}" class="btn btn-outline-light btn-lg rounded-pill px-5" style="font-weight:600;">Sign In</a>
-</div>
-</div>
-</div>
-{% elif smart_matches %}
-<div class="smart-matches-section">
-<div class="d-flex align-items-center justify-content-between mb-4">
-<div>
-<h4 class="fw-bold mb-1"><i class="fas fa-sparkles me-2" style="color:#ffcc00;"></i>Your Smart Matches</h4>
-<p class="mb-0 text-muted">Personalized recommendations based on your profile</p>
-</div>
-<span class="badge bg-dark fs-6 px-3 py-2">Top {{ smart_matches|length }}</span>
-</div>
-<div class="row g-3">
-{% for match in smart_matches|slice:":4" %}
-<div class="col-md-6 col-lg-3">
-<div class="card h-100 border-0 shadow-sm">
-<div class="position-relative" style="height:180px;">
-<img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400&h=200&fit=crop" class="w-100 h-100" style="object-fit:cover;" alt="Apartment">
-<div class="position-absolute top-0 end-0 m-3"><span class="badge bg-success shadow fs-6 px-3 py-2">{{ match.score }}% Match</span></div>
-<div class="position-absolute bottom-0 start-0 m-3"><span class="badge bg-dark shadow px-3 py-2">${{ match.apartment.rent_price|floatformat:0 }}</span></div>
-</div>
-<div class="card-body">
-<h6 class="fw-bold mb-2">{{ match.apartment.building.name }}</h6>
-<p class="small text-muted mb-3"><i class="fas fa-map-marker-alt me-1"></i>{{ match.apartment.building.neighborhood }}</p>
-<div class="d-flex gap-3 mb-3 small">
-<span><i class="fas fa-bed me-1"></i>{{ match.apartment.bedrooms|floatformat:0 }} bed</span>
-<span><i class="fas fa-bath me-1"></i>{{ match.apartment.bathrooms|floatformat:0 }} bath</span>
-</div>
-<a href="{% url 'apartment_overview' match.apartment.id %}" class="btn w-100 rounded-pill" style="background:#ffcc00;border:none;color:#000;font-weight:700;">View Details</a>
-</div>
-</div>
-</div>
-{% endfor %}
-</div>
-</div>
-{% endif %}
-
 <div class="row g-4">
 <div class="col-lg-7 col-xl-8">
 <div class="d-flex flex-wrap gap-2 mb-4 sticky-top bg-white py-3" style="z-index:1000;top:0;">
@@ -179,3 +130,9 @@ function clearFilter(type){document.getElementById(type+'Form').reset();}
 function applyFilters(){const params=new URLSearchParams(window.location.search);['priceForm','bedsForm','bathsForm','neighborhoodsForm','amenitiesForm'].forEach(formId=>{const form=document.getElementById(formId);if(form){const formData=new FormData(form);for(let[key,value]of formData.entries()){if(value)params.set(key,value);}}});window.location.href='?'+params.toString();}
 </script>
 {% endblock %}
+'''
+
+with open('apartments/templates/apartments/apartments_list.html', 'w') as f:
+    f.write(content)
+
+print("Fixed images and map")

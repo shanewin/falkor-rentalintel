@@ -36,31 +36,31 @@
     <div class="card mb-4">
         <div class="card-body">
             <h6 class="mb-3">Application Creation Progress</h6>
-            <div class="progress mb-3" style="height: 8px;">
+            <div class="progress mb-3 progress-bar-sm">
                 <div class="progress-bar bg-warning" style="width: 25%"></div>
             </div>
             <div class="row text-center">
                 <div class="col-3">
                     <div class="step text-warning">
-                        <div class="step-number bg-warning text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 40px; height: 40px;">1</div>
+                        <div class="step-number bg-warning text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 step-number-circle">1</div>
                         <small class="fw-bold">Property</small>
                     </div>
                 </div>
                 <div class="col-3">
                     <div class="step text-muted">
-                        <div class="step-number bg-light text-muted rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 40px; height: 40px;">2</div>
+                        <div class="step-number bg-light text-muted rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 step-number-circle">2</div>
                         <small>Applicant</small>
                     </div>
                 </div>
                 <div class="col-3">
                     <div class="step text-muted">
-                        <div class="step-number bg-light text-muted rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 40px; height: 40px;">3</div>
+                        <div class="step-number bg-light text-muted rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 step-number-circle">3</div>
                         <small>Settings</small>
                     </div>
                 </div>
                 <div class="col-3">
                     <div class="step text-muted">
-                        <div class="step-number bg-light text-muted rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 40px; height: 40px;">4</div>
+                        <div class="step-number bg-light text-muted rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 step-number-circle">4</div>
                         <small>Review</small>
                     </div>
                 </div>
@@ -115,7 +115,7 @@
                 </div>
 
                 <!-- Existing Property Selection -->
-                <div id="existing_property_section" style="display: none;">
+                <div id="existing_property_section" class="d-none">
                     <div class="mb-3">
                         <label for="apartment" class="form-label">Select Property</label>
                         <select class="form-select" name="apartment" id="apartment">
@@ -134,7 +134,7 @@
                 </div>
 
                 <!-- Manual Property Entry -->
-                <div id="manual_property_section" style="display: none;">
+                <div id="manual_property_section" class="d-none">
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -177,9 +177,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function toggleSections() {
         if (existingRadio.checked) {
-            existingSection.style.display = 'block';
+            existingSection.classList.remove('d-none');
             if (manualSection) {
-                manualSection.style.display = 'none';
+                manualSection.classList.add('d-none');
             }
             document.getElementById('apartment').required = true;
             
@@ -190,8 +190,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (manualBuildingAddress) manualBuildingAddress.required = false;
             
         } else if (manualRadio && manualRadio.checked) {
-            existingSection.style.display = 'none';
-            manualSection.style.display = 'block';
+            existingSection.classList.add('d-none');
+            manualSection.classList.remove('d-none');
             document.getElementById('apartment').required = false;
             document.getElementById('manual_building_name').required = true;
             document.getElementById('manual_building_address').required = true;

@@ -3,6 +3,7 @@
 {% load crispy_forms_tags %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'buildings/css/buildings.css' %}">
 <link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
 <!-- Cropper.js CSS -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
@@ -39,7 +40,7 @@
     <div class="card mb-4">
         <div class="card-body">
             <h6 class="mb-3">Building Setup Progress</h6>
-            <div class="progress mb-3" style="height: 6px;">
+            <div class="progress mb-3 progress-bar-sm">
                 <div class="progress-bar bg-yellow" style="width: 50%"></div>
             </div>
             <div class="row text-center">
@@ -93,7 +94,7 @@
                     {% for image in building.images.all %}
                     <div class="col-md-4 mb-3">
                         <div class="card">
-                            <img src="{{ image.image.url }}" class="card-img-top" alt="Building image" style="height: 200px; object-fit: cover;">
+                            <img src="{{ image.image.url }}" class="card-img-top building-card-image" alt="Building image">
                             <div class="card-body p-2">
                                 <small class="text-muted">{{ image.description|default:"No description" }}</small>
                             </div>

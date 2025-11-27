@@ -39,13 +39,13 @@
     <div class="card mb-4">
         <div class="card-body">
             <h6 class="mb-3">Application Creation Progress</h6>
-            <div class="progress mb-3" style="height: 8px;">
+            <div class="progress mb-3 progress-bar-sm">
                 <div class="progress-bar bg-warning" style="width: 100%"></div>
             </div>
             <div class="row text-center">
                 <div class="col-3">
                     <div class="step text-success">
-                        <div class="step-number bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 40px; height: 40px;">
+                        <div class="step-number bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 step-number-circle">
                             <i class="fas fa-check"></i>
                         </div>
                         <small class="text-success fw-bold">Property</small>
@@ -53,7 +53,7 @@
                 </div>
                 <div class="col-3">
                     <div class="step text-success">
-                        <div class="step-number bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 40px; height: 40px;">
+                        <div class="step-number bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 step-number-circle">
                             <i class="fas fa-check"></i>
                         </div>
                         <small class="text-success fw-bold">Applicant</small>
@@ -61,7 +61,7 @@
                 </div>
                 <div class="col-3">
                     <div class="step text-success">
-                        <div class="step-number bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 40px; height: 40px;">
+                        <div class="step-number bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 step-number-circle">
                             <i class="fas fa-check"></i>
                         </div>
                         <small class="text-success fw-bold">Settings</small>
@@ -69,7 +69,7 @@
                 </div>
                 <div class="col-3">
                     <div class="step text-warning">
-                        <div class="step-number bg-warning text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 40px; height: 40px;">4</div>
+                        <div class="step-number bg-warning text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 step-number-circle">4</div>
                         <small class="fw-bold">Review</small>
                     </div>
                 </div>
@@ -239,13 +239,8 @@
                 <div class="card-header">
                     <h6 class="mb-0">What Happens Next?</h6>
                 </div>
-                <div class="card-body">
-                    <div class="timeline">
-                        <div class="timeline-item">
-                            <div class="timeline-marker bg-success"></div>
-                            <div class="timeline-content">
-                                <h6>Application Created</h6>
-                                <p class="small text-muted mb-0">Initial application record is set up</p>
+                <div class="card-bod{% endblock %}
+                              <p class="small text-muted mb-0">Initial application record is set up</p>
                             </div>
                         </div>
                         <div class="timeline-item">
@@ -276,38 +271,4 @@
     </div>
 </div>
 
-<style>
-.timeline {
-    position: relative;
-    padding-left: 30px;
-}
-
-.timeline-item {
-    position: relative;
-    padding-bottom: 20px;
-}
-
-.timeline-item:last-child {
-    padding-bottom: 0;
-}
-
-.timeline-marker {
-    position: absolute;
-    left: -37px;
-    top: 3px;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-}
-
-.timeline::before {
-    content: '';
-    position: absolute;
-    left: -31px;
-    top: 9px;
-    bottom: 20px;
-    width: 2px;
-    background-color: #dee2e6;
-}
-</style>
 {% endblock %}

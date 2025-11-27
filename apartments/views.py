@@ -226,7 +226,6 @@ def apartments_list(request):
             # Other errors - log but continue
             logger.error(f"Error getting smart matches: {e}")
             smart_matches = []
-
     context = {
         'sort_by': sort_by,
         'apartments': apartments,
@@ -240,6 +239,15 @@ def apartments_list(request):
         'selected_neighborhoods': neighborhood_values,
         'selected_amenities': amenity_ids,
         'pets_allowed_checked': request.GET.get('pets_allowed') == '1',
+        # Pre-calculated values for JS to avoid template syntax errors
+        'selected_neighborhoods_count': len(neighborhood_values) if neighborhood_values else 0,
+        'selected_amenities_count': len(amenity_ids) if amenity_ids else 0,
+        'pets_allowed_int': 1 if request.GET.get('pets_allowed') == '1' else 0,
+        # Sort booleans to avoid template operator spacing issues
+        'is_sort_relevant': sort_by == 'relevant',
+        'is_sort_price_asc': sort_by == 'price_asc',
+        'is_sort_price_desc': sort_by == 'price_desc',
+        'is_sort_newest': sort_by == 'newest',
     }
     
     # Handle AJAX requests for filtering

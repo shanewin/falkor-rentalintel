@@ -10,7 +10,7 @@
         </div>
         <div class="card-body">
             <!-- Progress Bar -->
-            <div class="progress mb-3" style="height: 25px;">
+            <div class="progress mb-3 progress-bar-lg">
                 <div class="progress-bar bg-success" role="progressbar" style="width: 20%;" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100">
                     Section 1 of 5
                 </div>
@@ -155,7 +155,7 @@
         </div>
 
         <!-- Conditional Landlord Fields -->
-        <div id="landlord-fields" style="display: none;">
+        <div id="landlord-fields" class="d-none">
             <div class="row">
                 <div class="col-md-6">
                     <div class="mb-3">
@@ -247,9 +247,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Show/hide landlord fields based on rental property status
     function toggleLandlordFields() {
         if (isRentalCheckbox && isRentalCheckbox.checked) {
-            landlordFields.style.display = 'block';
+        if (isRentalCheckbox && isRentalCheckbox.checked) {
+            landlordFields.classList.remove('d-none');
         } else {
-            landlordFields.style.display = 'none';
+            landlordFields.classList.add('d-none');
         }
     }
     

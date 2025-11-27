@@ -39,13 +39,13 @@
     <div class="card mb-4">
         <div class="card-body">
             <h6 class="mb-3">Application Creation Progress</h6>
-            <div class="progress mb-3" style="height: 8px;">
+            <div class="progress mb-3 progress-bar-sm">
                 <div class="progress-bar bg-warning" style="width: 50%"></div>
             </div>
             <div class="row text-center">
                 <div class="col-3">
                     <div class="step text-success">
-                        <div class="step-number bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 40px; height: 40px;">
+                        <div class="step-number bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 step-number-circle">
                             <i class="fas fa-check"></i>
                         </div>
                         <small class="text-success fw-bold">Property</small>
@@ -53,19 +53,19 @@
                 </div>
                 <div class="col-3">
                     <div class="step text-warning">
-                        <div class="step-number bg-warning text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 40px; height: 40px;">2</div>
+                        <div class="step-number bg-warning text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 step-number-circle">2</div>
                         <small class="fw-bold">Applicant</small>
                     </div>
                 </div>
                 <div class="col-3">
                     <div class="step text-muted">
-                        <div class="step-number bg-light text-muted rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 40px; height: 40px;">3</div>
+                        <div class="step-number bg-light text-muted rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 step-number-circle">3</div>
                         <small>Settings</small>
                     </div>
                 </div>
                 <div class="col-3">
                     <div class="step text-muted">
-                        <div class="step-number bg-light text-muted rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 40px; height: 40px;">4</div>
+                        <div class="step-number bg-light text-muted rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 step-number-circle">4</div>
                         <small>Review</small>
                     </div>
                 </div>
@@ -127,7 +127,7 @@
                 </div>
 
                 <!-- Existing Applicant Selection -->
-                <div id="existing_applicant_section" style="display: none;">
+                <div id="existing_applicant_section" class="d-none">
                     <div class="mb-3">
                         <label for="applicant" class="form-label">Select Applicant</label>
                         <select class="form-select" name="applicant" id="applicant">
@@ -149,7 +149,7 @@
                 </div>
 
                 <!-- New Applicant Creation -->
-                <div id="new_applicant_section" style="display: none;">
+                <div id="new_applicant_section" class="d-none">
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -210,13 +210,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function toggleSections() {
         if (existingRadio.checked) {
-            existingSection.style.display = 'block';
-            newSection.style.display = 'none';
+            existingSection.classList.remove('d-none');
+            newSection.classList.add('d-none');
             document.getElementById('applicant').required = true;
             document.getElementById('new_applicant_email').required = false;
         } else if (newRadio.checked) {
-            existingSection.style.display = 'none';
-            newSection.style.display = 'block';
+            existingSection.classList.add('d-none');
+            newSection.classList.remove('d-none');
             document.getElementById('applicant').required = false;
             document.getElementById('new_applicant_email').required = true;
         }

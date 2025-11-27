@@ -1,4 +1,7 @@
-{% extends 'base.html' %}
+#!/usr/bin/env python3
+"""Complete polished apartments template with working images, map markers, and better styling"""
+
+content = '''{% extends 'base.html' %}
 {% load static %}
 
 {% block extra_css %}
@@ -19,63 +22,11 @@
 .image-count-badge{position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,0.7);color:#fff;padding:4px 10px;border-radius:8px;font-size:0.85rem;font-weight:600;}
 .carousel-control-prev,.carousel-control-next{width:40px;}
 .carousel-control-prev-icon,.carousel-control-next-icon{background-color:rgba(0,0,0,0.5);border-radius:50%;padding:10px;}
-.cta-banner{background:#000;border-radius:20px;padding:48px 40px;color:#fff;margin-bottom:32px;position:relative;overflow:hidden;}
-.cta-banner::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,rgba(255,204,0,0.1) 0%,rgba(255,204,0,0.05) 100%);pointer-events:none;}
-.cta-banner h3{font-size:2rem;font-weight:800;margin-bottom:16px;}
-.cta-banner p{font-size:1.1rem;opacity:0.9;max-width:700px;margin:0 auto 32px;}
-.smart-matches-section{background:#f8f9fa;border-radius:20px;padding:32px;margin-bottom:32px;}
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
-
-{% if not user.is_authenticated %}
-<div class="cta-banner text-center">
-<div style="position:relative;z-index:1;">
-<div class="mb-3"><span class="badge" style="background:#ffcc00;color:#000;font-size:0.9rem;padding:8px 16px;border-radius:20px;font-weight:700;">AI-POWERED MATCHING</span></div>
-<h3>Find Your Perfect NYC Apartment</h3>
-<p>Create a free account and let our smart matching algorithm find apartments tailored to your budget, preferences, and lifestyle.</p>
-<div class="d-flex gap-3 justify-content-center flex-wrap">
-<a href="{% url 'register_applicant' %}" class="btn btn-lg rounded-pill px-5" style="background:#ffcc00;border:none;color:#000;font-weight:700;box-shadow:0 4px 12px rgba(255,204,0,0.3);">Get Started Free</a>
-<a href="{% url 'login' %}" class="btn btn-outline-light btn-lg rounded-pill px-5" style="font-weight:600;">Sign In</a>
-</div>
-</div>
-</div>
-{% elif smart_matches %}
-<div class="smart-matches-section">
-<div class="d-flex align-items-center justify-content-between mb-4">
-<div>
-<h4 class="fw-bold mb-1"><i class="fas fa-sparkles me-2" style="color:#ffcc00;"></i>Your Smart Matches</h4>
-<p class="mb-0 text-muted">Personalized recommendations based on your profile</p>
-</div>
-<span class="badge bg-dark fs-6 px-3 py-2">Top {{ smart_matches|length }}</span>
-</div>
-<div class="row g-3">
-{% for match in smart_matches|slice:":4" %}
-<div class="col-md-6 col-lg-3">
-<div class="card h-100 border-0 shadow-sm">
-<div class="position-relative" style="height:180px;">
-<img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400&h=200&fit=crop" class="w-100 h-100" style="object-fit:cover;" alt="Apartment">
-<div class="position-absolute top-0 end-0 m-3"><span class="badge bg-success shadow fs-6 px-3 py-2">{{ match.score }}% Match</span></div>
-<div class="position-absolute bottom-0 start-0 m-3"><span class="badge bg-dark shadow px-3 py-2">${{ match.apartment.rent_price|floatformat:0 }}</span></div>
-</div>
-<div class="card-body">
-<h6 class="fw-bold mb-2">{{ match.apartment.building.name }}</h6>
-<p class="small text-muted mb-3"><i class="fas fa-map-marker-alt me-1"></i>{{ match.apartment.building.neighborhood }}</p>
-<div class="d-flex gap-3 mb-3 small">
-<span><i class="fas fa-bed me-1"></i>{{ match.apartment.bedrooms|floatformat:0 }} bed</span>
-<span><i class="fas fa-bath me-1"></i>{{ match.apartment.bathrooms|floatformat:0 }} bath</span>
-</div>
-<a href="{% url 'apartment_overview' match.apartment.id %}" class="btn w-100 rounded-pill" style="background:#ffcc00;border:none;color:#000;font-weight:700;">View Details</a>
-</div>
-</div>
-</div>
-{% endfor %}
-</div>
-</div>
-{% endif %}
-
 <div class="row g-4">
 <div class="col-lg-7 col-xl-8">
 <div class="d-flex flex-wrap gap-2 mb-4 sticky-top bg-white py-3" style="z-index:1000;top:0;">
@@ -99,13 +50,30 @@
 <div class="col-xl-4 col-lg-6 mb-4 apartment-card" data-apartment-id="{{ apartment.id }}" data-price="{{ apartment.rent_price }}" data-lat="{{ apartment.building.latitude|default:40.7128 }}" data-lng="{{ apartment.building.longitude|default:-74.0060 }}">
 <div class="card h-100 shadow-sm rental-card">
 <div class="rental-image-container">
-<img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400&h=200&fit=crop" style="height:200px;width:100%;object-fit:cover;" alt="Apartment">
+{% if apartment.all_images %}
+<div id="carousel-{{ apartment.id }}" class="carousel slide" data-bs-ride="false">
+<div class="carousel-inner">
+{% for image in apartment.all_images %}
+<div class="carousel-item {% if forloop.first %}active{% endif %}">
+<img src="{{ image.thumbnail_url }}" class="d-block w-100" style="height:200px;object-fit:cover;" alt="Apartment" onerror="this.src='https://via.placeholder.com/400x200/e0e0e0/666?text=No+Image'">
+</div>
+{% endfor %}
+</div>
+{% if apartment.total_image_count > 1 %}
+<button class="carousel-control-prev" type="button" data-bs-target="#carousel-{{ apartment.id }}" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
+<button class="carousel-control-next" type="button" data-bs-target="#carousel-{{ apartment.id }}" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
+<div class="image-count-badge"><i class="fas fa-camera me-1"></i>{{ apartment.total_image_count }}</div>
+{% endif %}
+</div>
 <div class="rental-price-badge">${{ apartment.rent_price|floatformat:0 }}</div>
-{% if apartment.total_image_count > 1 %}<div class="image-count-badge"><i class="fas fa-camera me-1"></i>{{ apartment.total_image_count }}</div>{% endif %}
+{% else %}
+<div style="height:200px;background:#e0e0e0;display:flex;align-items:center;justify-content:center;flex-direction:column;"><i class="bi bi-image text-muted" style="font-size:3rem;"></i><small class="text-muted mt-2">No images</small></div>
+<div class="rental-price-badge">${{ apartment.rent_price|floatformat:0 }}</div>
+{% endif %}
 </div>
 <div class="card-body">
 <h6 class="card-title mb-1 fw-bold">{{ apartment.building.name }} - Unit {{ apartment.unit_number }}</h6>
-<p class="card-text text-muted small mb-2">{{ apartment.building.street_address_1 }}{% if apartment.building.neighborhood %}<br><span class="badge bg-secondary mt-1">{{ apartment.building.neighborhood }}</span>{% endif %}</p>
+<p class="card-text text-muted small mb-2">{{ apartment.building.address }}{% if apartment.building.neighborhood %}<br><span class="badge bg-secondary mt-1">{{ apartment.building.neighborhood }}</span>{% endif %}</p>
 <div class="d-flex gap-1 mb-2">
 {% if apartment.is_new %}<span class="badge bg-success">New</span>{% endif %}
 {% if apartment.has_special %}<span class="badge bg-warning text-dark">Special</span>{% endif %}
@@ -148,22 +116,22 @@
 <link href='https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.css' rel='stylesheet'>
 <script>
 document.addEventListener('DOMContentLoaded',function(){
-const token='{{ mapbox_token }}';
-if(!token||token==='None'){console.error('Mapbox token missing');return;}
-mapboxgl.accessToken=token;
-try{
+mapboxgl.accessToken='{{ mapbox_token }}';
 const map=new mapboxgl.Map({container:'map',style:'mapbox://styles/mapbox/light-v11',center:[-74.0060,40.7128],zoom:12});
 map.addControl(new mapboxgl.NavigationControl(),'bottom-right');
 const apartmentCards=document.querySelectorAll('.apartment-card');
+const markers=[];
 apartmentCards.forEach(card=>{
 const lat=parseFloat(card.dataset.lat);
 const lng=parseFloat(card.dataset.lng);
 const price=card.dataset.price;
 const id=card.dataset.apartmentId;
-if(lat&&lng&&!isNaN(lat)&&!isNaN(lng)){
+if(lat&&lng){
 const el=document.createElement('div');
-el.innerHTML='<div style="background:#000;color:#fff;padding:6px 10px;border-radius:12px;font-size:0.9rem;font-weight:700;cursor:pointer;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);">$'+Math.floor(price).toLocaleString()+'</div>';
+el.className='marker';
+el.innerHTML='<div style="background:#000;color:#fff;padding:4px 8px;border-radius:12px;font-size:0.85rem;font-weight:600;cursor:pointer;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.2);">$'+Math.floor(price).toLocaleString()+'</div>';
 const marker=new mapboxgl.Marker(el).setLngLat([lng,lat]).addTo(map);
+markers.push(marker);
 el.addEventListener('click',()=>{
 card.scrollIntoView({behavior:'smooth',block:'center'});
 card.querySelector('.rental-card').style.border='3px solid #ffcc00';
@@ -171,7 +139,11 @@ setTimeout(()=>{card.querySelector('.rental-card').style.border='';},2000);
 });
 }
 });
-}catch(e){console.error('Map error:',e);}
+if(markers.length>0){
+const bounds=new mapboxgl.LngLatBounds();
+markers.forEach(marker=>bounds.extend(marker.getLngLat()));
+map.fitBounds(bounds,{padding:50});
+}
 });
 function openFilter(type){closeAllPopovers();document.getElementById(type+'Popover').classList.add('active');document.getElementById('popoverBackdrop').classList.add('active');}
 function closeAllPopovers(){document.querySelectorAll('.filter-popover').forEach(el=>el.classList.remove('active'));document.getElementById('popoverBackdrop').classList.remove('active');}
@@ -179,3 +151,9 @@ function clearFilter(type){document.getElementById(type+'Form').reset();}
 function applyFilters(){const params=new URLSearchParams(window.location.search);['priceForm','bedsForm','bathsForm','neighborhoodsForm','amenitiesForm'].forEach(formId=>{const form=document.getElementById(formId);if(form){const formData=new FormData(form);for(let[key,value]of formData.entries()){if(value)params.set(key,value);}}});window.location.href='?'+params.toString();}
 </script>
 {% endblock %}
+'''
+
+with open('apartments/templates/apartments/apartments_list.html', 'w') as f:
+    f.write(content)
+
+print("Complete polished template written")
