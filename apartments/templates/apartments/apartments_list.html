@@ -520,7 +520,8 @@
                 {% for amenity in all_amenities %}
                 <label class="form-check form-check-sm mb-1">
                     <input class="form-check-input amenity-checkbox" name="amenities" type="checkbox"
-                        value="{{ amenity.id }}" {% if amenity.id|stringformat:'s' in selected_amenities %}checked{% endif %}>
+                        value="{{ amenity.id }}" {% if amenity.id|stringformat:'s' in selected_amenities %}checked{%
+                        endif %}>
                     <span class="form-check-label">{{ amenity.name }}</span>
                 </label>
                 {% endfor %}
@@ -569,11 +570,11 @@
                         <select class="form-select form-select-sm" id="sortSelect" aria-label="Sort apartments"
                             name="sort" onchange="debouncedApplyFilters()">
                             <option value="">Relevant</option>
-                            <option value="price_asc" {% if sort_by == 'price_asc' %}selected{% endif %}>Price: Low to
+                            <option value="price_asc" {% if sort_by=='price_asc' %}selected{% endif %}>Price: Low to
                                 High</option>
-                            <option value="price_desc" {% if sort_by == 'price_desc' %}selected{% endif %}>Price: High to
+                            <option value="price_desc" {% if sort_by=='price_desc' %}selected{% endif %}>Price: High to
                                 Low</option>
-                            <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Newest</option>
+                            <option value="newest" {% if sort_by=='newest' %}selected{% endif %}>Newest</option>
                         </select>
                         {% if user.is_authenticated %}
                         <a href="#" class="btn btn-outline-dark btn-sm">Save Search</a>
