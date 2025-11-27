@@ -520,8 +520,7 @@
                 {% for amenity in all_amenities %}
                 <label class="form-check form-check-sm mb-1">
                     <input class="form-check-input amenity-checkbox" name="amenities" type="checkbox"
-                        value="{{ amenity.id }}" {% if amenity.id|stringformat:'s' in selected_amenities %}checked{%
-                        endif %}>
+                        value="{{ amenity.id }}" {% if amenity.id|stringformat:'s' in selected_amenities %}checked{% endif %}>
                     <span class="form-check-label">{{ amenity.name }}</span>
                 </label>
                 {% endfor %}
