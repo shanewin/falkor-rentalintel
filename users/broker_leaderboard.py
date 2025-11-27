@@ -47,6 +47,7 @@ class BrokerLeaderboardService:
     def get_broker_leaderboard(self, limit: int = 20) -> List[Dict]:
         """
         Get ranked list of brokers with performance metrics
+        Optimized to use database aggregation instead of N+1 queries.
         
         Args:
             limit: Maximum number of brokers to return
@@ -56,11 +57,22 @@ class BrokerLeaderboardService:
         """
         from applications.models import Application
         
-        # Get all active brokers
+        # Recent activity (last 30 days)
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        
+        # Get all active brokers with pre-calculated metrics
+        # Uses application_set (default reverse relation) for aggregation
         brokers = User.objects.filter(
             is_broker=True,
             is_active=True
-        ).select_related('broker_profile')
+        ).select_related('broker_profile').annotate(
+            annotated_total_apps=Count('application_set'),
+            annotated_approved_apps=Count('application_set', filter=Q(application_set__status='APPROVED')),
+            annotated_rejected_apps=Count('application_set', filter=Q(application_set__status='REJECTED')),
+            annotated_pending_apps=Count('application_set', filter=Q(application_set__status='PENDING')),
+            annotated_recent_apps=Count('application_set', filter=Q(application_set__created_at__gte=thirty_days_ago)),
+            annotated_last_activity=Max('application_set__created_at')
+        )
         
         leaderboard = []
         
@@ -79,21 +91,29 @@ class BrokerLeaderboardService:
         return leaderboard[:limit]
     
     def _calculate_broker_metrics(self, broker) -> Dict:
-        """Calculate comprehensive metrics for a single broker"""
-        from applications.models import Application
+        """Calculate comprehensive metrics for a single broker using annotated data"""
         
-        # Get all applications for this broker
-        all_apps = Application.objects.filter(broker=broker)
-        approved_apps = all_apps.filter(status='APPROVED')
-        
-        # Recent activity (last 30 days)
-        thirty_days_ago = timezone.now() - timedelta(days=30)
-        recent_apps = all_apps.filter(created_at__gte=thirty_days_ago)
-        
-        # Basic counts
-        total_applications = all_apps.count()
-        approved_applications = approved_apps.count()
-        recent_applications = recent_apps.count()
+        # Use annotated data if available, otherwise fall back to queries (for backward compatibility/testing)
+        if hasattr(broker, 'annotated_total_apps'):
+            total_applications = broker.annotated_total_apps
+            approved_applications = broker.annotated_approved_apps
+            rejected_applications = broker.annotated_rejected_apps
+            pending_applications = broker.annotated_pending_apps
+            recent_applications = broker.annotated_recent_apps
+            last_activity_date = broker.annotated_last_activity
+        else:
+            # Fallback for non-annotated querysets
+            from applications.models import Application
+            all_apps = Application.objects.filter(broker=broker)
+            total_applications = all_apps.count()
+            approved_applications = all_apps.filter(status='APPROVED').count()
+            rejected_applications = all_apps.filter(status='REJECTED').count()
+            pending_applications = all_apps.filter(status='PENDING').count()
+            
+            thirty_days_ago = timezone.now() - timedelta(days=30)
+            recent_applications = all_apps.filter(created_at__gte=thirty_days_ago).count()
+            last_activity = all_apps.order_by('-created_at').first()
+            last_activity_date = last_activity.created_at if last_activity else None
         
         # Calculate conversion rate
         conversion_rate = (approved_applications / total_applications * 100) if total_applications > 0 else 0
@@ -113,12 +133,11 @@ class BrokerLeaderboardService:
         broker_name = self._get_broker_display_name(broker)
         
         # Recent activity status
-        last_activity = all_apps.order_by('-created_at').first()
         days_since_activity = None
         activity_status = "Never Active"
         
-        if last_activity:
-            days_since_activity = (timezone.now() - last_activity.created_at).days
+        if last_activity_date:
+            days_since_activity = (timezone.now() - last_activity_date).days
             if days_since_activity == 0:
                 activity_status = "Active Today"
             elif days_since_activity == 1:
@@ -141,8 +160,8 @@ class BrokerLeaderboardService:
             # Core metrics
             'total_applications': total_applications,
             'approved_applications': approved_applications,
-            'rejected_applications': all_apps.filter(status='REJECTED').count(),
-            'pending_applications': all_apps.filter(status='PENDING').count(),
+            'rejected_applications': rejected_applications,
+            'pending_applications': pending_applications,
             'conversion_rate': round(conversion_rate, 1),
             'revenue_generated': revenue_generated,
             
@@ -160,7 +179,7 @@ class BrokerLeaderboardService:
             
             # Display info
             'performance_level': performance_level,
-            'last_activity_date': last_activity.created_at if last_activity else None,
+            'last_activity_date': last_activity_date,
         }
     
     def _calculate_conversion_bonus(self, conversion_rate: float) -> int:
@@ -273,7 +292,7 @@ class BrokerLeaderboardService:
         # Active brokers (created application in last 30 days)
         thirty_days_ago = timezone.now() - timedelta(days=30)
         active_brokers = brokers.filter(
-            application__created_at__gte=thirty_days_ago
+            application_set__created_at__gte=thirty_days_ago
         ).distinct().count()
         
         # Calculate stats

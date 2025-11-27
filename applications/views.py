@@ -736,6 +736,11 @@ def broker_create_application(request):
             
             # Set manual property fields if needed
             if property_type == 'manual':
+                # CRITICAL: Only superusers can create applications for manual properties
+                if not request.user.is_superuser:
+                    messages.error(request, "Access denied. Only administrators can create applications for properties not in the database.")
+                    return redirect('broker_create_application')
+                    
                 application.manual_building_name = request.POST.get('manual_building_name', '')
                 application.manual_building_address = request.POST.get('manual_building_address', '')
                 application.manual_unit_number = request.POST.get('manual_unit_number', '')
