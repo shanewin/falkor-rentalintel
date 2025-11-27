@@ -29,6 +29,7 @@
     --info: #17a2b8;
     --link-color: #007bff;
     --link-hover-color: #0056b3;
+    --brand-orange: #fd7e14;
 
     /* Form Specifics (Mapped to Brand) */
     --form-primary-black: var(--brand-black);

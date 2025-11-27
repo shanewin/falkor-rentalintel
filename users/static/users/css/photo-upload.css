@@ -1,8 +1,8 @@
 /* Cloudinary Photo Upload Widget Styles */
 
 .cloudinary-photo-upload-container {
-    background: #f8f9fa;
-    border: 2px dashed #dee2e6;
+    background: var(--brand-light-gray);
+    border: 2px dashed var(--border-color);
     border-radius: 8px;
     padding: 20px;
     margin: 15px 0;
@@ -10,8 +10,8 @@
 }
 
 .cloudinary-photo-upload-container:hover {
-    border-color: #ffcc00;
-    background: #fffdf7;
+    border-color: var(--brand-yellow);
+    background: var(--form-bg-highlight);
 }
 
 .photo-preview-section {
@@ -27,8 +27,8 @@
     height: 150px;
     border-radius: 50%;
     overflow: hidden;
-    background: white;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: var(--brand-white);
+    box-shadow: var(--shadow-sm);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -46,7 +46,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    color: #6c757d;
+    color: var(--text-muted);
     text-align: center;
     padding: 20px;
 }
@@ -54,12 +54,12 @@
 .photo-placeholder i {
     font-size: 60px;
     margin-bottom: 10px;
-    color: #dee2e6;
+    color: var(--border-color);
 }
 
 .photo-placeholder span {
     font-size: 14px;
-    color: #6c757d;
+    color: var(--text-muted);
 }
 
 .photo-controls {
@@ -73,18 +73,18 @@
 }
 
 .upload-btn {
-    background-color: #ffcc00;
-    border-color: #ffcc00;
-    color: #000;
+    background-color: var(--brand-yellow);
+    border-color: var(--brand-yellow);
+    color: var(--brand-black);
     font-weight: 500;
     transition: all 0.3s ease;
 }
 
 .upload-btn:hover {
-    background-color: #e6b800;
-    border-color: #e6b800;
+    background-color: var(--brand-yellow-dark);
+    border-color: var(--brand-yellow-dark);
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(255, 204, 0, 0.3);
+    box-shadow: 0 4px 8px rgba(255, 214, 10, 0.3);
 }
 
 .zoom-in-btn,
@@ -100,17 +100,17 @@
 .upload-progress {
     margin-top: 15px;
     padding: 10px;
-    background: white;
+    background: var(--brand-white);
     border-radius: 4px;
 }
 
 .upload-progress .progress {
     height: 25px;
-    background: #f8f9fa;
+    background: var(--brand-light-gray);
 }
 
 .upload-progress .progress-bar {
-    background-color: #ffcc00;
+    background-color: var(--brand-yellow);
     font-weight: 500;
 }
 
@@ -118,7 +118,7 @@
 .edit-canvas-container {
     width: 100%;
     height: 400px;
-    background: #f8f9fa;
+    background: var(--brand-light-gray);
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -134,14 +134,14 @@
 
 .edit-controls {
     padding: 15px;
-    background: #f8f9fa;
+    background: var(--brand-light-gray);
     border-radius: 8px;
 }
 
 .edit-controls .form-label {
     font-weight: 500;
     font-size: 14px;
-    color: #495057;
+    color: var(--text-dark);
 }
 
 .edit-controls .form-range {
@@ -149,14 +149,14 @@
 }
 
 .edit-controls .form-range::-webkit-slider-thumb {
-    background: #ffcc00;
-    border: 2px solid #fff;
+    background: var(--brand-yellow);
+    border: 2px solid var(--brand-white);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .edit-controls .form-range::-moz-range-thumb {
-    background: #ffcc00;
-    border: 2px solid #fff;
+    background: var(--brand-yellow);
+    border: 2px solid var(--brand-white);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
@@ -211,7 +211,7 @@
 .delete-btn:focus,
 .zoom-in-btn:focus,
 .zoom-out-btn:focus {
-    outline: 3px solid rgba(255, 204, 0, 0.5);
+    outline: 3px solid rgba(255, 214, 10, 0.5);
     outline-offset: 2px;
 }
 
@@ -230,7 +230,7 @@
     height: 40px;
     margin: -20px 0 0 -20px;
     border: 4px solid #f3f3f3;
-    border-top: 4px solid #ffcc00;
+    border-top: 4px solid var(--brand-yellow);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -242,12 +242,12 @@
 
 /* Success state */
 .cloudinary-photo-upload-container.success {
-    border-color: #28a745;
+    border-color: var(--success);
     background: #f4fff4;
 }
 
 /* Error state */
 .cloudinary-photo-upload-container.error {
-    border-color: #dc3545;
+    border-color: var(--danger);
     background: #fff5f5;
 }
