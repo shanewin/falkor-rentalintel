@@ -102,3 +102,4 @@ celery
 redis
 gunicorn==21.2.0
 dj-database-url==2.1.0
+faker==22.0.0openai>=1.0.0

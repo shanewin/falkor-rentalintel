@@ -1,0 +1,171 @@
+/* Custom CSS for Profile Page */
+:root {
+    --primary-color: #6c5ce7; /* Modern purple */
+    --secondary-color: #a29bfe; /* Lighter purple */
+    --background-color: #f8f9fa;
+    --text-color: #2d3436;
+    --muted-text-color: #636e72;
+    --border-color: #e0e0e0;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background-color: #ffffff;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border-radius: 12px 12px 0 0;
+    padding: 1.5rem;
+}
+
+.card-header h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.card-body {
+    padding: 2rem;
+}
+
+.list-group-item {
+    border: none;
+    padding: 1rem 1.5rem;
+    background-color: var(--background-color);
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    transition: background-color 0.3s ease;
+}
+
+.list-group-item:hover {
+    background-color: #e9ecef;
+}
+
+.list-group-item strong {
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+.list-group-item span {
+    color: var(--muted-text-color);
+}
+
+.img-thumbnail {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 5px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.img-thumbnail:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.btn-outline-primary {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    font-weight: 500;
+    padding: 0.5rem 1.5rem;
+    border-radius: 8px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* Typography */
+h5 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.text-muted {
+    color: var(--muted-text-color) !important;
+}
+
+/* Profile Picture Styling */
+.rounded-circle {
+    border: 4px solid #ffffff;
+    box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+/* Pets Section Styling */
+.card-shadow-sm {
+    box-shadow: 0 2px 8px var(--shadow-color);
+    border-radius: 8px;
+}
+
+.card-shadow-sm .card-body {
+    padding: 1.5rem;
+}
+
+.card-shadow-sm h6 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.card-shadow-sm p {
+    color: var(--muted-text-color);
+    margin-bottom: 1rem;
+}
+
+/* Table Styling */
+.table {
+    width: 100%;
+    margin-bottom: 1rem;
+    color: var(--text-color);
+}
+
+.table td, .table th {
+    padding: 0.75rem;
+    vertical-align: top;
+    border-top: 1px solid var(--border-color);
+}
+
+.table-borderless td, .table-borderless th {
+    border: 0;
+}
+
+/* Spacing Utilities */
+.mb-3 {
+    margin-bottom: 1.5rem !important;
+}
+
+.mt-4 {
+    margin-top: 2rem !important;
+}
+
+.fw-bold {
+    font-weight: 600;
+}
+
+.border-bottom {
+    border-bottom: 2px solid var(--border-color) !important;
+    padding-bottom: 0.75rem;
+}
+
+.text-center {
+    text-align: center;
+}

@@ -86,6 +86,13 @@ class Application(models.Model):
     
     # Version tracking for new system
     application_version = models.CharField(max_length=10, default='v1')  # 'v1' = old, 'v2' = new
+    
+    # Application revocation tracking
+    is_revoked = models.BooleanField(default=False)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    revoked_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='revoked_applications')
+    revocation_reason = models.CharField(max_length=200, blank=True, null=True)
+    revocation_notes = models.TextField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
         """Ensure that required_documents only contains valid choices"""
@@ -125,6 +132,26 @@ class Application(models.Model):
         if self.apartment:
             return self.apartment.unit_number
         return self.manual_unit_number or "Unknown Unit"
+
+    def is_satisfied(self):
+        """
+        Check if all required documents have been uploaded.
+        Returns True if all requirements are met, False otherwise.
+        """
+        if not self.required_documents:
+            return True
+
+        uploaded_types = set(
+            self.uploaded_files.values_list('document_type', flat=True)
+        )
+        
+        # Check if every required doc is in the uploaded types
+        # Note: required_documents is a list of strings (e.g. ['paystub', 'photo_id'])
+        for req_doc in self.required_documents:
+            if req_doc not in uploaded_types:
+                return False
+        
+        return True
 
 
 class UploadedFile(models.Model):

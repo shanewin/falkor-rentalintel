@@ -5,10 +5,10 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('home.urls')),
+    path('', include('apartments.urls')),  # Apartments is now the homepage
     path('users/', include('users.urls')),
     path('buildings/', include('buildings.urls')),
-    path('apartments/', include('apartments.urls')),
+    path('apartments/', include('apartments.urls')),  # Keep apartments also accessible at /apartments/
     path('applications/', include('applications.urls')),
     path('applicants/', include('applicants.urls')),
     path("doc_analysis/", include("doc_analysis.urls")),

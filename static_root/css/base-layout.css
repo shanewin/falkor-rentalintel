@@ -1,0 +1,172 @@
+/* Base layout styles migrated from templates/base.html inline block */
+
+/* Bootstrap 5 Navigation Styling */
+.navbar-doorway {
+    background-color: #ffcc00 !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.navbar-doorway .navbar-brand img {
+    height: 60px;
+    width: auto;
+    max-width: 250px;
+}
+
+.navbar-doorway .navbar-brand,
+.navbar-doorway .navbar-nav .nav-link {
+    color: #000000;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.navbar-doorway .navbar-nav .nav-link:hover,
+.navbar-doorway .navbar-nav .nav-link:focus,
+.navbar-doorway .navbar-nav .nav-link.active {
+    color: #333333;
+    background-color: rgba(255,255,255,0.2);
+    border-radius: 6px;
+}
+
+.navbar-doorway .navbar-toggler {
+    border-color: rgba(0,0,0,0.2);
+    padding: 4px 8px;
+}
+
+.navbar-doorway .navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%280, 0, 0, 0.8%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+/* User Profile Dropdown */
+.navbar-user-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.navbar-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255,255,255,0.5);
+}
+
+.navbar-avatar-fallback {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    color: #000;
+}
+
+.dropdown-toggle::after {
+    margin-left: 8px;
+}
+
+.dropdown-menu {
+    margin-top: 10px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.dropdown-item {
+    padding: 10px 20px;
+    font-weight: 500;
+}
+
+.dropdown-item:hover {
+    background-color: #ffcc00;
+    color: #000;
+}
+
+.dropdown-divider {
+    margin: 5px 0;
+}
+
+/* Logout Button in Dropdown */
+.dropdown-item.text-danger {
+    color: #dc3545 !important;
+}
+
+.dropdown-item.text-danger:hover {
+    background-color: #dc3545;
+    color: white !important;
+}
+
+/* Main Content */
+.content {
+    padding: 20px;
+    margin-top: 86px; /* Height of larger navbar */
+    min-height: calc(100vh - 86px);
+}
+
+/* Hide sidebar and adjust content for preview mode */
+.preview-mode .navbar {
+    display: none !important;
+}
+
+.preview-mode .content {
+    margin-top: 0 !important;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Form Elements */
+span.asteriskField {
+    color: red;
+    margin-left: 4px;
+}
+
+label.requiredField {
+    font-weight: bold;
+}
+
+.custom-amenities-checkboxes .form-check {
+    display: inline-block;
+    margin-right: 15px;
+    font-size: 14px;
+}
+
+.custom-amenities-checkboxes .form-check-input {
+    width: 18px;
+    height: 18px;
+    margin-right: 5px;
+    cursor: pointer;
+}
+
+.custom-amenities-checkboxes label {
+    font-weight: 500;
+    cursor: pointer;
+}
+
+/* Mobile Responsive */
+@media (max-width: 991px) {
+    .navbar-collapse {
+        padding-top: 15px;
+        border-top: 1px solid rgba(0,0,0,0.1);
+        margin-top: 15px;
+    }
+
+    .navbar-user-section {
+        padding: 15px 0;
+        border-top: 1px solid rgba(0,0,0,0.1);
+        margin-top: 10px;
+        width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .custom-amenities-checkboxes .form-check {
+        margin-bottom: 10px;
+    }
+
+    .content {
+        padding: 15px;
+    }
+}

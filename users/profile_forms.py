@@ -11,30 +11,49 @@ import cloudinary
 class BrokerProfileForm(forms.ModelForm):
     profile_photo = CloudinaryFileField(required=False)
     
+    # Override years_experience to use choices
+    YEARS_CHOICES = [('', 'Select Years')] + [(i, f'{i} year{"s" if i != 1 else ""}') for i in range(1, 21)]
+    years_experience = forms.ChoiceField(
+        choices=YEARS_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-select select2'}),
+        required=False
+    )
+    
     class Meta:
         model = BrokerProfile
         fields = [
-            'profile_photo', 'first_name', 'last_name', 'phone_number', 'mobile_phone', 'professional_email',
-            'business_name', 'business_address_1', 'business_address_2', 'business_city', 'business_state', 'business_zip',
-            'broker_license_number', 'license_state', 'license_expiration',
-            'department', 'job_title', 'years_experience',
-            'specializations', 'territories', 'standard_commission_rate', 'commission_split',
-            'bio', 'certifications', 'awards',
-            'preferred_contact_method', 'available_hours',
-            'linkedin_url', 'website_url'
+            'profile_photo', 'first_name', 'last_name', 'mobile_phone', 'professional_email',
+            'business_name', 'business_address_1', 'business_city', 'business_state', 'business_zip',
+            'broker_license_number', 'license_state', 'license_expiration', 'years_experience',
+            'job_title', 'specializations', 'territories', 
+            'bio', 'linkedin_url', 'website_url'
         ]
         widgets = {
+            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First Name'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Last Name'}),
+            'mobile_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(555) 555-5555'}),
+            'professional_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'professional@example.com'}),
+            'business_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Company/Brokerage Name'}),
+            'business_address_1': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Business Address'}),
+            'business_city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City'}),
+            'business_state': forms.Select(attrs={'class': 'form-select select2'}),
+            'business_zip': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ZIP Code'}),
+            'broker_license_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'License Number'}),
+            'license_state': forms.Select(attrs={'class': 'form-select select2'}),
             'license_expiration': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'bio': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
+            'job_title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Job Title'}),
+            'bio': forms.Textarea(attrs={'rows': 4, 'class': 'form-control', 'placeholder': 'Tell clients about your experience, specialties, and what makes you unique...'}),
+            'linkedin_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://linkedin.com/in/yourname'}),
+            'website_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://yourwebsite.com'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # Setup number inputs
-        self.fields['years_experience'].widget = forms.NumberInput(attrs={'class': 'form-control', 'min': '0'})
-        self.fields['standard_commission_rate'].widget = forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '100'})
-        self.fields['commission_split'].widget = forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '100'})
+        # Make most fields optional (only email from User model is truly required)
+        for field_name, field in self.fields.items():
+            if field_name not in ['profile_photo']:  # Keep photo explicitly optional
+                field.required = False
         
         # Crispy Forms setup
         self.helper = FormHelper(self)

@@ -1,6 +1,7 @@
 from django.urls import path, include
 from .views import delete_applicant_photo, delete_pet_photo, applicant_overview, applicants_list, applicant_crm, get_applicant_data
 from .profile_views import progressive_profile, quick_profile_update, profile_step1, profile_step2, profile_step3
+from .activity_views import activity_dashboard, activity_timeline, activity_analytics_api
 
 urlpatterns = [
     path('profile/<int:applicant_id>/', applicant_overview, name='applicant_overview'),
@@ -19,4 +20,8 @@ urlpatterns = [
     path('my-profile/step2/', profile_step2, name='profile_step2'),
     path('my-profile/step3/', profile_step3, name='profile_step3'),
     
+    # Activity tracking dashboard
+    path('activity/dashboard/', activity_dashboard, name='activity_dashboard'),
+    path('activity/timeline/<int:applicant_id>/', activity_timeline, name='activity_timeline'),
+    path('api/activity/analytics/', activity_analytics_api, name='activity_analytics_api'),
 ]

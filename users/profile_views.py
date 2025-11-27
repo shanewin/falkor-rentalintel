@@ -20,18 +20,24 @@ def broker_progressive_profile(request):
     # Get or create broker profile linked to user
     try:
         broker_profile = request.user.broker_profile
+        # Ensure email is always set to current user email
+        if not broker_profile.professional_email or broker_profile.professional_email != request.user.email:
+            broker_profile.professional_email = request.user.email
+            broker_profile.save()
     except BrokerProfile.DoesNotExist:
         # Create broker profile if it doesn't exist
+        # Only basic fields are required - most are optional like applicant profile
         broker_profile = BrokerProfile.objects.create(
             user=request.user,
             first_name='',
             last_name='',
             phone_number='',
+            professional_email=request.user.email,  # Preload with account email
             business_name='',
             business_address_1='',
             business_city='',
             business_zip='',
-            broker_license_number='',
+            broker_license_number=f'TEMP-{request.user.id}',  # Temporary unique value
             license_state='NY',
             job_title='Real Estate Broker',
             years_experience=0
@@ -47,6 +53,43 @@ def broker_progressive_profile(request):
             with transaction.atomic():
                 broker_profile = form.save()
                 
+                # Handle profile photo upload with cropping (like applicant profile)
+                if 'profile_photo' in request.FILES:
+                    import json
+                    import base64
+                    from io import BytesIO
+                    from PIL import Image
+                    from django.core.files.base import ContentFile
+                    
+                    # Get crop data if provided (using dash like applicant profile)
+                    crop_data = request.POST.get('crop_data', '')
+                    
+                    if crop_data:
+                        try:
+                            crop_info = json.loads(crop_data)
+                            
+                            # If we have a cropped image from Cropper.js
+                            if crop_info.get('cropped') and crop_info.get('croppedImage'):
+                                # Extract base64 data
+                                cropped_image_data = crop_info['croppedImage']
+                                if cropped_image_data.startswith('data:image'):
+                                    # Remove data:image/...;base64, prefix
+                                    image_data = cropped_image_data.split(',')[1]
+                                    image_binary = base64.b64decode(image_data)
+                                    
+                                    # Save the cropped image
+                                    image_file = ContentFile(image_binary)
+                                    broker_profile.profile_photo.save(
+                                        f'broker_profile_{broker_profile.id}_cropped.jpg',
+                                        image_file,
+                                        save=True
+                                    )
+                                    
+                        except (json.JSONDecodeError, KeyError, ValueError) as e:
+                            # If cropping fails, fall back to original image
+                            print(f"Photo cropping failed: {e}")
+                            pass
+                
                 # Recalculate completion after save
                 new_percentage, _ = ProfileProgressService.calculate_broker_profile_completion(broker_profile)
                 
@@ -61,27 +104,17 @@ def broker_progressive_profile(request):
     else:
         form = BrokerProfileForm(instance=broker_profile)
     
-    # Organize form fields by section for better UX
-    sections = {
-        'Personal Information': ['first_name', 'last_name', 'phone_number', 'mobile_phone', 'professional_email'],
-        'Business Information': ['business_name', 'business_address_1', 'business_address_2', 'business_city', 'business_state', 'business_zip'],
-        'License Information': ['broker_license_number', 'license_state', 'license_expiration', 'years_experience'],
-        'Professional Details': ['department', 'job_title', 'specializations', 'territories', 'standard_commission_rate', 'commission_split'],
-        'Professional Information': ['bio', 'certifications', 'awards'],
-        'Contact & Availability': ['preferred_contact_method', 'available_hours', 'linkedin_url', 'website_url'],
-    }
-    
     context = {
         'form': form,
         'profile': broker_profile,
+        'user': request.user,  # Pass user for email display
         'completion_percentage': completion_percentage,
         'missing_fields': missing_fields,
         'next_steps': next_steps,
-        'sections': sections,
         'profile_type': 'Broker',
     }
     
-    return render(request, 'users/progressive_profile.html', context)
+    return render(request, 'users/broker_profile.html', context)
 
 
 @login_required

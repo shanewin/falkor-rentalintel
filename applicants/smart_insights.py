@@ -21,7 +21,11 @@ keeping all personal information completely secure and private.
 import re
 from datetime import datetime, timedelta
 from django.utils import timezone
-from decimal import Decimal
+from django.utils.html import escape
+from decimal import Decimal, InvalidOperation
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class SmartInsights:
@@ -46,62 +50,87 @@ class SmartInsights:
             'confidence_level': 'Medium'
         }
         
-        # Calculate overall score
         insights['overall_score'] = cls._calculate_overall_score(insights)
-        
-        # Generate summary
         insights['summary'] = cls._generate_summary(applicant, insights)
-        
-        # Set confidence level
         insights['confidence_level'] = cls._determine_confidence(applicant, insights)
         
         return insights
     
     @classmethod
     def _analyze_affordability(cls, applicant):
-        """Analyze if applicant can afford their desired rent"""
+        """Analyze if applicant can afford their desired rent using Decimal precision"""
         analysis = {
             'can_afford': False,
-            'recommended_rent': 0,
-            'income_multiple': 0,
+            'recommended_rent': Decimal('0'),
+            'income_multiple': Decimal('0'),
             'details': 'Insufficient income information'
         }
         
-        # Calculate total income
-        total_monthly_income = 0
+        total_monthly_income = Decimal('0')
         
-        # Primary employment income
-        if applicant.annual_income:
-            total_monthly_income += float(applicant.annual_income) / 12
+        # Use Decimal arithmetic for precise money calculations
+        # Handle None vs 0 income properly
+        if applicant.annual_income is not None:
+            try:
+                annual = Decimal(str(applicant.annual_income))
+                if annual > 0:  # Only add positive income
+                    total_monthly_income += annual / Decimal('12')
+            except (InvalidOperation, ValueError) as e:
+                logger.warning(f"Invalid annual_income for applicant {applicant.id}: {applicant.annual_income}")
         
-        # Additional jobs
-        for job in applicant.jobs.all():
-            if job.annual_income:
-                total_monthly_income += float(job.annual_income) / 12
+        # Use select_related to optimize database queries
+        for job in applicant.jobs.select_related().all():
+            if job.annual_income is not None:
+                try:
+                    annual = Decimal(str(job.annual_income))
+                    if annual > 0:
+                        total_monthly_income += annual / Decimal('12')
+                except (InvalidOperation, ValueError) as e:
+                    logger.warning(f"Invalid job annual_income for applicant {applicant.id}: {job.annual_income}")
         
-        # Additional income sources
-        for income in applicant.income_sources.all():
-            if income.average_annual_income:
-                total_monthly_income += float(income.average_annual_income) / 12
+        for income in applicant.income_sources.select_related().all():
+            if income.average_annual_income is not None:
+                try:
+                    annual = Decimal(str(income.average_annual_income))
+                    if annual > 0:
+                        total_monthly_income += annual / Decimal('12')
+                except (InvalidOperation, ValueError) as e:
+                    logger.warning(f"Invalid income source for applicant {applicant.id}: {income.average_annual_income}")
         
         if total_monthly_income > 0:
-            # Standard is 3x rent rule
-            recommended_rent = total_monthly_income / 3
-            analysis['recommended_rent'] = round(recommended_rent, 2)
+            # Standard is 3x rent rule - using Decimal for precision
+            recommended_rent = total_monthly_income / Decimal('3')
+            analysis['recommended_rent'] = recommended_rent.quantize(Decimal('0.01'))
             
-            if applicant.max_rent_budget:
-                budget = float(applicant.max_rent_budget)
-                analysis['income_multiple'] = total_monthly_income / budget if budget > 0 else 0
-                analysis['can_afford'] = analysis['income_multiple'] >= 3.0
-                
-                if analysis['can_afford']:
-                    analysis['details'] = f"Strong affordability: Income of ${total_monthly_income:,.0f}/month supports ${budget:,.0f} rent (${analysis['income_multiple']:.1f}x income rule)"
-                elif analysis['income_multiple'] >= 2.5:
-                    analysis['details'] = f"Borderline affordability: Income of ${total_monthly_income:,.0f}/month for ${budget:,.0f} rent ({analysis['income_multiple']:.1f}x). Consider with strong credit/references."
-                else:
-                    analysis['details'] = f"Poor affordability: Income of ${total_monthly_income:,.0f}/month insufficient for ${budget:,.0f} rent ({analysis['income_multiple']:.1f}x income rule)"
+            if applicant.max_rent_budget is not None:
+                try:
+                    budget = Decimal(str(applicant.max_rent_budget))
+                    # Prevent division by zero
+                    if budget > 0:
+                        analysis['income_multiple'] = total_monthly_income / budget
+                        analysis['can_afford'] = analysis['income_multiple'] >= Decimal('3.0')
+                        
+                        # Safe formatting for display
+                        income_fmt = float(total_monthly_income)
+                        budget_fmt = float(budget)
+                        multiple_fmt = float(analysis['income_multiple'])
+                        
+                        if analysis['can_afford']:
+                            analysis['details'] = f"Strong affordability: Income of ${income_fmt:,.0f}/month supports ${budget_fmt:,.0f} rent ({multiple_fmt:.1f}x income rule)"
+                        elif analysis['income_multiple'] >= Decimal('2.5'):
+                            analysis['details'] = f"Borderline affordability: Income of ${income_fmt:,.0f}/month for ${budget_fmt:,.0f} rent ({multiple_fmt:.1f}x). Consider with strong credit/references."
+                        else:
+                            analysis['details'] = f"Poor affordability: Income of ${income_fmt:,.0f}/month insufficient for ${budget_fmt:,.0f} rent ({multiple_fmt:.1f}x income rule)"
+                    else:
+                        analysis['details'] = "Invalid rent budget: must be greater than $0"
+                except (InvalidOperation, ValueError) as e:
+                    logger.warning(f"Invalid max_rent_budget for applicant {applicant.id}: {applicant.max_rent_budget}")
+                    analysis['details'] = "Unable to analyze affordability: invalid rent budget"
             else:
-                analysis['details'] = f"Monthly income: ${total_monthly_income:,.0f}. Recommended max rent: ${recommended_rent:,.0f} (3x income rule)"
+                analysis['details'] = f"Monthly income: ${float(total_monthly_income):,.0f}. Recommended max rent: ${float(recommended_rent):,.0f} (3x income rule)"
+        else:
+            # Handle zero/no income explicitly
+            analysis['details'] = 'No verified income information available - income verification required'
         
         return analysis
     
@@ -136,13 +165,23 @@ class SmartInsights:
             else:
                 analysis['concerns'].append(f"Short employment history ({employment_duration} days)")
         
-        # Employment status analysis
+        # Employment status analysis - Fair Housing compliant scoring
+        # Remove discriminatory assumptions about students
         if applicant.employment_status == 'employed':
             analysis['stability_score'] += 25
             analysis['strengths'].append("Currently employed")
         elif applicant.employment_status == 'student':
-            analysis['stability_score'] += 15
-            analysis['strengths'].append("Student status (may have family support)")
+            # Fair Housing compliance: Base scoring on verifiable income, not assumptions
+            # Students are scored based on documented income sources, not assumptions about family support
+            has_income = (applicant.annual_income and applicant.annual_income > 0) or \
+                        applicant.jobs.filter(annual_income__gt=0).exists() or \
+                        applicant.income_sources.filter(average_annual_income__gt=0).exists()
+            
+            if has_income:
+                analysis['stability_score'] += 15
+                analysis['strengths'].append("Student with documented income")
+            else:
+                analysis['concerns'].append("Student status with no documented income - verification required")
         elif applicant.employment_status == 'unemployed':
             analysis['concerns'].append("Currently unemployed")
         elif applicant.employment_status == 'self_employed':
@@ -168,8 +207,28 @@ class SmartInsights:
             'address_count': 0
         }
         
-        # Current address analysis
-        if applicant.length_at_current_address:
+        # Current address analysis - use new structured fields
+        total_months = 0
+        if applicant.current_address_years:
+            total_months += applicant.current_address_years * 12
+        if applicant.current_address_months:
+            total_months += applicant.current_address_months
+            
+        if total_months > 0:
+            duration_display = applicant.current_address_duration_display
+            if total_months >= 24:  # 2+ years
+                analysis['history_score'] += 20
+                analysis['strengths'].append(f"Stable at current address ({duration_display})")
+            elif total_months >= 12:  # 1+ year
+                analysis['history_score'] += 15
+                analysis['strengths'].append(f"Good stability at current address ({duration_display})")
+            elif total_months >= 6:  # 6+ months
+                analysis['history_score'] += 5
+                analysis['strengths'].append(f"Some stability at current address ({duration_display})")
+            else:
+                analysis['concerns'].append(f"Short duration at current address ({duration_display})")
+        elif applicant.length_at_current_address:
+            # Fallback to old text field if new fields not filled
             duration = applicant.length_at_current_address.lower()
             if any(word in duration for word in ['year', 'years']) and not any(word in duration for word in ['month', '<', 'less']):
                 analysis['history_score'] += 20
@@ -204,7 +263,9 @@ class SmartInsights:
         if applicant.evicted_before:
             analysis['concerns'].append("Previous eviction reported")
             if applicant.eviction_explanation:
-                analysis['concerns'].append(f"Explanation: {applicant.eviction_explanation[:100]}...")
+                # Sanitize text input to prevent XSS
+                sanitized_explanation = escape(applicant.eviction_explanation.strip())
+                analysis['concerns'].append(f"Explanation: {sanitized_explanation[:100]}...")
         else:
             analysis['history_score'] += 10
             analysis['strengths'].append("No eviction history reported")
@@ -216,11 +277,15 @@ class SmartInsights:
         """Identify potential red flags in the application"""
         red_flags = []
         
-        # Income vs budget mismatch
+        # Income vs budget mismatch - use Decimal for precision
         if applicant.annual_income and applicant.max_rent_budget:
-            monthly_income = float(applicant.annual_income) / 12
-            if float(applicant.max_rent_budget) > monthly_income / 2:
-                red_flags.append("🚩 Rent budget exceeds 50% of reported income")
+            try:
+                monthly_income = Decimal(str(applicant.annual_income)) / Decimal('12')
+                max_budget = Decimal(str(applicant.max_rent_budget))
+                if max_budget > monthly_income / Decimal('2'):
+                    red_flags.append("🚩 Rent budget exceeds 50% of reported income")
+            except (InvalidOperation, ValueError):
+                red_flags.append("⚠️ Invalid income or budget data")
         
         # Missing critical information
         missing_info = []
@@ -268,9 +333,14 @@ class SmartInsights:
         # Credit check
         recommendations.append("💳 Run credit check to verify financial responsibility")
         
-        # Bank statements
-        if applicant.annual_income and float(applicant.annual_income) > 50000:
-            recommendations.append("🏦 Request bank statements for income verification")
+        # Bank statements - use Decimal for precision
+        if applicant.annual_income:
+            try:
+                annual_income = Decimal(str(applicant.annual_income))
+                if annual_income > Decimal('50000'):
+                    recommendations.append("🏦 Request bank statements for income verification")
+            except (InvalidOperation, ValueError):
+                pass  # Skip recommendation if income is invalid
         
         # Emergency contact verification
         if applicant.emergency_contact_name:
@@ -283,12 +353,12 @@ class SmartInsights:
         """Calculate overall applicant score out of 100"""
         score = 0
         
-        # Affordability (40% weight)
+        # Affordability (40% weight) - handle Decimal values
         if insights['affordability']['can_afford']:
             score += 40
-        elif insights['affordability']['income_multiple'] >= 2.5:
+        elif insights['affordability']['income_multiple'] >= Decimal('2.5'):
             score += 25
-        elif insights['affordability']['income_multiple'] >= 2.0:
+        elif insights['affordability']['income_multiple'] >= Decimal('2.0'):
             score += 15
         
         # Employment stability (30% weight)
@@ -327,15 +397,19 @@ class SmartInsights:
         summary = f"**{recommendation}** ({risk_level}) - "
         
         if affordability['can_afford']:
-            summary += f"Strong financial profile with {affordability['income_multiple']:.1f}x income coverage. "
-        elif affordability['income_multiple'] >= 2.5:
-            summary += f"Adequate income with {affordability['income_multiple']:.1f}x coverage, consider with good credit. "
+            summary += f"Strong financial profile with {float(affordability['income_multiple']):.1f}x income coverage. "
+        elif affordability['income_multiple'] >= Decimal('2.5'):
+            summary += f"Adequate income with {float(affordability['income_multiple']):.1f}x coverage, consider with good credit. "
+        elif affordability['income_multiple'] > 0:
+            summary += f"Income concerns with only {float(affordability['income_multiple']):.1f}x coverage. "
         else:
-            summary += f"Income concerns with only {affordability['income_multiple']:.1f}x coverage. "
+            summary += "No income information available for analysis. "
         
         employment = insights['employment_stability']
         if employment['strengths']:
-            summary += f"Employment: {employment['strengths'][0]}. "
+            # Sanitize text before displaying
+            sanitized_strength = escape(str(employment['strengths'][0]))
+            summary += f"Employment: {sanitized_strength}. "
         
         if insights['red_flags']:
             summary += f"⚠️ {len(insights['red_flags'])} concern(s) identified."

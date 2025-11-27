@@ -116,31 +116,28 @@
         
         <p>Hello,</p>
         
-        <p>Your <strong>{{ role }}</strong> account has been created for the Doorway rental management platform. You can now access the system using your temporary login credentials below.</p>
+        <p>Your <strong>{{ role }}</strong> account has been created for the Doorway rental management platform. To get started, you need to set up your password using the secure link below.</p>
         
         <div class="credentials-box">
-            <h3>Your Login Credentials</h3>
+            <h3>Your Account Information</h3>
             <div class="credential-item">
                 <span class="credential-label">Email:</span>
                 <span class="credential-value">{{ user.email }}</span>
             </div>
-            <div class="credential-item">
-                <span class="credential-label">Temporary Password:</span>
-                <span class="credential-value">{{ temporary_password }}</span>
-            </div>
         </div>
         
         <div style="text-align: center;">
-            <a href="{{ login_url }}" class="login-button">
-                🚪 Log In to Doorway
+            <a href="{{ invitation_link }}" class="login-button">
+                🔐 Set Your Password
             </a>
         </div>
         
         <div class="security-note">
             <h4>🔒 Important Security Information</h4>
             <ul>
-                <li>Please log in and change your password immediately</li>
-                <li>This temporary password will expire in 30 days</li>
+                <li>This secure link expires in 48 hours for your protection</li>
+                <li>Create a strong password with at least 8 characters</li>
+                <li>This link can only be used once to set your password</li>
                 <li>Keep your login credentials secure and do not share them</li>
                 <li>Log out completely when using shared computers</li>
             </ul>

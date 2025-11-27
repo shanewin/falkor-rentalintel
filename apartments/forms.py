@@ -11,7 +11,7 @@ class ApartmentBasicForm(forms.ModelForm):
     class Meta:
         model = Apartment
         fields = [
-            'building', 'unit_number', 'bedrooms', 'bathrooms', 'apartment_type', 
+            'building', 'unit_number', 'bedrooms', 'bathrooms', 'square_feet', 'apartment_type', 
             'rent_price', 'net_price', 'deposit_price', 'status'
         ]
 
@@ -24,9 +24,10 @@ class ApartmentBasicForm(forms.ModelForm):
                 'Basic Apartment Information',
                 'building',
                 Row(
-                    Column(Field('unit_number', placeholder="e.g., 2A"), css_class='col-md-4'),
-                    Column(Field('bedrooms', placeholder="e.g., 2"), css_class='col-md-4'),
-                    Column(Field('bathrooms', placeholder="e.g., 1"), css_class='col-md-4'),
+                    Column(Field('unit_number', placeholder="e.g., 2A"), css_class='col-md-3'),
+                    Column(Field('bedrooms', placeholder="e.g., 2"), css_class='col-md-3'),
+                    Column(Field('bathrooms', placeholder="e.g., 1"), css_class='col-md-3'),
+                    Column(Field('square_feet', placeholder="e.g., 850"), css_class='col-md-3'),
                 ),
                 Row(
                     Column(Field('apartment_type'), css_class='col-md-6'),
@@ -80,7 +81,7 @@ class ApartmentDetailsForm(forms.ModelForm):
     class Meta:
         model = Apartment
         fields = [
-            'broker_fee_required', 'paid_months', 'self_tour_status', 
+            'broker_fee_required', 'paid_months',
             'lease_duration', 'holding_deposit', 'free_stuff', 'required_documents'
         ]
 
@@ -94,8 +95,7 @@ class ApartmentDetailsForm(forms.ModelForm):
             Fieldset(
                 'Additional Details',
                 Row(
-                    Column(Field('broker_fee_required'), css_class='col-md-6'),
-                    Column(Field('self_tour_status'), css_class='col-md-6'),
+                    Column(Field('broker_fee_required'), css_class='col-md-12'),
                 ),
                 Row(
                     Column(Field('paid_months', placeholder="e.g., 2"), css_class='col-md-6'),
@@ -115,9 +115,9 @@ class ApartmentForm(forms.ModelForm):
     class Meta:
         model = Apartment
         fields = [
-            'building', 'unit_number', 'bedrooms', 'bathrooms', 'rent_price', 'net_price', 'deposit_price',
+            'building', 'unit_number', 'bedrooms', 'bathrooms', 'square_feet', 'rent_price', 'net_price', 'deposit_price',
             'description', 'status', 'amenities', 'lock_type', 'broker_fee_required',
-            'paid_months', 'self_tour_status', 'lease_duration', 'holding_deposit', 'free_stuff',
+            'paid_months', 'lease_duration', 'holding_deposit', 'free_stuff',
             'required_documents','apartment_type',
         ]
 
@@ -142,9 +142,10 @@ class ApartmentForm(forms.ModelForm):
                 'Apartment Details',
                 'building',
                 Row(
-                    Column(Field('unit_number', placeholder="e.g., 2A"), css_class='col-md-4'),
-                    Column(Field('bedrooms', placeholder="e.g., 2"), css_class='col-md-4'),
-                    Column(Field('bathrooms', placeholder="e.g., 1"), css_class='col-md-4'),
+                    Column(Field('unit_number', placeholder="e.g., 2A"), css_class='col-md-3'),
+                    Column(Field('bedrooms', placeholder="e.g., 2"), css_class='col-md-3'),
+                    Column(Field('bathrooms', placeholder="e.g., 1"), css_class='col-md-3'),
+                    Column(Field('square_feet', placeholder="e.g., 850"), css_class='col-md-3'),
                 ),
                 Row(
                     Column(Field('apartment_type'), css_class='col-md-6'),
@@ -174,9 +175,8 @@ class ApartmentForm(forms.ModelForm):
             Fieldset(
                 'Additional Details',
                 Row(
-                    Column(Field('broker_fee_required'), css_class='col-md-4'),
-                    Column(Field('paid_months', placeholder="e.g., 2"), css_class='col-md-4'),
-                    Column(Field('self_tour_status'), css_class='col-md-4'),
+                    Column(Field('broker_fee_required'), css_class='col-md-6'),
+                    Column(Field('paid_months', placeholder="e.g., 2"), css_class='col-md-6'),
                 ),
                 Row(
                     Column(Field('lease_duration', placeholder="e.g., 12 months"), css_class='col-md-6'),

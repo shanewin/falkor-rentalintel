@@ -5,16 +5,109 @@
 {% block content %}
 <div class="container mt-4">
     
-    <!-- Broker Management Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2><i class="fas fa-cog"></i> Application Management</h2>
-            <p class="text-muted mb-0">Broker Dashboard - Manage and analyze application progress</p>
-        </div>
-        <div>
-            <a href="{% url 'applications_list' %}" class="btn btn-outline-secondary">
+    <!-- Enhanced Application Header -->
+    <div class="application-header mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <a href="{% url 'applications_list' %}" class="btn btn-outline-secondary btn-sm">
                 <i class="fas fa-arrow-left"></i> Back to Applications
             </a>
+            <span class="badge bg-secondary">Application #{{ application.id }}</span>
+        </div>
+        
+        <div class="card mt-3 border-0 shadow" style="background: linear-gradient(135deg, #ffe502 0%, #ffb302 100%);">
+            <div class="card-body" style="color: #1a1a1a;">
+                <div class="row align-items-center">
+                    <!-- Applicant Info -->
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center">
+                            <div class="applicant-avatar me-3">
+                                {% if application.applicant and application.applicant.photos.exists %}
+                                    {% with photo=application.applicant.photos.first %}
+                                        <img src="{{ photo.thumbnail_url }}" class="rounded-circle" style="width: 80px; height: 80px; object-fit: cover; border: 3px solid #1a1a1a; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                                    {% endwith %}
+                                {% else %}
+                                    <div class="rounded-circle bg-white d-flex align-items-center justify-content-center" style="width: 80px; height: 80px; border: 3px solid #1a1a1a; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                                        <i class="fas fa-user text-secondary" style="font-size: 40px;"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <h5 class="mb-1">
+                                    {% if personal_info %}
+                                        {{ personal_info.first_name }} {{ personal_info.last_name }}
+                                    {% elif application.applicant %}
+                                        {{ application.applicant.first_name }} {{ application.applicant.last_name }}
+                                    {% else %}
+                                        <em>Applicant TBD</em>
+                                    {% endif %}
+                                </h5>
+                                <p class="mb-0" style="opacity: 0.8;">
+                                    {% if personal_info and personal_info.email %}
+                                        <i class="fas fa-envelope me-1"></i> {{ personal_info.email }}
+                                    {% elif application.applicant and application.applicant.email %}
+                                        <i class="fas fa-envelope me-1"></i> {{ application.applicant.email }}
+                                    {% endif %}
+                                </p>
+                                {% if personal_info and personal_info.phone_cell %}
+                                    <p class="mb-0" style="opacity: 0.8;">
+                                        <i class="fas fa-phone me-1"></i> {{ personal_info.phone_cell }}
+                                    </p>
+                                {% elif application.applicant and application.applicant.phone_number %}
+                                    <p class="mb-0" style="opacity: 0.8;">
+                                        <i class="fas fa-phone me-1"></i> {{ application.applicant.phone_number }}
+                                    </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Property Info -->
+                    <div class="col-md-5">
+                        <div class="property-info">
+                            <h3 class="mb-2">
+                                <i class="fas fa-building me-2"></i>
+                                {% if application.apartment %}
+                                    {{ application.apartment.building.name }}
+                                {% else %}
+                                    {{ application.manual_building_name|default:"Property" }}
+                                {% endif %}
+                            </h3>
+                            <p class="mb-1" style="opacity: 0.85;">
+                                <i class="fas fa-map-marker-alt me-1"></i>
+                                {% if application.apartment %}
+                                    {{ application.apartment.building.street_address }}, 
+                                    {{ application.apartment.building.city }}, {{ application.apartment.building.state }} {{ application.apartment.building.zip_code }}
+                                {% else %}
+                                    {{ application.manual_building_address|default:"Address not specified" }}
+                                {% endif %}
+                            </p>
+                            <p class="mb-0">
+                                <strong>Unit:</strong> 
+                                {% if application.apartment %}
+                                    {{ application.apartment.unit_number }}
+                                {% else %}
+                                    {{ application.manual_unit_number|default:"Not specified" }}
+                                {% endif %}
+                                {% if application.apartment.rent %}
+                                    <span class="ms-3"><strong>Rent:</strong> ${{ application.apartment.rent|floatformat:0 }}/month</span>
+                                {% endif %}
+                                <span class="ms-3"><strong>App Fee:</strong> ${{ application.application_fee_amount|floatformat:0 }}</span>
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Status & Progress -->
+                    <div class="col-md-3 text-end">
+                        <div class="progress-info">
+                            <h2 class="mb-1">{{ progress_percent|floatformat:0 }}%</h2>
+                            <p class="mb-2" style="opacity: 0.8;">Complete</p>
+                            <span class="badge" style="background-color: #1a1a1a; color: #ffe502; font-weight: 600;">
+                                {{ application.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -22,56 +115,6 @@
         <!-- Left Column - Application Overview -->
         <div class="col-lg-8">
             
-            <!-- Application Summary Card -->
-            <div class="card mb-4 shadow">
-                <div class="card-header bg-primary text-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="mb-1"><i class="fas fa-home"></i> Property Application</h5>
-                            <small>
-                                {% if application.apartment %}
-                                    {{ application.apartment.building.name }} - Unit {{ application.apartment.unit_number }}
-                                {% else %}
-                                    {{ application.get_building_display }}{% if application.get_unit_display %} - Unit {{ application.get_unit_display }}{% endif %}
-                                {% endif %}
-                            </small>
-                        </div>
-                        <div class="text-end">
-                            <div class="badge bg-light text-dark fs-6">{{ progress_percent|floatformat:0 }}% Complete</div>
-                            <div class="small">{{ completed_sections }}/{{ total_sections }} Sections</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <!-- Progress Bar -->
-                    <div class="progress mb-4" style="height: 12px;">
-                        <div class="progress-bar bg-success" style="width: {{ progress_percent }}%"></div>
-                    </div>
-                    
-                    <!-- Key Info Row -->
-                    <div class="row">
-                        <div class="col-md-6">
-                            <strong><i class="fas fa-user"></i> Applicant:</strong> 
-                            {% if personal_info %}
-                                {{ personal_info.first_name }} {{ personal_info.last_name }}
-                                {% if personal_info.email %}
-                                    <br><small class="text-muted">{{ personal_info.email }}</small>
-                                {% endif %}
-                            {% else %}
-                                <span class="text-muted">Not provided yet</span>
-                            {% endif %}
-                        </div>
-                        <div class="col-md-3">
-                            <strong><i class="fas fa-dollar-sign"></i> Fee:</strong> ${{ application.application_fee_amount|floatformat:2 }}
-                        </div>
-                        <div class="col-md-3">
-                            <strong><i class="fas fa-flag"></i> Status:</strong><br>
-                            <span class="badge bg-secondary">{{ application.get_status_display }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Section Progress Overview -->
             <div class="card mb-4 shadow">
                 <div class="card-header">
@@ -283,7 +326,7 @@
                 </div>
                 <div class="card-body">
                     {% if personal_info and personal_info.email %}
-                    <a href="mailto:{{ personal_info.email }}" class="btn btn-primary btn-sm w-100 mb-2">
+                    <a href="mailto:{{ personal_info.email }}" class="btn btn-sm w-100 mb-2" style="background-color: #ffe502; color: #1a1a1a; border: none; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                         <i class="fas fa-envelope"></i> Email Applicant
                     </a>
                     {% else %}
@@ -293,7 +336,7 @@
                     {% endif %}
                     
                     {% if personal_info and personal_info.phone_cell %}
-                    <a href="sms:{{ personal_info.phone_cell }}" class="btn btn-success btn-sm w-100 mb-2">
+                    <a href="sms:{{ personal_info.phone_cell }}" class="btn btn-sm w-100 mb-2" style="background-color: #ffcc02; color: #1a1a1a; border: none; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                         <i class="fas fa-sms"></i> SMS Applicant
                     </a>
                     {% else %}
@@ -302,46 +345,29 @@
                     </button>
                     {% endif %}
                     
-                    <a href="{% url 'send_application_link' application.id %}" class="btn btn-info btn-sm w-100 mb-2">
-                        <i class="fas fa-link"></i> Send Application Link
+                    <button onclick="copyApplicationLink()" class="btn btn-sm w-100 mb-2" style="background-color: #ffb302; color: #1a1a1a; border: none; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <i class="fas fa-copy"></i> Copy Application Link
+                    </button>
+                    
+                    <a href="{% url 'v2_application_overview' application.id %}?token={{ application.unique_link }}" class="btn btn-sm w-100 mb-2" style="background-color: #ffcc02; color: #1a1a1a; border: none; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" target="_blank">
+                        <i class="fas fa-eye"></i> Preview Applicant View
                     </a>
                     
                     <hr>
                     
-                    <a href="{% url 'application_edit' application.id %}" class="btn btn-warning btn-sm w-100 mb-2">
-                        <i class="fas fa-edit"></i> Edit Application Settings
-                    </a>
-                    
-                    <a href="{% url 'v2_application_overview' application.id %}?preview=true" class="btn btn-secondary btn-sm w-100" target="_blank">
-                        <i class="fas fa-eye"></i> Preview Applicant View
-                    </a>
-                </div>
-            </div>
-
-            <!-- Application Details Card -->
-            <div class="card mb-4 shadow">
-                <div class="card-header">
-                    <h6 class="mb-0"><i class="fas fa-info-circle"></i> Application Details</h6>
-                </div>
-                <div class="card-body">
-                    <div class="row mb-2">
-                        <div class="col-6"><strong>Created:</strong></div>
-                        <div class="col-6">{{ application.created_at|date:"M d, Y" }}</div>
-                    </div>
-                    <div class="row mb-2">
-                        <div class="col-6"><strong>Updated:</strong></div>
-                        <div class="col-6">{{ application.updated_at|date:"M d, Y" }}</div>
-                    </div>
-                    <div class="row mb-2">
-                        <div class="col-6"><strong>Version:</strong></div>
-                        <div class="col-6">{{ application.application_version|upper }}</div>
-                    </div>
-                    <div class="row mb-2">
-                        <div class="col-6"><strong>UUID:</strong></div>
-                        <div class="col-6">
-                            <small class="font-monospace">{{ application.unique_link }}</small>
-                        </div>
-                    </div>
+                    {% if not application.is_revoked %}
+                    <button type="button" class="btn btn-danger btn-sm w-100" data-bs-toggle="modal" data-bs-target="#revokeApplicationModal">
+                        <i class="fas fa-ban"></i> Revoke Application
+                    </button>
+                    {% else %}
+                    <button class="btn btn-outline-danger btn-sm w-100" disabled>
+                        <i class="fas fa-ban"></i> Application Revoked
+                    </button>
+                    <small class="text-muted mt-1">
+                        Revoked: {{ application.revoked_at|date:"M d, Y g:i A" }}<br>
+                        Reason: {{ application.revocation_reason }}
+                    </small>
+                    {% endif %}
                 </div>
             </div>
 
@@ -369,6 +395,58 @@
                 </div>
             </div>
 
+        </div>
+    </div>
+</div>
+
+<!-- Revoke Application Modal -->
+<div class="modal fade" id="revokeApplicationModal" tabindex="-1" aria-labelledby="revokeApplicationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="revokeApplicationModalLabel">
+                    <i class="fas fa-ban me-2"></i>Revoke Application Access
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'revoke_application' application.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Warning:</strong> This will prevent the applicant from accessing their application. 
+                        The application data will remain in the system for record-keeping.
+                    </div>
+                    
+                    <p><strong>Are you sure you want to revoke access to this application?</strong></p>
+                    
+                    <div class="mb-3">
+                        <label for="revoke_reason" class="form-label">Reason for revoking: *</label>
+                        <select class="form-select" id="revoke_reason" name="revoke_reason" required onchange="toggleOtherReason()">
+                            <option value="">Select a reason...</option>
+                            <option value="Duplicate application">Duplicate application</option>
+                            <option value="Applicant withdrew">Applicant withdrew</option>
+                            <option value="Property no longer available">Property no longer available</option>
+                            <option value="Incomplete submission">Incomplete submission</option>
+                            <option value="Failed screening">Failed screening</option>
+                            <option value="Broker error">Broker error</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3" id="other_reason_container" style="display: none;">
+                        <label for="other_reason_text" class="form-label">Please specify: *</label>
+                        <textarea class="form-control" id="other_reason_text" name="other_reason_text" rows="3" 
+                                  placeholder="Please provide a detailed reason for revoking this application..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-ban me-2"></i>Revoke Application
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -423,6 +501,61 @@ function pollTaskStatus(fileId) {
             // Continue polling on error
             setTimeout(() => pollTaskStatus(fileId), 5000);
         });
+}
+
+// Toggle other reason text area
+function toggleOtherReason() {
+    const reasonSelect = document.getElementById('revoke_reason');
+    const otherContainer = document.getElementById('other_reason_container');
+    const otherTextarea = document.getElementById('other_reason_text');
+    
+    if (reasonSelect.value === 'Other') {
+        otherContainer.style.display = 'block';
+        otherTextarea.required = true;
+    } else {
+        otherContainer.style.display = 'none';
+        otherTextarea.required = false;
+        otherTextarea.value = '';
+    }
+}
+
+// Copy application link to clipboard
+function copyApplicationLink() {
+    const applicationUrl = window.location.origin + "{% url 'v2_application_overview' application.id %}?token={{ application.unique_link }}";
+    
+    // Create a temporary textarea element to copy the text
+    const tempTextarea = document.createElement('textarea');
+    tempTextarea.value = applicationUrl;
+    tempTextarea.style.position = 'absolute';
+    tempTextarea.style.left = '-9999px';
+    document.body.appendChild(tempTextarea);
+    
+    // Select and copy the text
+    tempTextarea.select();
+    tempTextarea.setSelectionRange(0, 99999); // For mobile devices
+    
+    try {
+        document.execCommand('copy');
+        
+        // Change button text temporarily to show success
+        const button = event.target.closest('button');
+        const originalHTML = button.innerHTML;
+        const originalStyle = button.style.backgroundColor;
+        button.innerHTML = '<i class="fas fa-check"></i> Link Copied!';
+        button.style.backgroundColor = '#22c55e';
+        
+        // Reset button after 2 seconds
+        setTimeout(() => {
+            button.innerHTML = originalHTML;
+            button.style.backgroundColor = originalStyle;
+        }, 2000);
+    } catch (err) {
+        console.error('Failed to copy text: ', err);
+        alert('Failed to copy link. Please try again.');
+    }
+    
+    // Remove the temporary textarea
+    document.body.removeChild(tempTextarea);
 }
 
 // Start polling for all files with active tasks

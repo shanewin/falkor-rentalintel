@@ -1,22 +1,275 @@
 from django import forms
+from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator, EmailValidator
+from django.utils.html import escape
+from django.core.cache import cache
+from django.utils import timezone
+from datetime import date, datetime, timedelta
+from decimal import Decimal, InvalidOperation
+import os
+
+# Safe import for python-magic
+try:
+    import magic
+    MAGIC_AVAILABLE = True
+except ImportError:
+    MAGIC_AVAILABLE = False
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning("python-magic not installed. File type detection will be limited to extension checking.")
 from .models import Applicant, ApplicantPhoto, Pet, PetPhoto, Amenity, Neighborhood, InteractionLog
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Row, Column, Field, Div, Submit, HTML
 from crispy_forms.bootstrap import InlineCheckboxes
 from cloudinary.forms import CloudinaryFileField
 
+# Security validators and file validation
+def validate_image_file(file):
+    """Validate uploaded image files for security"""
+    # Check file size (max 10MB)
+    max_size = 10 * 1024 * 1024
+    if file.size > max_size:
+        raise ValidationError(f"File size must be under 10MB. Current size: {file.size / (1024*1024):.1f}MB")
+    
+    # Check file type using python-magic (MIME type detection) if available
+    if MAGIC_AVAILABLE:
+        try:
+            file_mime = magic.from_buffer(file.read(2048), mime=True)
+            file.seek(0)  # Reset file pointer
+            
+            allowed_types = [
+                'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'
+            ]
+            
+            if file_mime not in allowed_types:
+                raise ValidationError(f"Invalid file type: {file_mime}. Only JPEG, PNG, GIF, and WebP images are allowed.")
+                
+        except Exception as e:
+            raise ValidationError("Unable to verify file type. Please ensure this is a valid image file.")
+    
+    # Check file extension
+    allowed_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+    file_extension = os.path.splitext(file.name)[1].lower()
+    
+    if file_extension not in allowed_extensions:
+        raise ValidationError(f"Invalid file extension: {file_extension}. Allowed: {', '.join(allowed_extensions)}")
+    
+    # Check for suspicious file patterns
+    file.seek(0)
+    file_content = file.read(512)  # Read first 512 bytes
+    file.seek(0)
+    
+    # Look for script tags, executable headers, etc.
+    suspicious_patterns = [
+        b'<script', b'javascript:', b'vbscript:', b'onload=', b'onclick=',
+        b'MZ', b'PK',  # PE and ZIP headers (executables)
+    ]
+    
+    for pattern in suspicious_patterns:
+        if pattern in file_content:
+            raise ValidationError("File contains suspicious content and cannot be uploaded.")
+
+def validate_phone_number(value):
+    """Validate phone number format"""
+    if not value:
+        return  # Optional field
+    
+    # Remove common formatting
+    cleaned = ''.join(char for char in value if char.isdigit())
+    
+    # Check length (10 or 11 digits for US)
+    if len(cleaned) not in [10, 11]:
+        raise ValidationError("Phone number must be 10 or 11 digits.")
+    
+    # Check for valid US phone pattern
+    if len(cleaned) == 11 and not cleaned.startswith('1'):
+        raise ValidationError("11-digit phone numbers must start with 1.")
+
+def validate_email_domain(value):
+    """Enhanced email validation with domain checking"""
+    if not value:
+        return  # Optional field
+    
+    # Basic Django validation first
+    EmailValidator()(value)
+    
+    # Check for suspicious domains
+    blocked_domains = [
+        '10minutemail.com', 'tempmail.org', 'guerrillamail.com',
+        'mailinator.com', 'yopmail.com', '33mail.com'
+    ]
+    
+    domain = value.split('@')[1].lower() if '@' in value else ''
+    if domain in blocked_domains:
+        raise ValidationError("Temporary email addresses are not allowed.")
+
+def validate_currency_amount(value):
+    """Validate currency amounts with reasonable limits"""
+    if value is None:
+        return  # Optional field
+    
+    if value < 0:
+        raise ValidationError("Amount cannot be negative.")
+    
+    # Set reasonable limits for rent budget (max $50,000/month)
+    if value > 50000:
+        raise ValidationError("Maximum budget allowed is $50,000 per month.")
+    
+    # Check for suspiciously low amounts that might indicate data entry errors
+    if value > 0 and value < 100:
+        raise ValidationError("Minimum budget is $100 per month.")
+
+def sanitize_text_input(value):
+    """Sanitize text input to prevent XSS"""
+    if not value:
+        return value
+    
+    # HTML escape the input
+    sanitized = escape(value)
+    
+    # Additional checks for malicious patterns
+    dangerous_patterns = [
+        'javascript:', 'data:', 'vbscript:', 'onclick', 'onload', 
+        'onerror', 'onmouseover', '<script', '</script>'
+    ]
+    
+    value_lower = value.lower()
+    for pattern in dangerous_patterns:
+        if pattern in value_lower:
+            raise ValidationError("Input contains potentially unsafe content.")
+    
+    return sanitized
+
+def validate_birth_date(value):
+    """Validate date of birth - must be 18+ and in the past"""
+    if not value:
+        return  # Optional field
+    
+    today = date.today()
+    
+    # Check if date is in the future
+    if value > today:
+        raise ValidationError("Date of birth cannot be in the future.")
+    
+    # Calculate age
+    age = today.year - value.year - ((today.month, today.day) < (value.month, value.day))
+    
+    # Check minimum age (18)
+    if age < 18:
+        raise ValidationError("You must be at least 18 years old to apply.")
+    
+    # Check maximum reasonable age (120)
+    if age > 120:
+        raise ValidationError("Please check your date of birth - age appears to be over 120 years.")
+
+def validate_move_in_date(value):
+    """Validate move-in date - must be reasonable future date"""
+    if not value:
+        return  # Optional field
+    
+    today = date.today()
+    
+    # Check if date is in the past
+    if value < today:
+        raise ValidationError("Move-in date cannot be in the past.")
+    
+    # Check if date is too far in future (2 years max)
+    max_future_date = today + timedelta(days=730)  # 2 years
+    if value > max_future_date:
+        raise ValidationError("Move-in date cannot be more than 2 years in the future.")
+
+def validate_employment_dates(start_date, end_date):
+    """Validate employment date range"""
+    if not start_date or not end_date:
+        return  # Both dates must be provided for validation
+    
+    if end_date < start_date:
+        raise ValidationError("Employment end date must be after start date.")
+    
+    # Check for unreasonably long employment (50 years max)
+    if (end_date - start_date).days > (50 * 365):
+        raise ValidationError("Employment duration cannot exceed 50 years.")
+
+def check_rate_limit(user_identifier, form_type='form_submission'):
+    """Basic rate limiting - max 10 submissions per minute"""
+    cache_key = f"rate_limit:{form_type}:{user_identifier}"
+    
+    # Get current submission count
+    current_count = cache.get(cache_key, 0)
+    
+    # Check if limit exceeded
+    if current_count >= 10:
+        raise ValidationError(
+            "Too many form submissions. Please wait a minute before trying again."
+        )
+    
+    # Increment counter with 60 second expiry
+    cache.set(cache_key, current_count + 1, 60)
+
+def validate_bedroom_range(min_bedrooms, max_bedrooms):
+    """Validate bedroom range logic"""
+    if not min_bedrooms or not max_bedrooms:
+        return  # Optional fields
+    
+    # Convert to numbers for comparison
+    try:
+        min_val = float(min_bedrooms) if min_bedrooms != '' else 0
+        max_val = float(max_bedrooms) if max_bedrooms != '' else 999
+        
+        if min_val > max_val:
+            raise ValidationError("Maximum bedrooms must be greater than or equal to minimum bedrooms.")
+            
+    except (ValueError, TypeError):
+        # Invalid values will be caught by field validation
+        pass
+
+def validate_bathroom_range(min_bathrooms, max_bathrooms):
+    """Validate bathroom range logic"""
+    if not min_bathrooms or not max_bathrooms:
+        return  # Optional fields
+    
+    # Convert to numbers for comparison
+    try:
+        min_val = float(min_bathrooms) if min_bathrooms != '' else 0
+        max_val = float(max_bathrooms) if max_bathrooms != '' else 999
+        
+        if min_val > max_val:
+            raise ValidationError("Maximum bathrooms must be greater than or equal to minimum bathrooms.")
+            
+    except (ValueError, TypeError):
+        # Invalid values will be caught by field validation
+        pass
+
 # Multi-step forms for progressive profile completion
+
+class SecureImageField(forms.FileField):
+    """Secure file field with validation for image uploads"""
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('validators', []).append(validate_image_file)
+        super().__init__(*args, **kwargs)
 
 class ApplicantBasicInfoForm(forms.ModelForm):
     """Step 1: Basic Information Form"""
+    
+    # Add secure file fields for ID documents
+    profile_photo = SecureImageField(required=False)
+    passport_document = SecureImageField(required=False)
+    driver_license_front = SecureImageField(required=False)
+    driver_license_back = SecureImageField(required=False)
+    state_id_front = SecureImageField(required=False)
+    state_id_back = SecureImageField(required=False)
     
     class Meta:
         model = Applicant
         fields = [
             'first_name', 'last_name', 'phone_number', 'email',
             'street_address_1', 'street_address_2', 'city', 'state', 'zip_code',
+            'current_address_years', 'current_address_months',
             'housing_status', 'current_landlord_name', 'current_landlord_phone', 'current_landlord_email',
-            'date_of_birth',
+            'monthly_rent', 'reason_for_moving',
+            'date_of_birth', 'driver_license_number', 'driver_license_state',
+            'evicted_before', 'eviction_explanation',
+            'emergency_contact_name', 'emergency_contact_relationship', 'emergency_contact_phone',
         ]
         widgets = {
             'date_of_birth': forms.DateInput(attrs={
@@ -27,10 +280,87 @@ class ApplicantBasicInfoForm(forms.ModelForm):
                 'class': 'form-select select2',
                 'data-placeholder': 'Select State'
             }),
+            'driver_license_state': forms.Select(attrs={
+                'class': 'form-select select2',
+                'data-placeholder': "Driver's License State"
+            }),
+            'monthly_rent': forms.TextInput(attrs={
+                'class': 'form-control',
+                'type': 'text',
+                'placeholder': 'Monthly Rent'
+            }),
+            'reason_for_moving': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Tell us a bit about why you are moving'
+            }),
         }
 
+
+    def clean(self):
+        """Cross-field validation and rate limiting"""
+        cleaned_data = super().clean()
+        
+        # Rate limiting - use IP + user ID if available
+        request = getattr(self, 'request', None)
+        if request:
+            user_identifier = request.META.get('REMOTE_ADDR', 'unknown')
+            if request.user.is_authenticated:
+                user_identifier = f"{user_identifier}:{request.user.id}"
+            
+            try:
+                check_rate_limit(user_identifier, 'basic_info_form')
+            except ValidationError as e:
+                self.add_error(None, e)
+        
+        return cleaned_data
+
+    def clean_monthly_rent(self):
+        """Allow comma-formatted currency input for monthly rent"""
+        raw_value = self.data.get('monthly_rent')
+        if raw_value:
+            try:
+                return Decimal(raw_value.replace(',', ''))
+            except InvalidOperation:
+                pass
+        return self.cleaned_data.get('monthly_rent')
+
     def __init__(self, *args, **kwargs):
+        # Extract request for rate limiting
+        self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
+        
+        # Add security validators to text fields
+        self.fields['first_name'].validators.append(sanitize_text_input)
+        self.fields['last_name'].validators.append(sanitize_text_input)
+        self.fields['email'].validators.append(validate_email_domain)
+        self.fields['phone_number'].validators.append(validate_phone_number)
+        
+        # Add length limits to prevent database overflow
+        self.fields['first_name'].widget.attrs.update({'maxlength': 50})
+        self.fields['last_name'].widget.attrs.update({'maxlength': 50})
+        self.fields['street_address_1'].widget.attrs.update({'maxlength': 100})
+        self.fields['street_address_2'].widget.attrs.update({'maxlength': 100})
+        self.fields['city'].widget.attrs.update({'maxlength': 50})
+        self.fields['zip_code'].widget.attrs.update({'maxlength': 10})
+        
+        # Apply sanitization to address fields
+        for field_name in ['street_address_1', 'street_address_2', 'city', 'current_landlord_name', 
+                          'current_landlord_email', 'eviction_explanation', 'reason_for_moving',
+                          'emergency_contact_name', 'emergency_contact_relationship',
+                          'driver_license_number']:
+            if field_name in self.fields:
+                self.fields[field_name].validators.append(sanitize_text_input)
+        
+        # Add date validation
+        if 'date_of_birth' in self.fields:
+            self.fields['date_of_birth'].validators.append(validate_birth_date)
+        
+        if 'emergency_contact_phone' in self.fields:
+            self.fields['emergency_contact_phone'].validators.append(validate_phone_number)
+        
+        if 'monthly_rent' in self.fields:
+            self.fields['monthly_rent'].validators.append(validate_currency_amount)
         
         # Only first_name, last_name, and email are required
         required_fields = ['first_name', 'last_name', 'email']
@@ -42,6 +372,22 @@ class ApplicantBasicInfoForm(forms.ModelForm):
             field.label_suffix = ''
             if field.required:
                 field.widget.attrs['required'] = 'required'
+        
+        # Setup dropdown choices for duration fields
+        year_choices = [('', 'Years')] + [(i, f'{i} year{"s" if i != 1 else ""}') for i in range(0, 21)]
+        month_choices = [('', 'Months')] + [(i, f'{i} month{"s" if i != 1 else ""}') for i in range(0, 12)]
+        
+        self.fields['current_address_years'].widget = forms.Select(
+            choices=year_choices,
+            attrs={'class': 'form-select select2', 'data-placeholder': 'Years'}
+        )
+        self.fields['current_address_years'].label = ''
+        
+        self.fields['current_address_months'].widget = forms.Select(
+            choices=month_choices,
+            attrs={'class': 'form-select select2', 'data-placeholder': 'Months'}
+        )
+        self.fields['current_address_months'].label = ''
 
         # Crispy Forms setup
         self.helper = FormHelper()
@@ -121,28 +467,79 @@ class ApplicantBasicInfoForm(forms.ModelForm):
                     Column('zip_code', css_class='col-md-4'),
                 ),
                 HTML('''
-                <div class="form-check mb-3">
-                    <input class="form-check-input" type="checkbox" id="is_rental_checkbox" name="is_rental_checkbox">
-                    <label class="form-check-label" for="is_rental_checkbox">
-                        Is this a Rental?
-                    </label>
-                </div>
+                <label class="form-label">
+                    How long have you lived at your current address? 
+                    <i class="fas fa-info-circle text-success ms-1" 
+                       data-bs-toggle="tooltip" 
+                       data-bs-placement="right" 
+                       title="Important for rental application">
+                    </i>
+                </label>
                 '''),
-                Field('housing_status', type="hidden"),
+                Row(
+                    Column(Field('current_address_years', label=False), css_class='col-md-2'),
+                    Column(Field('current_address_months', label=False), css_class='col-md-2'),
+                    Column(css_class='col-md-8'),
+                ),
                 Div(
-                    Row(
-                        Column(Field('current_landlord_name', placeholder="Landlord's Name"), css_class='col-md-4'),
-                        Column(Field('current_landlord_phone', placeholder="(555) 555-5555"), css_class='col-md-4'),
-                        Column(Field('current_landlord_email', placeholder="Landlord's Email"), css_class='col-md-4'),
+                    HTML('''
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="is_rental_checkbox" name="is_rental_checkbox">
+                        <label class="form-check-label" for="is_rental_checkbox">
+                            Is this a Rental?
+                        </label>
+                    </div>
+                    '''),
+                    Field('housing_status', type="hidden"),
+                    Div(
+                        Row(
+                            Column(Field('current_landlord_name', placeholder="Landlord's Name"), css_class='col-md-4'),
+                            Column(Field('current_landlord_phone', placeholder="(555) 555-5555"), css_class='col-md-4'),
+                            Column(Field('current_landlord_email', placeholder="Landlord's Email"), css_class='col-md-4'),
+                        ),
+                        css_id='rental_landlord_fields',
+                        css_class='d-none mb-2'
                     ),
-                    css_id='landlord_fields',
-                    css_class='d-none mb-2'
+                    Div(
+                        HTML('''
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label" for="{{ form.monthly_rent.id_for_label }}">Monthly Rent</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="text"
+                                               name="{{ form.monthly_rent.html_name }}"
+                                               id="{{ form.monthly_rent.id_for_label }}"
+                                               class="form-control currency-input"
+                                               value="{{ form.monthly_rent.value|default_if_none:'' }}"
+                                               placeholder="1,200.00">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label class="form-label" for="{{ form.reason_for_moving.id_for_label }}">Reason for Moving</label>
+                                {{ form.reason_for_moving }}
+                            </div>
+                        </div>
+                        '''),
+                        css_id='rental_additional_fields',
+                        css_class='d-none mb-2'
+                    ),
+                    css_id='current_rental_container',
                 ),
                 HTML('''
                 <div class="mt-2">
                     <button type="button" id="add-previous-address-btn" class="btn btn-sm" style="background-color: #ffcc00; color: #000000; border: 1px solid #ffcc00;">
                         <i class="fas fa-plus"></i> Add Previous Address
                     </button>
+                    <i class="fas fa-info-circle text-success ms-2" 
+                       data-bs-toggle="tooltip" 
+                       data-bs-placement="right" 
+                       title="Adding previous addresses improves your rental application and helps with placement">
+                    </i>
                 </div>
                 <div id="previous-addresses-container">
                     <!-- Dynamic previous address forms will be added here -->
@@ -150,11 +547,39 @@ class ApplicantBasicInfoForm(forms.ModelForm):
                 '''),
             ),
             
+            HTML('''
+            <div class="mb-3">
+                <label class="form-label">
+                    Have you ever been evicted before?
+                    <i class="fas fa-info-circle text-success ms-2" 
+                       data-bs-toggle="tooltip" 
+                       data-bs-placement="right" 
+                       title="Important for rental application">
+                    </i>
+                </label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" id="id_evicted_before_yes" name="evicted_before" value="True" {% if form.evicted_before.value == True %}checked{% endif %}>
+                    <label class="form-check-label" for="id_evicted_before_yes">
+                        Yes
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" id="id_evicted_before_no" name="evicted_before" value="False" {% if form.evicted_before.value == False %}checked{% endif %}>
+                    <label class="form-check-label" for="id_evicted_before_no">
+                        No
+                    </label>
+                </div>
+            </div>
+            <div id="eviction_explanation_field" class="mb-3 {% if not form.evicted_before.value %}d-none{% endif %}">
+                <label class="form-label" for="id_eviction_explanation">Please explain the circumstances:</label>
+                <textarea class="form-control" id="id_eviction_explanation" name="eviction_explanation" rows="3" placeholder="Briefly describe what happened and what you learned from the experience...">{{ form.eviction_explanation.value|default:'' }}</textarea>
+            </div>
+            '''),
+
             Fieldset(
                 'Identification',
                 Row(
-                    Column('date_of_birth', css_class='col-md-6'),
-                    Column(css_class='col-md-6'),
+                    Column('date_of_birth', css_class='col-md-4'),
                 ),
                 HTML('''
                 <div class="mt-3">
@@ -186,156 +611,161 @@ class ApplicantBasicInfoForm(forms.ModelForm):
                             </label>
                         </div>
                     </div>
-                    
-                    <!-- Upload sections that will be shown/hidden based on selection -->
-                    <div id="passport_upload" class="id-upload-section mt-3" style="display: none;">
-                        <div class="card">
-                            <div class="card-body">
-                                <h6 class="mb-3"><i class="fas fa-passport"></i> Upload Passport</h6>
+                </div>
+                '''),
+                Row(
+                    Column(Field('driver_license_number', placeholder="Driver's License Number"), css_class='col-md-4 driver-license-field d-none'),
+                    Column('driver_license_state', css_class='col-md-4 driver-license-field d-none'),
+                ),
+                HTML('''
+                <!-- Upload sections that will be shown/hidden based on selection -->
+                <div id="passport_upload" class="id-upload-section mt-3" style="display: none;">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="mb-3"><i class="fas fa-passport"></i> Upload Passport</h6>
+                            <div class="row align-items-center">
+                                <div class="col-auto">
+                                    <div class="passport-container position-relative">
+                                        <div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" 
+                                             style="width: 200px; height: 125px;">
+                                            <i class="fas fa-passport fa-3x text-muted"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <p class="text-muted small mb-3">Upload a clear photo of your passport</p>
+                                    <div class="d-flex gap-2 mb-3 image-cropper-buttons">
+                                        <button type="button" class="btn btn-primary btn-sm"
+                                                onclick="document.getElementById('id_passport_document').click()">
+                                            <i class="fas fa-camera"></i> Upload Passport
+                                        </button>
+                                    </div>
+                                    <input type="file" name="passport_document" id="id_passport_document" 
+                                           accept="image/*" style="display: none;" class="form-control">
+                                    <input type="hidden" id="crop-data-passport" name="crop_data_passport" value="">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="driver_license_upload" class="id-upload-section mt-3" style="display: none;">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="mb-3"><i class="fas fa-id-card"></i> Upload Driver's License</h6>
+                            
+                            <!-- Front of Driver's License -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Front of Driver's License</label>
                                 <div class="row align-items-center">
                                     <div class="col-auto">
-                                        <div class="passport-container position-relative">
+                                        <div class="driver-license-front-container position-relative">
                                             <div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" 
                                                  style="width: 200px; height: 125px;">
-                                                <i class="fas fa-passport fa-3x text-muted"></i>
+                                                <i class="fas fa-id-card fa-3x text-muted"></i>
                                             </div>
                                         </div>
                                     </div>
                                     <div class="col">
-                                        <p class="text-muted small mb-3">Upload a clear photo of your passport</p>
+                                        <p class="text-muted small mb-3">Upload a clear photo of the front of your driver's license</p>
                                         <div class="d-flex gap-2 mb-3 image-cropper-buttons">
                                             <button type="button" class="btn btn-primary btn-sm"
-                                                    onclick="document.getElementById('id_passport_document').click()">
-                                                <i class="fas fa-camera"></i> Upload Passport
+                                                    onclick="document.getElementById('id_driver_license_front').click()">
+                                                <i class="fas fa-camera"></i> Upload Front
                                             </button>
                                         </div>
-                                        <input type="file" name="passport_document" id="id_passport_document" 
+                                        <input type="file" name="driver_license_front" id="id_driver_license_front" 
                                                accept="image/*" style="display: none;" class="form-control">
-                                        <input type="hidden" id="crop-data-passport" name="crop_data_passport" value="">
+                                        <input type="hidden" id="crop-data-driver-front" name="crop_data_driver_front" value="">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Back of Driver's License -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Back of Driver's License</label>
+                                <div class="row align-items-center">
+                                    <div class="col-auto">
+                                        <div class="driver-license-back-container position-relative">
+                                            <div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" 
+                                                 style="width: 200px; height: 125px;">
+                                                <i class="fas fa-id-card fa-3x text-muted"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <p class="text-muted small mb-3">Upload a clear photo of the back of your driver's license</p>
+                                        <div class="d-flex gap-2 mb-3 image-cropper-buttons">
+                                            <button type="button" class="btn btn-primary btn-sm"
+                                                    onclick="document.getElementById('id_driver_license_back').click()">
+                                                <i class="fas fa-camera"></i> Upload Back
+                                            </button>
+                                        </div>
+                                        <input type="file" name="driver_license_back" id="id_driver_license_back" 
+                                               accept="image/*" style="display: none;" class="form-control">
+                                        <input type="hidden" id="crop-data-driver-back" name="crop_data_driver_back" value="">
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <div id="driver_license_upload" class="id-upload-section mt-3" style="display: none;">
-                        <div class="card">
-                            <div class="card-body">
-                                <h6 class="mb-3"><i class="fas fa-id-card"></i> Upload Driver's License</h6>
-                                
-                                <!-- Front of Driver's License -->
-                                <div class="mb-4">
-                                    <label class="form-label fw-bold">Front of Driver's License</label>
-                                    <div class="row align-items-center">
-                                        <div class="col-auto">
-                                            <div class="driver-license-front-container position-relative">
-                                                <div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" 
-                                                     style="width: 200px; height: 125px;">
-                                                    <i class="fas fa-id-card fa-3x text-muted"></i>
-                                                </div>
+                </div>
+                
+                <div id="state_id_upload" class="id-upload-section mt-3" style="display: none;">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="mb-3"><i class="fas fa-id-badge"></i> Upload State ID</h6>
+                            
+                            <!-- Front of State ID -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Front of State ID</label>
+                                <div class="row align-items-center">
+                                    <div class="col-auto">
+                                        <div class="state-id-front-container position-relative">
+                                            <div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" 
+                                                 style="width: 200px; height: 125px;">
+                                                <i class="fas fa-id-badge fa-3x text-muted"></i>
                                             </div>
-                                        </div>
-                                        <div class="col">
-                                            <p class="text-muted small mb-3">Upload a clear photo of the front of your driver's license</p>
-                                            <div class="d-flex gap-2 mb-3 image-cropper-buttons">
-                                                <button type="button" class="btn btn-primary btn-sm"
-                                                        onclick="document.getElementById('id_driver_license_front').click()">
-                                                    <i class="fas fa-camera"></i> Upload Front
-                                                </button>
-                                            </div>
-                                            <input type="file" name="driver_license_front" id="id_driver_license_front" 
-                                                   accept="image/*" style="display: none;" class="form-control">
-                                            <input type="hidden" id="crop-data-driver-front" name="crop_data_driver_front" value="">
                                         </div>
                                     </div>
-                                </div>
-                                
-                                <!-- Back of Driver's License -->
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">Back of Driver's License</label>
-                                    <div class="row align-items-center">
-                                        <div class="col-auto">
-                                            <div class="driver-license-back-container position-relative">
-                                                <div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" 
-                                                     style="width: 200px; height: 125px;">
-                                                    <i class="fas fa-id-card fa-3x text-muted"></i>
-                                                </div>
-                                            </div>
+                                    <div class="col">
+                                        <p class="text-muted small mb-3">Upload a clear photo of the front of your state ID</p>
+                                        <div class="d-flex gap-2 mb-3 image-cropper-buttons">
+                                            <button type="button" class="btn btn-primary btn-sm"
+                                                    onclick="document.getElementById('id_state_id_front').click()">
+                                                <i class="fas fa-camera"></i> Upload Front
+                                            </button>
                                         </div>
-                                        <div class="col">
-                                            <p class="text-muted small mb-3">Upload a clear photo of the back of your driver's license</p>
-                                            <div class="d-flex gap-2 mb-3 image-cropper-buttons">
-                                                <button type="button" class="btn btn-primary btn-sm"
-                                                        onclick="document.getElementById('id_driver_license_back').click()">
-                                                    <i class="fas fa-camera"></i> Upload Back
-                                                </button>
-                                            </div>
-                                            <input type="file" name="driver_license_back" id="id_driver_license_back" 
-                                                   accept="image/*" style="display: none;" class="form-control">
-                                            <input type="hidden" id="crop-data-driver-back" name="crop_data_driver_back" value="">
-                                        </div>
+                                        <input type="file" name="state_id_front" id="id_state_id_front" 
+                                               accept="image/*" style="display: none;" class="form-control">
+                                        <input type="hidden" id="crop-data-state-front" name="crop_data_state_front" value="">
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                    
-                    <div id="state_id_upload" class="id-upload-section mt-3" style="display: none;">
-                        <div class="card">
-                            <div class="card-body">
-                                <h6 class="mb-3"><i class="fas fa-id-badge"></i> Upload State ID</h6>
-                                
-                                <!-- Front of State ID -->
-                                <div class="mb-4">
-                                    <label class="form-label fw-bold">Front of State ID</label>
-                                    <div class="row align-items-center">
-                                        <div class="col-auto">
-                                            <div class="state-id-front-container position-relative">
-                                                <div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" 
-                                                     style="width: 200px; height: 125px;">
-                                                    <i class="fas fa-id-badge fa-3x text-muted"></i>
-                                                </div>
+                            
+                            <!-- Back of State ID -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Back of State ID</label>
+                                <div class="row align-items-center">
+                                    <div class="col-auto">
+                                        <div class="state-id-back-container position-relative">
+                                            <div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" 
+                                                 style="width: 200px; height: 125px;">
+                                                <i class="fas fa-id-badge fa-3x text-muted"></i>
                                             </div>
-                                        </div>
-                                        <div class="col">
-                                            <p class="text-muted small mb-3">Upload a clear photo of the front of your state ID</p>
-                                            <div class="d-flex gap-2 mb-3 image-cropper-buttons">
-                                                <button type="button" class="btn btn-primary btn-sm"
-                                                        onclick="document.getElementById('id_state_id_front').click()">
-                                                    <i class="fas fa-camera"></i> Upload Front
-                                                </button>
-                                            </div>
-                                            <input type="file" name="state_id_front" id="id_state_id_front" 
-                                                   accept="image/*" style="display: none;" class="form-control">
-                                            <input type="hidden" id="crop-data-state-front" name="crop_data_state_front" value="">
                                         </div>
                                     </div>
-                                </div>
-                                
-                                <!-- Back of State ID -->
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">Back of State ID</label>
-                                    <div class="row align-items-center">
-                                        <div class="col-auto">
-                                            <div class="state-id-back-container position-relative">
-                                                <div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" 
-                                                     style="width: 200px; height: 125px;">
-                                                    <i class="fas fa-id-badge fa-3x text-muted"></i>
-                                                </div>
-                                            </div>
+                                    <div class="col">
+                                        <p class="text-muted small mb-3">Upload a clear photo of the back of your state ID</p>
+                                        <div class="d-flex gap-2 mb-3 image-cropper-buttons">
+                                            <button type="button" class="btn btn-primary btn-sm"
+                                                    onclick="document.getElementById('id_state_id_back').click()">
+                                                <i class="fas fa-camera"></i> Upload Back
+                                            </button>
                                         </div>
-                                        <div class="col">
-                                            <p class="text-muted small mb-3">Upload a clear photo of the back of your state ID</p>
-                                            <div class="d-flex gap-2 mb-3 image-cropper-buttons">
-                                                <button type="button" class="btn btn-primary btn-sm"
-                                                        onclick="document.getElementById('id_state_id_back').click()">
-                                                    <i class="fas fa-camera"></i> Upload Back
-                                                </button>
-                                            </div>
-                                            <input type="file" name="state_id_back" id="id_state_id_back" 
-                                                   accept="image/*" style="display: none;" class="form-control">
-                                            <input type="hidden" id="crop-data-state-back" name="crop_data_state_back" value="">
-                                        </div>
+                                        <input type="file" name="state_id_back" id="id_state_id_back" 
+                                               accept="image/*" style="display: none;" class="form-control">
+                                        <input type="hidden" id="crop-data-state-back" name="crop_data_state_back" value="">
                                     </div>
                                 </div>
                             </div>
@@ -345,13 +775,14 @@ class ApplicantBasicInfoForm(forms.ModelForm):
                 '''),
             ),
             
-            
-            # Navigation Buttons
-            Div(
-                Submit('basic_info_submit', 'Save & Continue', css_class='btn btn-doorway-primary btn-lg me-3'),
-                HTML('<a href="{% url \'profile_step2\' %}" class="btn btn-outline-secondary btn-lg">Skip</a>'),
-                css_class='text-center mt-4'
-            )
+            Fieldset(
+                'Emergency Contact',
+                Row(
+                    Column(Field('emergency_contact_name', placeholder="Full Name"), css_class='col-md-4'),
+                    Column(Field('emergency_contact_relationship', placeholder="Relationship"), css_class='col-md-4'),
+                    Column(Field('emergency_contact_phone', placeholder="(555) 555-5555"), css_class='col-md-4'),
+                ),
+            ),
         )
 
 
@@ -393,12 +824,19 @@ class ApplicantHousingForm(forms.ModelForm):
                 'class': 'form-control currency-field',
                 'step': '0.01',
                 'placeholder': '2500.00',
-                'min': '0'
+                'min': '100',
+                'max': '50000'
             }),
         }
 
     def __init__(self, *args, **kwargs):
+        # Extract request for rate limiting
+        self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
+        
+        # Add currency validation to budget field
+        if 'max_rent_budget' in self.fields:
+            self.fields['max_rent_budget'].validators.append(validate_currency_amount)
 
         # Set up bedroom range dropdowns
         self.fields['min_bedrooms'] = forms.ChoiceField(
@@ -450,6 +888,10 @@ class ApplicantHousingForm(forms.ModelForm):
         for field_name, field in self.fields.items():
             field.required = False
             field.label_suffix = ''
+        
+        # Friendly labels
+        if 'reason_for_moving' in self.fields:
+            self.fields['reason_for_moving'].label = 'Reason for Moving'
 
         # Crispy Forms setup
         self.helper = FormHelper()
@@ -522,6 +964,7 @@ class ApplicantHousingForm(forms.ModelForm):
                             </div>
                             <div id="pets-list-container">
                                 <!-- Dynamic pet forms will be added here -->
+                                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                             </div>
                         </div>
                     </div>
@@ -778,6 +1221,52 @@ class ApplicantHousingForm(forms.ModelForm):
             )
         )
 
+    def clean(self):
+        """Cross-field validation for bedroom/bathroom ranges, move-in date, and rate limiting"""
+        cleaned_data = super().clean()
+        
+        # Rate limiting
+        request = getattr(self, 'request', None)
+        if request:
+            user_identifier = request.META.get('REMOTE_ADDR', 'unknown')
+            if request.user.is_authenticated:
+                user_identifier = f"{user_identifier}:{request.user.id}"
+            
+            try:
+                check_rate_limit(user_identifier, 'housing_form')
+            except ValidationError as e:
+                self.add_error(None, e)
+        
+        # Cross-field validation for bedroom range
+        try:
+            validate_bedroom_range(
+                cleaned_data.get('min_bedrooms'),
+                cleaned_data.get('max_bedrooms')
+            )
+        except ValidationError as e:
+            self.add_error('min_bedrooms', e)
+            self.add_error('max_bedrooms', e)
+        
+        # Cross-field validation for bathroom range
+        try:
+            validate_bathroom_range(
+                cleaned_data.get('min_bathrooms'),
+                cleaned_data.get('max_bathrooms')
+            )
+        except ValidationError as e:
+            self.add_error('min_bathrooms', e)
+            self.add_error('max_bathrooms', e)
+        
+        # Validate move-in date
+        move_in_date = cleaned_data.get('desired_move_in_date')
+        if move_in_date:
+            try:
+                validate_move_in_date(move_in_date)
+            except ValidationError as e:
+                self.add_error('desired_move_in_date', e)
+        
+        return cleaned_data
+
 
 class ApplicantEmploymentForm(forms.ModelForm):
     """Step 3: Income & Employment Form"""
@@ -792,10 +1281,13 @@ class ApplicantEmploymentForm(forms.ModelForm):
         max_digits=12,
         decimal_places=2,
         required=False,
+        validators=[validate_currency_amount],
         widget=forms.NumberInput(attrs={
             'class': 'form-control currency-field',
             'step': '0.01',
-            'placeholder': '$0.00'
+            'placeholder': '$0.00',
+            'min': '0',
+            'max': '10000000'  # $10M max for income
         })
     )
     
@@ -826,7 +1318,8 @@ class ApplicantEmploymentForm(forms.ModelForm):
                 'class': 'form-control currency-field',
                 'step': '0.01',
                 'placeholder': '5000.00',
-                'min': '0'
+                'min': '0',
+                'max': '500000'  # $500k/month max
             }),
             # Student field widgets
             'school_address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '123 University Ave, College Town, NY 12345'}),
@@ -834,7 +1327,49 @@ class ApplicantEmploymentForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        # Extract request for rate limiting
+        self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
+        
+        # Add security validators to text fields
+        text_fields_to_sanitize = [
+            'company_name', 'position', 'supervisor_name', 'supervisor_email',
+            'school_name', 'school_address', 'income_source'
+        ]
+        
+        for field_name in text_fields_to_sanitize:
+            if field_name in self.fields:
+                self.fields[field_name].validators.append(sanitize_text_input)
+        
+        # Add phone validation
+        phone_fields = ['supervisor_phone', 'school_phone']
+        for field_name in phone_fields:
+            if field_name in self.fields:
+                self.fields[field_name].validators.append(validate_phone_number)
+        
+        # Add currency validation
+        currency_fields = ['annual_income', 'average_annual_income']
+        for field_name in currency_fields:
+            if field_name in self.fields:
+                self.fields[field_name].validators.append(validate_currency_amount)
+        
+        # Add email validation
+        if 'supervisor_email' in self.fields:
+            self.fields['supervisor_email'].validators.append(validate_email_domain)
+        
+        # Add length limits
+        length_limits = {
+            'company_name': 100,
+            'position': 100,
+            'supervisor_name': 100,
+            'school_name': 100,
+            'school_address': 200,
+            'income_source': 100
+        }
+        
+        for field_name, max_length in length_limits.items():
+            if field_name in self.fields:
+                self.fields[field_name].widget.attrs.update({'maxlength': max_length})
         
         # All fields are optional
         for field_name, field in self.fields.items():
@@ -919,21 +1454,27 @@ class ApplicantEmploymentForm(forms.ModelForm):
             HTML('''
             <div id="jobs-container-employed" style="display: none;">
                 <h5 class="mb-3">Additional Employment</h5>
-                <div id="jobs-list-employed"></div>
+                <div id="jobs-list-employed">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                </div>
             </div>
             '''),
             
             HTML('''
             <div id="income-container-employed" style="display: none;">
                 <h5 class="mb-3">Income Sources</h5>
-                <div id="income-list-employed"></div>
+                <div id="income-list-employed">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                </div>
             </div>
             '''),
             
             HTML('''
             <div id="assets-container-employed" style="display: none;">
                 <h5 class="mb-3">Assets</h5>
-                <div id="assets-list-employed"></div>
+                <div id="assets-list-employed">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                </div>
             </div>
             '''),
             
@@ -1025,6 +1566,41 @@ class ApplicantEmploymentForm(forms.ModelForm):
             )
         )
 
+    def clean(self):
+        """Cross-field validation for employment dates and rate limiting"""
+        cleaned_data = super().clean()
+        
+        # Rate limiting
+        request = getattr(self, 'request', None)
+        if request:
+            user_identifier = request.META.get('REMOTE_ADDR', 'unknown')
+            if request.user.is_authenticated:
+                user_identifier = f"{user_identifier}:{request.user.id}"
+            
+            try:
+                check_rate_limit(user_identifier, 'employment_form')
+            except ValidationError as e:
+                self.add_error(None, e)
+        
+        # Cross-field validation for employment dates
+        start_date = cleaned_data.get('employment_start_date')
+        end_date = cleaned_data.get('employment_end_date')
+        currently_employed = cleaned_data.get('currently_employed')
+        
+        # If not currently employed, end date is required
+        if not currently_employed and start_date and not end_date:
+            self.add_error('employment_end_date', 'End date is required for past employment.')
+        
+        # Validate employment date range
+        if start_date and end_date:
+            try:
+                validate_employment_dates(start_date, end_date)
+            except ValidationError as e:
+                self.add_error('employment_start_date', e)
+                self.add_error('employment_end_date', e)
+        
+        return cleaned_data
+
 
 # Original single-page form (keep for backward compatibility)
 class ApplicantForm(forms.ModelForm):
@@ -1049,13 +1625,34 @@ class ApplicantForm(forms.ModelForm):
                 'class': 'form-control currency-field',
                 'step': '0.01',
                 'placeholder': '2500.00',
-                'min': '0'
+                'min': '100',
+                'max': '50000'
             }),
             'employment_status': forms.Select(attrs={'class': 'form-select select2'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+        # Add security validators
+        self.fields['first_name'].validators.append(sanitize_text_input)
+        self.fields['last_name'].validators.append(sanitize_text_input)
+        self.fields['email'].validators.append(validate_email_domain)
+        self.fields['phone_number'].validators.append(validate_phone_number)
+        self.fields['max_rent_budget'].validators.append(validate_currency_amount)
+        
+        # Add length limits
+        length_limits = {
+            'first_name': 50, 'last_name': 50, 'street_address_1': 100,
+            'street_address_2': 100, 'city': 50, 'zip_code': 10,
+            'emergency_contact_name': 100, 'emergency_contact_relationship': 50,
+            'driver_license_number': 50, 'school_name': 100, 'school_address': 200
+        }
+        
+        for field_name, max_length in length_limits.items():
+            if field_name in self.fields:
+                self.fields[field_name].widget.attrs.update({'maxlength': max_length})
+                self.fields[field_name].validators.append(sanitize_text_input)
 
         # Allow decimal values for bedrooms and bathrooms
         self.fields['number_of_bedrooms'].widget = forms.NumberInput(attrs={'step': '0.5', 'class': 'form-control'})
@@ -1265,19 +1862,28 @@ FAKE_USERS = [
 ]
 
 class InteractionLogForm(forms.ModelForm):
-    file = forms.FileField(required=False, widget=forms.FileInput(attrs={"class": "form-control"}))  # ✅ Simple file upload
+    file = SecureImageField(required=False)  # Use secure file field
     notify_users = forms.MultipleChoiceField(
         choices=FAKE_USERS,
         widget=forms.CheckboxSelectMultiple,
         required=False,
         label="Notify Users",
-    )  # ✅ Fake checkboxes for notifications
+    )
 
     class Meta:
         model = InteractionLog
-        fields = ["note", "file", "notify_users"]  # ✅ Added notify_users
+        fields = ["note", "file", "notify_users"]
         widgets = {
-            "note": forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Enter interaction details..."}),
+            "note": forms.Textarea(attrs={
+                "class": "form-control", 
+                "rows": 3, 
+                "placeholder": "Enter interaction details...",
+                "maxlength": 1000  # Limit note length
+            }),
         }
-
-
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Add XSS protection to note field
+        self.fields['note'].validators.append(sanitize_text_input)

@@ -80,6 +80,12 @@
             <form method="post" enctype="multipart/form-data" class="doorway-form">
                 {% csrf_token %}
                 {% crispy form form.helper %}
+                <div class="text-center mt-4">
+                    <button type="submit" name="basic_info_submit" class="btn btn-doorway-primary btn-lg me-3">
+                        Save & Continue
+                    </button>
+                    <a href="{% url 'profile_step2' %}" class="btn btn-outline-secondary btn-lg">Skip</a>
+                </div>
             </form>
         </div>
     </div>
@@ -107,6 +113,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Setup previous addresses
     setupPreviousAddresses();
+    
+    // Setup eviction checkbox
+    setupEvictionCheckbox();
     
     // Setup identification uploads
     setupIdentificationUploads();
@@ -138,27 +147,44 @@ function setupUniversalCropper() {
 
 // Rental checkbox functionality
 function setupRentalCheckbox() {
-    const checkbox = document.getElementById('is_rental_checkbox');
-    const landlordFields = document.getElementById('landlord_fields');
-    const housingStatusField = document.querySelector('[name="housing_status"]');
+    const rentalContainer = document.getElementById('current_rental_container');
+    if (!rentalContainer) return;
+
+    const checkbox = rentalContainer.querySelector('#is_rental_checkbox');
+    const landlordFields = rentalContainer.querySelector('#rental_landlord_fields');
+    const rentalExtras = rentalContainer.querySelector('#rental_additional_fields');
+    const housingStatusField = rentalContainer.querySelector('[name="housing_status"]');
+    const monthlyRentInput = rentalContainer.querySelector('#id_monthly_rent');
     
-    if (checkbox && landlordFields) {
-        checkbox.addEventListener('change', function() {
-            if (this.checked) {
-                landlordFields.classList.remove('d-none');
-                housingStatusField.value = 'rent';
-            } else {
-                landlordFields.classList.add('d-none');
-                housingStatusField.value = 'own';
-            }
-        });
-        
-        // Set initial state based on existing data
-        if (housingStatusField.value === 'rent') {
-            checkbox.checked = true;
-            landlordFields.classList.remove('d-none');
+    const toggleRentalFields = (isRental) => {
+        if (landlordFields) {
+            landlordFields.classList.toggle('d-none', !isRental);
         }
+        if (rentalExtras) {
+            rentalExtras.classList.toggle('d-none', !isRental);
+        }
+        if (housingStatusField) {
+            housingStatusField.value = isRental ? 'rent' : 'own';
+        }
+        if (!isRental && monthlyRentInput) {
+            monthlyRentInput.value = monthlyRentInput.value.replace(/,/g, '');
+        }
+    };
+
+    if (checkbox) {
+        checkbox.addEventListener('change', function() {
+            toggleRentalFields(this.checked);
+        });
     }
+
+    // Set initial state based on existing data
+    const shouldShowRental = (housingStatusField && housingStatusField.value === 'rent') || (checkbox && checkbox.checked);
+    if (checkbox) {
+        checkbox.checked = shouldShowRental;
+    }
+    toggleRentalFields(shouldShowRental);
+
+    setupCurrencyInput(monthlyRentInput);
 }
 
 // Identification document uploads functionality
@@ -174,9 +200,13 @@ function setupIdentificationUploads() {
                     
                     // Initialize Universal Image Cropper for this section's upload fields
                     initializeIdentificationCroppers(this.value);
-                } else {
-                    uploadSection.style.display = 'none';
                 }
+
+                if (this.value === 'driver_license') {
+                    toggleDriverLicenseFields(this.checked);
+                }
+            } else if (this.value === 'driver_license') {
+                toggleDriverLicenseFields(this.checked);
             }
         });
     });
@@ -185,8 +215,60 @@ function setupIdentificationUploads() {
     checkboxes.forEach(checkbox => {
         if (checkbox.checked) {
             initializeIdentificationCroppers(checkbox.value);
+            if (checkbox.value === 'driver_license') {
+                toggleDriverLicenseFields(true);
+            }
         }
     });
+
+    // If the applicant has driver license fields prefilled but checkbox not checked, show fields and check the box
+    const driverNumber = document.getElementById('id_driver_license_number');
+    const driverState = document.getElementById('id_driver_license_state');
+    const driverCheckbox = document.getElementById('id_driver_license');
+    if ((driverNumber && driverNumber.value) || (driverState && driverState.value)) {
+        if (driverCheckbox) {
+            driverCheckbox.checked = true;
+        }
+        toggleDriverLicenseFields(true);
+    }
+}
+
+function toggleDriverLicenseFields(visible) {
+    const fields = document.querySelectorAll('.driver-license-field');
+    fields.forEach(field => field.classList.toggle('d-none', !visible));
+}
+
+function setupCurrencyInput(input) {
+    if (!input) return;
+
+    const formatCurrency = (value) => {
+        const numeric = value.replace(/[^0-9.]/g, '');
+        if (!numeric) return '';
+        const parts = numeric.split('.');
+        const whole = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        const decimal = parts[1] ? '.' + parts[1].slice(0, 2) : '';
+        return whole + decimal;
+    };
+
+    const handleInput = (event) => {
+        const caret = input.selectionStart;
+        input.value = formatCurrency(input.value);
+        // Reset caret to end after formatting
+        input.setSelectionRange(input.value.length, input.value.length);
+    };
+
+    input.addEventListener('input', handleInput);
+    input.addEventListener('blur', () => { input.value = formatCurrency(input.value); });
+
+    const form = input.closest('form');
+    if (form) {
+        form.addEventListener('submit', () => {
+            input.value = input.value.replace(/,/g, '');
+        });
+    }
+
+    // Initial format
+    input.value = formatCurrency(input.value);
 }
 
 // Initialize Universal Image Cropper for identification uploads
@@ -321,18 +403,26 @@ function loadExistingIdentificationDocuments() {
     
     // Process each document type
     Object.keys(docsByType).forEach(docType => {
-        const checkbox = document.getElementById(`id_${docType}`);
-        if (checkbox) {
-            // Check the checkbox
-            checkbox.checked = true;
-            
-            // Show the upload section
-            const uploadSection = document.getElementById(`${docType}_upload`);
-            if (uploadSection) {
-                uploadSection.style.display = 'block';
+        const docData = docsByType[docType];
+        // Only process if there are actual images
+        const hasImages = docData.single || docData.front || docData.back;
+        
+        if (hasImages) {
+            const checkbox = document.getElementById(`id_${docType}`);
+            if (checkbox) {
+                // Check the checkbox
+                checkbox.checked = true;
+                
+                // Show the upload section
+                const uploadSection = document.getElementById(`${docType}_upload`);
+                if (uploadSection) {
+                    uploadSection.style.display = 'block';
                 
                 // Initialize croppers for this section
                 initializeIdentificationCroppers(docType);
+                if (docType === 'driver_license') {
+                    toggleDriverLicenseFields(true);
+                }
                 
                 // Load existing images
                 setTimeout(() => {
@@ -354,6 +444,7 @@ function loadExistingIdentificationDocuments() {
                         }
                     }
                 }, 200);
+                }
             }
         }
     });
@@ -412,24 +503,48 @@ function loadImageIntoContainer(containerSelector, imageUrl) {
 
 // Previous addresses functionality (reuse existing JS)
 function setupPreviousAddresses() {
+    // Prevent multiple executions
+    if (window.previousAddressesSetup) {
+        console.log('Previous addresses already setup, skipping...');
+        return;
+    }
+    window.previousAddressesSetup = true;
+    
     // Reuse the previous address JavaScript from progressive_profile.html
     let previousAddressCount = {{ previous_addresses.count|default:0 }};
     const maxAddresses = 4;
 
+    // Clear any existing previous addresses before loading to prevent duplicates
+    const container = document.getElementById('previous-addresses-container');
+    if (container) {
+        container.innerHTML = '';
+    }
+    
     // Load existing addresses
     {% for prev_addr in previous_addresses %}
-    addPreviousAddressForm({{ prev_addr.order }}, {
-        street_address_1: "{{ prev_addr.street_address_1|default:'' }}",
-        street_address_2: "{{ prev_addr.street_address_2|default:'' }}",
-        city: "{{ prev_addr.city|default:'' }}",
-        state: "{{ prev_addr.state|default:'' }}",
-        zip_code: "{{ prev_addr.zip_code|default:'' }}",
-        length_at_address: "{{ prev_addr.length_at_address|default:'' }}",
-        housing_status: "{{ prev_addr.housing_status|default:'own' }}",
-        landlord_name: "{{ prev_addr.landlord_name|default:'' }}",
-        landlord_phone: "{{ prev_addr.landlord_phone|default:'' }}",
-        landlord_email: "{{ prev_addr.landlord_email|default:'' }}"
-    });
+    (function() {
+        // Parse duration text to extract years and months
+        const durationText = "{{ prev_addr.length_at_address|default:'' }}";
+        const yearMatch = durationText.match(/(\d+)\s*years?/);
+        const monthMatch = durationText.match(/(\d+)\s*months?/);
+        
+        console.log('Loading previous address:', {{ prev_addr.order }}, durationText);
+        
+        addPreviousAddressForm({{ prev_addr.order }}, {
+            street_address_1: "{{ prev_addr.street_address_1|default:'' }}",
+            street_address_2: "{{ prev_addr.street_address_2|default:'' }}",
+            city: "{{ prev_addr.city|default:'' }}",
+            state: "{{ prev_addr.state|default:'' }}",
+            zip_code: "{{ prev_addr.zip_code|default:'' }}",
+            length_at_address: durationText,
+            years: yearMatch ? parseInt(yearMatch[1]) : 0,
+            months: monthMatch ? parseInt(monthMatch[1]) : 0,
+            housing_status: "{{ prev_addr.housing_status|default:'own' }}",
+            landlord_name: "{{ prev_addr.landlord_name|default:'' }}",
+            landlord_phone: "{{ prev_addr.landlord_phone|default:'' }}",
+            landlord_email: "{{ prev_addr.landlord_email|default:'' }}"
+        });
+    })();
     {% endfor %}
 
     // Add new address button
@@ -463,7 +578,7 @@ function setupPreviousAddresses() {
 
     function createPreviousAddressForm(index, data = {}) {
         return `
-            <div class="previous-address-container card mb-3" data-index="${index}" id="previous_address_${index}">
+            <div class="previous-address-container card mb-3 mt-4" data-index="${index}" id="previous_address_${index}">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h6 class="mb-0">Previous Address ${index}</h6>
                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="removePreviousAddress(${index})">
@@ -496,10 +611,29 @@ function setupPreviousAddresses() {
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">How long did you live there?</label>
-                            <input type="text" class="form-control" name="prev_length_at_address_${index}" value="${data.length_at_address || ''}" placeholder="e.g., 2 years">
+                        <div class="col-md-12 mb-2">
+                            <label class="form-label">
+                                How long did you live there? 
+                                <i class="fas fa-info-circle text-success ms-1" 
+                                   data-bs-toggle="tooltip" 
+                                   data-bs-placement="right" 
+                                   title="Important for rental application">
+                                </i>
+                            </label>
                         </div>
+                        <div class="col-md-2 mb-3">
+                            <select class="form-select select2" name="prev_address_years_${index}" data-placeholder="Years">
+                                <option value="">Years</option>
+                                ${Array.from({length: 21}, (_, i) => `<option value="${i}" ${data.years == i ? 'selected' : ''}>${i} year${i !== 1 ? 's' : ''}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <select class="form-select select2" name="prev_address_months_${index}" data-placeholder="Months">
+                                <option value="">Months</option>
+                                ${Array.from({length: 12}, (_, i) => `<option value="${i}" ${data.months == i ? 'selected' : ''}>${i} month${i !== 1 ? 's' : ''}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="col-md-8"></div>
                     </div>
                     
                     <div class="form-check mb-3">
@@ -525,6 +659,15 @@ function setupPreviousAddresses() {
                                 <input type="email" class="form-control" name="prev_landlord_email_${index}" value="${data.landlord_email || ''}" placeholder="landlord@email.com">
                             </div>
                         </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="prev_monthly_rent_${index}">Monthly Rent</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="text" class="form-control currency-input" name="prev_monthly_rent_${index}" id="prev_monthly_rent_${index}" value="${data.monthly_rent || ''}" placeholder="1,200.00">
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -535,6 +678,7 @@ function setupPreviousAddresses() {
         const checkbox = document.getElementById(`prev_is_rental_${index}`);
         const landlordFields = document.getElementById(`prev_landlord_fields_${index}`);
         const housingStatusField = document.querySelector(`[name="prev_housing_status_${index}"]`);
+        const monthlyRentInput = document.getElementById(`prev_monthly_rent_${index}`);
         
         if (checkbox && landlordFields) {
             checkbox.addEventListener('change', function() {
@@ -544,8 +688,21 @@ function setupPreviousAddresses() {
                 } else {
                     landlordFields.classList.add('d-none');
                     housingStatusField.value = 'own';
+                    if (monthlyRentInput) monthlyRentInput.value = monthlyRentInput.value.replace(/,/g, '');
                 }
             });
+            
+            // initialize currency formatting for this input
+            if (monthlyRentInput) {
+                setupCurrencyInput(monthlyRentInput);
+            }
+
+            // Set initial visibility based on loaded data
+            if (this.checked) {
+                landlordFields.classList.remove('d-none');
+            } else {
+                landlordFields.classList.add('d-none');
+            }
         }
     }
 
@@ -558,6 +715,39 @@ function setupPreviousAddresses() {
             document.getElementById('add-previous-address-btn').style.display = 'inline-block';
         }
     };
+}
+
+// Eviction radio button functionality
+function setupEvictionCheckbox() {
+    const yesRadio = document.getElementById('id_evicted_before_yes');
+    const noRadio = document.getElementById('id_evicted_before_no');
+    const explanationField = document.getElementById('eviction_explanation_field');
+    
+    if (yesRadio && noRadio && explanationField) {
+        // Handle Yes radio button
+        yesRadio.addEventListener('change', function() {
+            if (this.checked) {
+                explanationField.classList.remove('d-none');
+            }
+        });
+        
+        // Handle No radio button
+        noRadio.addEventListener('change', function() {
+            if (this.checked) {
+                explanationField.classList.add('d-none');
+                // Clear the textarea when hiding
+                const textarea = document.getElementById('id_eviction_explanation');
+                if (textarea) {
+                    textarea.value = '';
+                }
+            }
+        });
+        
+        // Set initial state based on existing data (if any)
+        if (yesRadio.checked) {
+            explanationField.classList.remove('d-none');
+        }
+    }
 }
 </script>
 {% endblock %}

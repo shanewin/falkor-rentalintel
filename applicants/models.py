@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 from cloudinary.models import CloudinaryField
 from cloudinary.utils import cloudinary_url
 
@@ -22,9 +23,7 @@ class Neighborhood(models.Model):
 
 
 class NeighborhoodPreference(models.Model):
-    """
-    Through model for Applicant-Neighborhood relationship with ranking
-    """
+    # Ranked neighborhood selection (1 = top choice)
     applicant = models.ForeignKey('Applicant', on_delete=models.CASCADE)
     neighborhood = models.ForeignKey(Neighborhood, on_delete=models.CASCADE)
     preference_rank = models.PositiveIntegerField(help_text="1 = highest preference, higher numbers = lower preference")
@@ -78,10 +77,20 @@ class Applicant(models.Model):
         ('WI', 'Wisconsin'), ('WY', 'Wyoming'),
     ]
 
-    state = models.CharField(max_length=2, choices=STATE_CHOICES, default='NY', blank=True, null=True)
+    state = models.CharField(max_length=2, choices=STATE_CHOICES, blank=True, null=True)
     zip_code = models.CharField(max_length=20, blank=True, null=True)
 
-    length_at_current_address = models.CharField(max_length=50, blank=True, null=True)  # How long they lived there
+    # Address duration tracking
+    length_at_current_address = models.CharField(max_length=50, blank=True, null=True)  # Legacy field for backward compatibility
+    current_address_years = models.IntegerField(
+        blank=True, null=True, 
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    current_address_months = models.IntegerField(
+        blank=True, null=True, 
+        validators=[MinValueValidator(0), MaxValueValidator(11)]
+    )
+    
     housing_status = models.CharField(
         max_length=10,
         choices=[("rent", "Rent"), ("own", "Own")],
@@ -133,7 +142,7 @@ class Applicant(models.Model):
     supervisor_name = models.CharField(max_length=100, blank=True, null=True)
     supervisor_email = models.EmailField(blank=True, null=True)
     supervisor_phone = models.CharField(max_length=20, blank=True, null=True)
-    currently_employed = models.BooleanField(default=True)
+    currently_employed = models.BooleanField(null=True, blank=True)
     employment_start_date = models.DateField(blank=True, null=True)
     employment_end_date = models.DateField(blank=True, null=True)
     
@@ -146,7 +155,7 @@ class Applicant(models.Model):
     # Rental History
     previous_landlord_name = models.CharField(max_length=255, blank=True, null=True)
     previous_landlord_contact = models.TextField(blank=True, null=True)
-    evicted_before = models.BooleanField(default=False)
+    evicted_before = models.BooleanField(null=True, blank=True)
     eviction_explanation = models.TextField(blank=True, null=True)
 
     # Preferences
@@ -163,20 +172,20 @@ class Applicant(models.Model):
     number_of_bedrooms = models.DecimalField(max_digits=3, decimal_places=1, default=1.0, blank=True, null=True)
     number_of_bathrooms = models.DecimalField(max_digits=3, decimal_places=1, default=1.0, blank=True, null=True)
     max_rent_budget = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    open_to_roommates = models.BooleanField(default=False)
+    open_to_roommates = models.BooleanField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     assigned_broker = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     
-    # Placement tracking for rental management
+    # Tracks if applicant found housing through system
     PLACEMENT_STATUS_CHOICES = [
         ('unplaced', 'Unplaced'),
         ('placed', 'Placed'),
         ('withdrawn', 'Withdrawn'),
     ]
-    placement_status = models.CharField(max_length=20, choices=PLACEMENT_STATUS_CHOICES, default='unplaced')
+    placement_status = models.CharField(max_length=20, choices=PLACEMENT_STATUS_CHOICES, blank=True, null=True)
     placement_date = models.DateTimeField(null=True, blank=True, help_text="Date when applicant was placed in an apartment")
     placed_apartment = models.ForeignKey('apartments.Apartment', on_delete=models.SET_NULL, null=True, blank=True, help_text="Apartment where applicant was placed")
 
@@ -221,11 +230,35 @@ class Applicant(models.Model):
         }
         return {k: v for k, v in fields.items() if v}  # Remove empty fields
 
+    @property
+    def current_address_duration_display(self):
+        # Formats duration for tenant stability assessment
+        if self.current_address_years or self.current_address_months:
+            years = self.current_address_years or 0
+            months = self.current_address_months or 0
+            
+            if years and months:
+                return f"{years} year{'s' if years != 1 else ''}, {months} month{'s' if months != 1 else ''}"
+            elif years:
+                return f"{years} year{'s' if years != 1 else ''}"
+            elif months:
+                return f"{months} month{'s' if months != 1 else ''}"
+        elif self.length_at_current_address:
+            # Fallback to legacy field
+            return self.length_at_current_address
+        return "Not specified"
+    
+    @property
+    def total_months_at_current_address(self):
+        # Converts to months for rental history scoring
+        if self.current_address_years or self.current_address_months:
+            years = self.current_address_years or 0
+            months = self.current_address_months or 0
+            return (years * 12) + months
+        return None
+    
     def get_field_completion_status(self):
-        """
-        Comprehensive field completion tracker that categorizes all fields by section
-        and tracks filled vs empty status for both required and optional fields
-        """
+        # Profile completeness for application readiness
         
         def is_filled(value):
             """Check if a field has meaningful content"""
@@ -470,6 +503,52 @@ class Applicant(models.Model):
                 'empty_sections': [name for name, data in results.items() if data['completion_percentage'] == 0],
             }
         }
+    
+    def calculate_total_income(self):
+        """
+        Calculate total annual income from all sources
+        Business Logic: Used for rent affordability calculations (40x rule)
+        """
+        total = 0
+        
+        # Add income from all current jobs
+        for job in self.jobs.filter(currently_employed=True):
+            if job.annual_income:
+                total += job.annual_income
+        
+        # Add income from other sources (already annual)
+        for source in self.income_sources.all():
+            if source.average_annual_income:
+                total += source.average_annual_income
+        
+        return total
+    
+    def get_profile_completion_score(self):
+        """
+        Calculate profile completion percentage
+        Business Value: Higher completion = faster approval process
+        """
+        fields_to_check = [
+            'first_name', 'last_name', 'email', 'phone_number', 'date_of_birth',
+            'street_address_1', 'city', 'state', 'zip_code',
+            'min_bedrooms', 'max_bedrooms',
+            'max_rent_budget'
+        ]
+        
+        filled = sum(1 for field in fields_to_check if getattr(self, field, None))
+        total = len(fields_to_check)
+        
+        # Add bonus points for employment info
+        if self.jobs.filter(currently_employed=True).exists():
+            filled += 2
+            total += 2
+        
+        # Add bonus for preferences
+        if self.neighborhood_preferences.exists():
+            filled += 1
+            total += 1
+        
+        return round((filled / total) * 100) if total > 0 else 0
 
 
 
@@ -546,7 +625,7 @@ class PetPhoto(models.Model):
 
 
 class PreviousAddress(models.Model):
-    """Model for storing previous addresses of applicants"""
+    # Rental history verification data
     applicant = models.ForeignKey(Applicant, on_delete=models.CASCADE, related_name='previous_addresses')
     
     # Address fields (same as current address)
@@ -569,7 +648,15 @@ class PreviousAddress(models.Model):
     landlord_name = models.CharField(max_length=255, blank=True, null=True)
     landlord_phone = models.CharField(max_length=20, blank=True, null=True)
     landlord_email = models.EmailField(blank=True, null=True)
-    
+
+    monthly_rent = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        blank=True, 
+        null=True,
+        help_text="Monthly rent at this previous address"
+    )
+        
     # Order for display
     order = models.PositiveIntegerField(default=1, help_text="Order of previous addresses (1=most recent)")
     
@@ -587,7 +674,7 @@ class PreviousAddress(models.Model):
 
 
 class IdentificationDocument(models.Model):
-    """Model for storing identification documents"""
+    # KYC compliance document storage
     
     ID_TYPE_CHOICES = [
         ('passport', 'Passport'),
@@ -686,6 +773,7 @@ class ApplicationStatus(models.TextChoices):
 
 
 class ApplicantCRM(models.Model):
+    # Broker workflow tracking
     applicant = models.OneToOneField('Applicant', on_delete=models.CASCADE, related_name='crm', null=True, blank=True)
     assigned_broker = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=20, choices=ApplicationStatus.choices, default=ApplicationStatus.NEW)
@@ -696,6 +784,7 @@ class ApplicantCRM(models.Model):
 
 
 class ApplicationHistory(models.Model):
+    # Audit trail for status changes
     crm = models.ForeignKey(ApplicantCRM, on_delete=models.CASCADE, related_name="history")
     status = models.CharField(max_length=20, choices=ApplicationStatus.choices)
     updated_at = models.DateTimeField(auto_now_add=True)
@@ -709,20 +798,19 @@ class ApplicationHistory(models.Model):
 
 
 class InteractionLog(models.Model):
+    # Broker-applicant communication history
     crm = models.ForeignKey(ApplicantCRM, on_delete=models.CASCADE, related_name="logs")
     broker = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     note = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
-    is_message = models.BooleanField(default=False)  # ✅ Flag messages separately
+    is_message = models.BooleanField(default=False)  # Separates notes from messages
 
     def __str__(self):
         return f"Log for {self.crm.applicant.first_name} by {self.broker.username if self.broker else 'Unknown'}"
 
 
 class ApplicantActivity(models.Model):
-    """
-    Comprehensive activity tracking for applicants in the system
-    """
+    # Engagement tracking for broker insights
     ACTIVITY_TYPES = [
         # Profile & Registration Activities
         ('profile_created', 'Profile Created'),
@@ -758,6 +846,7 @@ class ApplicantActivity(models.Model):
         
         # Document Activities
         ('document_uploaded', 'Document Uploaded'),
+        ('document_deleted', 'Document Deleted'),
         ('document_verified', 'Document Verified'),
         ('document_rejected', 'Document Rejected'),
         
@@ -810,7 +899,7 @@ class ApplicantActivity(models.Model):
     
     @property
     def icon_class(self):
-        """Return Font Awesome icon class based on activity type"""
+        # UI icon mapping for activity visualization
         icon_map = {
             'profile_created': 'fas fa-user-plus',
             'profile_updated': 'fas fa-user-edit',
@@ -829,6 +918,7 @@ class ApplicantActivity(models.Model):
             'sms_sent': 'fas fa-sms',
             'phone_call': 'fas fa-phone',
             'document_uploaded': 'fas fa-file-upload',
+            'document_deleted': 'fas fa-trash',
             'document_verified': 'fas fa-file-check',
             'crm_note_added': 'fas fa-sticky-note',
             'status_changed': 'fas fa-exchange-alt',
@@ -839,7 +929,7 @@ class ApplicantActivity(models.Model):
     
     @property
     def color_class(self):
-        """Return CSS color class based on activity type"""
+        # Color coding for activity severity
         color_map = {
             'profile_created': 'text-success',
             'profile_updated': 'text-info',
@@ -857,6 +947,7 @@ class ApplicantActivity(models.Model):
             'sms_sent': 'text-success',
             'phone_call': 'text-warning',
             'document_uploaded': 'text-primary',
+            'document_deleted': 'text-danger',
             'document_verified': 'text-success',
             'crm_note_added': 'text-secondary',
             'status_changed': 'text-warning',
@@ -865,7 +956,8 @@ class ApplicantActivity(models.Model):
         return color_map.get(self.activity_type, 'text-muted')
 
 
-class UploadedFile(models.Model):  # ✅ Make sure this exists
+class UploadedFile(models.Model):
+    # File attachments for broker notes
     log = models.ForeignKey(InteractionLog, on_delete=models.CASCADE, related_name="uploaded_files")
     file = models.FileField(upload_to="interaction_logs/")
     uploaded_at = models.DateTimeField(auto_now_add=True)
@@ -875,11 +967,7 @@ class UploadedFile(models.Model):  # ✅ Make sure this exists
 
 
 class ApplicantBuildingAmenityPreference(models.Model):
-    """
-    Stores applicant preferences for building-wide amenities with priority levels.
-    Only stores amenities that the applicant cares about (priority 2-4).
-    No record = Don't Care.
-    """
+    # Only records amenities user actively wants
     applicant = models.ForeignKey(Applicant, on_delete=models.CASCADE, related_name='building_amenity_preferences')
     amenity = models.ForeignKey('buildings.Amenity', on_delete=models.CASCADE)
     
@@ -904,11 +992,7 @@ class ApplicantBuildingAmenityPreference(models.Model):
 
 
 class ApplicantApartmentAmenityPreference(models.Model):
-    """
-    Stores applicant preferences for apartment-specific amenities with priority levels.
-    Only stores amenities that the applicant cares about (priority 2-4).
-    No record = Don't Care.
-    """
+    # Unit-level feature requirements
     applicant = models.ForeignKey(Applicant, on_delete=models.CASCADE, related_name='apartment_amenity_preferences')
     amenity = models.ForeignKey('apartments.ApartmentAmenity', on_delete=models.CASCADE)
     
@@ -933,7 +1017,7 @@ class ApplicantApartmentAmenityPreference(models.Model):
 
 
 class ApplicantJob(models.Model):
-    """Model to store multiple jobs for an applicant"""
+    # Multiple employment verification
     applicant = models.ForeignKey(Applicant, on_delete=models.CASCADE, related_name='jobs')
     company_name = models.CharField(max_length=255)
     position = models.CharField(max_length=100)
@@ -962,7 +1046,7 @@ class ApplicantJob(models.Model):
 
 
 class ApplicantIncomeSource(models.Model):
-    """Model to store multiple income sources for an applicant"""
+    # Non-employment income tracking
     applicant = models.ForeignKey(Applicant, on_delete=models.CASCADE, related_name='income_sources')
     income_source = models.CharField(max_length=255)
     average_annual_income = models.DecimalField(max_digits=12, decimal_places=2)
@@ -985,7 +1069,7 @@ class ApplicantIncomeSource(models.Model):
 
 
 class ApplicantAsset(models.Model):
-    """Model to store multiple assets for an applicant"""
+    # Financial proof for qualification
     applicant = models.ForeignKey(Applicant, on_delete=models.CASCADE, related_name='assets')
     asset_name = models.CharField(max_length=255)
     account_balance = models.DecimalField(max_digits=12, decimal_places=2)

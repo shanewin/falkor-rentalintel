@@ -228,7 +228,11 @@
 
         <!-- Navigation Buttons -->
         <div class="d-flex justify-content-between mt-4">
-            <a href="{% url 'application_detail' application.id %}" class="btn btn-secondary">← Back to Overview</a>
+            {% if application and application.id %}
+                <a href="{% url 'application_detail' application.id %}" class="btn btn-secondary">← Back to Overview</a>
+            {% else %}
+                <a href="{% url 'applications_list' %}" class="btn btn-secondary">← Back to Applications</a>
+            {% endif %}
             <button type="submit" class="btn btn-primary">Save & Continue to Income →</button>
         </div>
     </form>
@@ -261,6 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const addAddressBtn = document.getElementById('add-address-btn');
     if (addAddressBtn) {
         addAddressBtn.addEventListener('click', function() {
+            {% if application and application.id %}
             fetch('{% url "add_previous_address" application.id %}', {
                 method: 'POST',
                 headers: {
@@ -276,6 +281,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => console.error('Error:', error));
+            {% else %}
+            // Cannot add addresses until application is saved
+            alert('Please save the application first before adding previous addresses.');
+            {% endif %}
         });
     }
     
@@ -284,6 +293,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.target.classList.contains('remove-address')) {
             const addressId = e.target.dataset.addressId;
             if (addressId && confirm('Are you sure you want to remove this address?')) {
+                {% if application and application.id %}
                 fetch(`{% url "remove_previous_address" application.id 0 %}`.replace('0', addressId), {
                     method: 'POST',
                     headers: {
@@ -297,6 +307,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 })
                 .catch(error => console.error('Error:', error));
+                {% else %}
+                // Cannot remove addresses until application exists
+                alert('Please save the application first.');
+                {% endif %}
             }
         }
     });

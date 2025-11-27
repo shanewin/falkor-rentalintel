@@ -1,0 +1,253 @@
+/* Cloudinary Photo Upload Widget Styles */
+
+.cloudinary-photo-upload-container {
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 15px 0;
+    transition: all 0.3s ease;
+}
+
+.cloudinary-photo-upload-container:hover {
+    border-color: #ffcc00;
+    background: #fffdf7;
+}
+
+.photo-preview-section {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.current-photo-wrapper {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.current-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.photo-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    text-align: center;
+    padding: 20px;
+}
+
+.photo-placeholder i {
+    font-size: 60px;
+    margin-bottom: 10px;
+    color: #dee2e6;
+}
+
+.photo-placeholder span {
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.photo-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.photo-controls .btn {
+    min-width: 120px;
+}
+
+.upload-btn {
+    background-color: #ffcc00;
+    border-color: #ffcc00;
+    color: #000;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.upload-btn:hover {
+    background-color: #e6b800;
+    border-color: #e6b800;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(255, 204, 0, 0.3);
+}
+
+.zoom-in-btn,
+.zoom-out-btn {
+    width: 40px;
+    padding: 6px;
+}
+
+.delete-btn {
+    font-size: 14px;
+}
+
+.upload-progress {
+    margin-top: 15px;
+    padding: 10px;
+    background: white;
+    border-radius: 4px;
+}
+
+.upload-progress .progress {
+    height: 25px;
+    background: #f8f9fa;
+}
+
+.upload-progress .progress-bar {
+    background-color: #ffcc00;
+    font-weight: 500;
+}
+
+/* Edit Modal Styles */
+.edit-canvas-container {
+    width: 100%;
+    height: 400px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+#edit-canvas {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.edit-controls {
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.edit-controls .form-label {
+    font-weight: 500;
+    font-size: 14px;
+    color: #495057;
+}
+
+.edit-controls .form-range {
+    height: 8px;
+}
+
+.edit-controls .form-range::-webkit-slider-thumb {
+    background: #ffcc00;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.edit-controls .form-range::-moz-range-thumb {
+    background: #ffcc00;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .photo-preview-section {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .current-photo-wrapper {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .photo-controls {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .photo-controls .btn {
+        min-width: auto;
+        flex: 1;
+    }
+}
+
+/* Animation for photo changes */
+@keyframes photoFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.current-photo.new-photo {
+    animation: photoFadeIn 0.5s ease;
+}
+
+/* Hover effects */
+.current-photo-wrapper:hover .current-photo {
+    transform: scale(1.05);
+}
+
+/* Focus styles for accessibility */
+.upload-btn:focus,
+.delete-btn:focus,
+.zoom-in-btn:focus,
+.zoom-out-btn:focus {
+    outline: 3px solid rgba(255, 204, 0, 0.5);
+    outline-offset: 2px;
+}
+
+/* Loading state */
+.cloudinary-photo-upload-container.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.cloudinary-photo-upload-container.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    margin: -20px 0 0 -20px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #ffcc00;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Success state */
+.cloudinary-photo-upload-container.success {
+    border-color: #28a745;
+    background: #f4fff4;
+}
+
+/* Error state */
+.cloudinary-photo-upload-container.error {
+    border-color: #dc3545;
+    background: #fff5f5;
+}

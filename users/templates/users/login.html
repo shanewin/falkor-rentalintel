@@ -97,6 +97,26 @@
         margin: 0;
         color: #333;
     }
+    .btn-forgot {
+        width: 100%;
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #ffcc00;
+        background-color: #fffdf5;
+        color: #333;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+        transition: all 0.3s;
+    }
+    .btn-forgot:hover {
+        background-color: #ffeb99;
+        color: #333;
+        text-decoration: none;
+        transform: translateY(-1px);
+        box-shadow: 0 5px 12px rgba(255,204,0,0.25);
+    }
 </style>
 {% endblock %}
 
@@ -141,6 +161,12 @@
             <label class="form-check-label" for="{{ form.remember_me.id_for_label }}">
                 Remember me
             </label>
+        </div>
+        
+        <div class="mb-3">
+            <a href="{% url 'password_reset' %}" class="btn-forgot">
+                <i class="fas fa-unlock"></i> Forgot your password?
+            </a>
         </div>
         
         <button type="submit" class="btn btn-login">

@@ -1,5 +1,5 @@
 from django import forms
-from .models import Application, RequiredDocumentType, PersonalInfoData, PreviousAddress
+from .models import Application, RequiredDocumentType, PersonalInfoData, PreviousAddress, IncomeData
 from applicants.models import Applicant
 from apartments.models import Apartment
 
@@ -158,6 +158,7 @@ class ApplicationForm(forms.ModelForm):
         apartment = kwargs.pop("apartment", None)
         user = kwargs.pop("user", None)  # Current logged in user (broker)
         super().__init__(*args, **kwargs)
+        self.user = user  # Store user for validation in clean()
 
         # ✅ Make apartment field optional with empty label
         self.fields["apartment"].queryset = Apartment.objects.all()
@@ -208,7 +209,16 @@ class ApplicationForm(forms.ModelForm):
         manual_address = cleaned_data.get('manual_building_address')
         manual_unit = cleaned_data.get('manual_unit_number')
         
-        # Either apartment OR manual fields must be provided
+        # Check if the user is a broker (passed in __init__)
+        is_broker = False
+        if hasattr(self, 'user') and self.user:
+             is_broker = getattr(self.user, 'is_broker', False)
+
+        # STRICT MODE: Brokers MUST select an apartment
+        if is_broker and not apartment:
+            raise forms.ValidationError("Brokers must select an existing apartment. Manual address entry is not permitted.")
+
+        # Either apartment OR manual fields must be provided (for non-brokers)
         if not apartment and not (manual_address and manual_unit):
             raise forms.ValidationError("Please either select an apartment from our database or enter manual address information.")
         
@@ -386,16 +396,192 @@ class ApplicationForm(forms.ModelForm):
     def save(self, commit=True):
         application = super().save(commit=False)
 
-        # ✅ Ensure required_documents is always a list
         application.required_documents = self.cleaned_data.get("required_documents", [])
 
-        # ✅ Update application with the selected applicant
         applicant = self.cleaned_data.get("applicant")
         if applicant:
             application.applicant = applicant
-
-        if commit:
-            application.save()
+            
+            # Save dynamic fields back to applicant profile
+            if commit:
+                # Save application first
+                application.save()
+                
+                # Update only the records that were displayed in the form
+                from django.db import transaction
+                
+                with transaction.atomic():
+                    # 1. Handle multiple jobs - update existing, create new, delete cleared
+                    job_count = 1
+                    existing_jobs = list(applicant.jobs.all().order_by('id'))
+                    updated_job_ids = []
+                    
+                    while f'job_company_{job_count}' in self.fields:
+                        company = self.cleaned_data.get(f'job_company_{job_count}')
+                        position = self.cleaned_data.get(f'job_position_{job_count}')
+                        income = self.cleaned_data.get(f'job_income_{job_count}')
+                        
+                        # Check if we have an existing job at this position
+                        if job_count <= len(existing_jobs):
+                            job = existing_jobs[job_count - 1]
+                            if company:  # Update existing job
+                                job.company_name = company
+                                job.position = position or ''
+                                job.annual_income = income or 0
+                                job.supervisor_name = self.cleaned_data.get(f'job_supervisor_{job_count}', '')
+                                job.supervisor_email = self.cleaned_data.get(f'job_supervisor_email_{job_count}', '')
+                                job.supervisor_phone = self.cleaned_data.get(f'job_supervisor_phone_{job_count}', '')
+                                job.currently_employed = self.cleaned_data.get(f'job_current_{job_count}', False)
+                                job.employment_start_date = self.cleaned_data.get(f'job_start_date_{job_count}')
+                                job.employment_end_date = self.cleaned_data.get(f'job_end_date_{job_count}')
+                                job.save()
+                                updated_job_ids.append(job.id)
+                            else:
+                                # Field was cleared - delete this job
+                                job.delete()
+                        else:
+                            # New job entry
+                            if company:
+                                from applicants.models import Job
+                                new_job = Job.objects.create(
+                                    applicant=applicant,
+                                    company_name=company,
+                                    position=position or '',
+                                    annual_income=income or 0,
+                                    supervisor_name=self.cleaned_data.get(f'job_supervisor_{job_count}', ''),
+                                    supervisor_email=self.cleaned_data.get(f'job_supervisor_email_{job_count}', ''),
+                                    supervisor_phone=self.cleaned_data.get(f'job_supervisor_phone_{job_count}', ''),
+                                    currently_employed=self.cleaned_data.get(f'job_current_{job_count}', False),
+                                    employment_start_date=self.cleaned_data.get(f'job_start_date_{job_count}'),
+                                    employment_end_date=self.cleaned_data.get(f'job_end_date_{job_count}'),
+                                )
+                                updated_job_ids.append(new_job.id)
+                        job_count += 1
+                    
+                    # 2. Handle multiple income sources - same pattern
+                    income_count = 1
+                    existing_incomes = list(applicant.income_sources.all().order_by('id'))
+                    updated_income_ids = []
+                    
+                    while f'income_source_{income_count}' in self.fields:
+                        source_type = self.cleaned_data.get(f'income_source_{income_count}')
+                        amount = self.cleaned_data.get(f'income_amount_{income_count}')
+                        
+                        if income_count <= len(existing_incomes):
+                            income = existing_incomes[income_count - 1]
+                            if source_type and amount:
+                                income.income_source = source_type
+                                income.average_annual_income = amount
+                                income.save()
+                                updated_income_ids.append(income.id)
+                            else:
+                                income.delete()
+                        else:
+                            if source_type and amount:
+                                from applicants.models import IncomeSource
+                                new_income = IncomeSource.objects.create(
+                                    applicant=applicant,
+                                    income_source=source_type,
+                                    average_annual_income=amount,
+                                )
+                                updated_income_ids.append(new_income.id)
+                        income_count += 1
+                    
+                    # 3. Handle multiple assets - same pattern
+                    asset_count = 1
+                    existing_assets = list(applicant.assets.all().order_by('id'))
+                    updated_asset_ids = []
+                    
+                    while f'asset_name_{asset_count}' in self.fields:
+                        asset_name = self.cleaned_data.get(f'asset_name_{asset_count}')
+                        balance = self.cleaned_data.get(f'asset_balance_{asset_count}')
+                        
+                        if asset_count <= len(existing_assets):
+                            asset = existing_assets[asset_count - 1]
+                            if asset_name and balance:
+                                asset.asset_name = asset_name
+                                asset.account_balance = balance
+                                asset.save()
+                                updated_asset_ids.append(asset.id)
+                            else:
+                                asset.delete()
+                        else:
+                            if asset_name and balance:
+                                from applicants.models import Asset
+                                new_asset = Asset.objects.create(
+                                    applicant=applicant,
+                                    asset_name=asset_name,
+                                    account_balance=balance,
+                                )
+                                updated_asset_ids.append(new_asset.id)
+                        asset_count += 1
+                    
+                    # 4. Handle previous addresses - same pattern
+                    address_count = 1
+                    existing_addresses = list(applicant.previous_addresses.all().order_by('id'))
+                    updated_address_ids = []
+                    
+                    while f'prev_street_address_1_{address_count}' in self.fields:
+                        street1 = self.cleaned_data.get(f'prev_street_address_1_{address_count}')
+                        city = self.cleaned_data.get(f'prev_city_{address_count}')
+                        
+                        if address_count <= len(existing_addresses):
+                            address = existing_addresses[address_count - 1]
+                            if street1 and city:
+                                address.street_address_1 = street1
+                                address.street_address_2 = self.cleaned_data.get(f'prev_street_address_2_{address_count}', '')
+                                address.city = city
+                                address.state = self.cleaned_data.get(f'prev_state_{address_count}', '')
+                                address.zip_code = self.cleaned_data.get(f'prev_zip_code_{address_count}', '')
+                                address.length_at_address = self.cleaned_data.get(f'prev_length_at_address_{address_count}', '')
+                                address.housing_status = self.cleaned_data.get(f'prev_housing_status_{address_count}')
+                                address.landlord_name = self.cleaned_data.get(f'prev_landlord_name_{address_count}', '')
+                                address.landlord_phone = self.cleaned_data.get(f'prev_landlord_phone_{address_count}', '')
+                                address.landlord_email = self.cleaned_data.get(f'prev_landlord_email_{address_count}', '')
+                                address.save()
+                                updated_address_ids.append(address.id)
+                            else:
+                                address.delete()
+                        else:
+                            if street1 and city:
+                                from applicants.models import PreviousAddress
+                                new_address = PreviousAddress.objects.create(
+                                    applicant=applicant,
+                                    street_address_1=street1,
+                                    street_address_2=self.cleaned_data.get(f'prev_street_address_2_{address_count}', ''),
+                                    city=city,
+                                    state=self.cleaned_data.get(f'prev_state_{address_count}', ''),
+                                    zip_code=self.cleaned_data.get(f'prev_zip_code_{address_count}', ''),
+                                    length_at_address=self.cleaned_data.get(f'prev_length_at_address_{address_count}', ''),
+                                    housing_status=self.cleaned_data.get(f'prev_housing_status_{address_count}'),
+                                    landlord_name=self.cleaned_data.get(f'prev_landlord_name_{address_count}', ''),
+                                    landlord_phone=self.cleaned_data.get(f'prev_landlord_phone_{address_count}', ''),
+                                    landlord_email=self.cleaned_data.get(f'prev_landlord_email_{address_count}', ''),
+                                )
+                                updated_address_ids.append(new_address.id)
+                        address_count += 1
+                    
+                    # Log activity for dynamic fields saved
+                    from .models import ApplicationActivity
+                    fields_saved = []
+                    if updated_job_ids:
+                        fields_saved.append(f"{len(updated_job_ids)} job(s)")
+                    if updated_income_ids:
+                        fields_saved.append(f"{len(updated_income_ids)} income source(s)")
+                    if updated_asset_ids:
+                        fields_saved.append(f"{len(updated_asset_ids)} asset(s)")
+                    if updated_address_ids:
+                        fields_saved.append(f"{len(updated_address_ids)} previous address(es)")
+                    
+                    if fields_saved:
+                        ApplicationActivity.objects.create(
+                            application=application,
+                            description=f"Updated applicant profile data: {', '.join(fields_saved)}"
+                        )
+        else:
+            # No applicant linked yet, just save the application
+            if commit:
+                application.save()
 
         return application
 
@@ -641,5 +827,42 @@ class PreviousAddressForm(forms.ModelForm):
             'landlord_name': "Previous Landlord's Name",
             'landlord_contact': "Previous Landlord's Contact",
         }
+
+
+class IncomeForm(forms.ModelForm):
+    """Section 2 - Income & Employment Form"""
+    
+    class Meta:
+        model = IncomeData
+        fields = [
+            'employment_type', 'company_name', 'position', 'annual_income',
+            'supervisor_name', 'supervisor_phone', 'supervisor_email',
+            'currently_employed', 'start_date', 'end_date',
+            'has_multiple_jobs', 'has_additional_income', 'has_assets'
+        ]
+        
+        widgets = {
+            'employment_type': forms.Select(attrs={'class': 'form-select'}),
+            'company_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'position': forms.TextInput(attrs={'class': 'form-control'}),
+            'annual_income': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'supervisor_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'supervisor_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(555) 123-4567'}),
+            'supervisor_email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'currently_employed': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'end_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'has_multiple_jobs': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'has_additional_income': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'has_assets': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Make most fields optional except key employment fields
+        required_fields = ['employment_type', 'company_name', 'position', 'annual_income', 'start_date']
+        for field_name, field in self.fields.items():
+            field.required = field_name in required_fields
 
 

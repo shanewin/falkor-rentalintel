@@ -1,0 +1,281 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
+<!-- Cropper.js CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1>My Broker Profile</h1>
+                <p>Complete your professional profile to better serve your clients</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'broker_dashboard' %}" class="btn btn-outline-primary">
+                    Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Profile Progress -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h6 class="mb-3">Profile Completion Progress ({{ completion_percentage }}% Complete)</h6>
+            <div class="progress mb-3" style="height: 6px;">
+                <div class="progress-bar" style="width: {{ completion_percentage }}%; background-color: #ffcc00;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Form -->
+    <div class="card">
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data" class="doorway-form">
+        {% csrf_token %}
+
+                <!-- Profile Photo Section -->
+                <fieldset>
+                    <legend>Profile Photo</legend>
+                    <div class="form-group">
+                        <div class="mb-4 profile-photo-section">
+                            <div class="row align-items-center">
+                                <div class="col-auto">
+                                    <div class="profile-photo-container position-relative">
+                                        {% if profile.profile_photo %}
+                                            <img src="{{ profile.get_profile_photo_url }}" 
+                                                 alt="Profile Photo" 
+                                                 class="preview-image rounded-circle border border-2 border-warning" 
+                                                 width="120" 
+                                                 height="120" 
+                                                 style="object-fit: cover;">
+                                        {% else %}
+                                            <div class="image-placeholder bg-light rounded-circle border border-2 border-secondary d-flex align-items-center justify-content-center" 
+                                                 style="width: 120px; height: 120px;">
+                                                <i class="fas fa-user fa-3x text-muted"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <h6 class="mb-2">Upload Your Profile Photo</h6>
+                                    <p class="text-muted small mb-3">Choose a professional photo that represents you well. Accepted formats: JPG, PNG, GIF (max 10MB)</p>
+                                    
+                                    <div class="d-flex gap-2 mb-3 image-cropper-buttons">
+                                        <button type="button" 
+                                                class="btn btn-primary btn-sm"
+                                                onclick="document.getElementById('id_profile_photo').click()">
+                                            <i class="fas fa-camera"></i> Upload Photo
+                                        </button>
+                                    </div>
+                                    
+                                    <input type="file" 
+                                           name="profile_photo" 
+                                           id="id_profile_photo" 
+                                           accept="image/*"
+                                           style="display: none;"
+                                           class="form-control">
+                                           
+                                    <!-- Crop transformation data -->
+                                    <input type="hidden" id="crop-data" name="crop_data" value="">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Personal Information -->
+                <fieldset>
+                    <legend>Personal Information</legend>
+                    <div class="form-group">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
+                                {{ form.first_name }}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
+                                {{ form.last_name }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="{{ form.mobile_phone.id_for_label }}" class="form-label">Mobile Phone</label>
+                                {{ form.mobile_phone }}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.professional_email.id_for_label }}" class="form-label">Professional Email</label>
+                                {{ form.professional_email }}
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Business Information -->
+                <fieldset>
+                    <legend>Business Information</legend>
+                    <div class="form-group">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="{{ form.business_name.id_for_label }}" class="form-label">Company/Brokerage Name</label>
+                                {{ form.business_name }}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.job_title.id_for_label }}" class="form-label">Job Title</label>
+                                {{ form.job_title }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <label for="{{ form.business_address_1.id_for_label }}" class="form-label">Business Address</label>
+                                {{ form.business_address_1 }}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.business_city.id_for_label }}" class="form-label">City</label>
+                                {{ form.business_city }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="{{ form.business_state.id_for_label }}" class="form-label">State</label>
+                                {{ form.business_state }}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.business_zip.id_for_label }}" class="form-label">Zip Code</label>
+                                {{ form.business_zip }}
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- License Information -->
+                <fieldset>
+                    <legend>License Information</legend>
+                    <div class="form-group">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="{{ form.broker_license_number.id_for_label }}" class="form-label">License Number</label>
+                                {{ form.broker_license_number }}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.license_state.id_for_label }}" class="form-label">License State</label>
+                                {{ form.license_state }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="{{ form.license_expiration.id_for_label }}" class="form-label">License Expiration</label>
+                                {{ form.license_expiration }}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.years_experience.id_for_label }}" class="form-label">Years of Experience</label>
+                                {{ form.years_experience }}
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Professional Bio -->
+                <fieldset>
+                    <legend>Professional Information</legend>
+                    <div class="form-group">
+                        <label for="{{ form.bio.id_for_label }}" class="form-label">Professional Bio</label>
+                        {{ form.bio }}
+                        <small class="form-text text-muted">Tell clients about your experience, specialties, and what makes you unique.</small>
+                    </div>
+                    <div class="form-group">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="{{ form.linkedin_url.id_for_label }}" class="form-label">LinkedIn Profile</label>
+                                {{ form.linkedin_url }}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.website_url.id_for_label }}" class="form-label">Professional Website</label>
+                                {{ form.website_url }}
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Save Button -->
+                <div class="text-center">
+                    <button type="submit" class="btn btn-doorway-primary btn-lg px-5">
+                        <i class="fas fa-save me-2"></i>Save Profile
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Forms JavaScript for phone formatting and other form utilities -->
+<script src="{% static 'js/forms.js' %}"></script>
+<!-- Cropper.js JavaScript -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<!-- Use Universal Image Cropper like applicant profile -->
+<script src="{% static 'js/image-cropper.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Setup Universal Image Cropper for profile photo (same as applicant)
+    setupUniversalCropper();
+});
+
+// Setup Universal Image Cropper for profile photos
+function setupUniversalCropper() {
+    console.log('Setting up Universal Image Cropper...');
+    console.log('Looking for elements:');
+    console.log('File input:', document.querySelector('#id_profile_photo'));
+    console.log('Container:', document.querySelector('.profile-photo-container'));
+    console.log('Crop data input:', document.querySelector('#crop-data'));
+    console.log('setupImageCropper function available:', typeof window.setupImageCropper);
+    
+    // Use the Universal Image Cropper with profile photo settings
+    const cropper = window.setupImageCropper('#id_profile_photo', '.profile-photo-container', '#crop-data', {
+        aspectRatio: 1, // Square for profile photos
+        outputWidth: 400,
+        outputHeight: 400,
+        outputQuality: 0.9,
+        modalTitle: 'Crop Your Profile Photo',
+        cropButtonText: 'Crop & Zoom',
+        previewButtonText: 'View Full Size'
+    });
+    
+    console.log('Cropper created:', cropper);
+    
+    // Check if there's already an existing photo and show buttons
+    const existingPhoto = document.querySelector('.profile-photo-container .preview-image');
+    if (existingPhoto && cropper) {
+        console.log('Loading existing image:', existingPhoto.src);
+        // Load the existing image into the cropper
+        cropper.loadExistingImage(existingPhoto.src);
+    }
+}
+</script>
+{% endblock %}

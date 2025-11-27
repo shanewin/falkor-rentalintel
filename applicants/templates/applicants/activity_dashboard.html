@@ -1,0 +1,549 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Activity Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .activity-dashboard {
+        padding: 20px 0;
+    }
+    
+    .stats-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .stats-card h3 {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #2c3e50;
+        margin: 0;
+    }
+    
+    .stats-card p {
+        color: #7f8c8d;
+        margin: 5px 0 0 0;
+    }
+    
+    .activity-feed {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        padding: 20px;
+    }
+    
+    .activity-item {
+        padding: 15px;
+        border-bottom: 1px solid #ecf0f1;
+        display: flex;
+        align-items: start;
+        transition: background 0.2s;
+    }
+    
+    .activity-item:hover {
+        background: #f8f9fa;
+    }
+    
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+    
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+        flex-shrink: 0;
+    }
+    
+    .activity-content {
+        flex: 1;
+    }
+    
+    .activity-title {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 3px;
+    }
+    
+    .activity-description {
+        color: #7f8c8d;
+        font-size: 0.9rem;
+    }
+    
+    .activity-time {
+        color: #95a5a6;
+        font-size: 0.85rem;
+        margin-left: auto;
+        white-space: nowrap;
+    }
+    
+    .filter-section {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        height: 300px;
+    }
+    
+    .top-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .top-list li {
+        padding: 8px 0;
+        border-bottom: 1px solid #ecf0f1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .top-list li:last-child {
+        border-bottom: none;
+    }
+    
+    .badge-count {
+        background: #3498db;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="activity-dashboard">
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h2">
+                <i class="fas fa-chart-line me-2"></i>Activity Dashboard
+            </h1>
+            <button class="btn btn-primary" onclick="refreshData()">
+                <i class="fas fa-sync-alt me-2"></i>Refresh
+            </button>
+        </div>
+        
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Applicant</label>
+                    <select name="applicant" class="form-select">
+                        <option value="">All Applicants</option>
+                        {% for applicant in all_applicants %}
+                        <option value="{{ applicant.id }}" 
+                                {% if filters.applicant_id == applicant.id|stringformat:"s" %}selected{% endif %}>
+                            {{ applicant.last_name }}, {{ applicant.first_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">Activity Type</label>
+                    <select name="type" class="form-select">
+                        <option value="">All Types</option>
+                        {% for value, label in activity_types %}
+                        <option value="{{ value }}" 
+                                {% if filters.activity_type == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label">Date Range</label>
+                    <select name="range" class="form-select">
+                        <option value="1" {% if filters.date_range == "1" %}selected{% endif %}>Today</option>
+                        <option value="7" {% if filters.date_range == "7" %}selected{% endif %}>Last 7 Days</option>
+                        <option value="30" {% if filters.date_range == "30" %}selected{% endif %}>Last 30 Days</option>
+                        <option value="90" {% if filters.date_range == "90" %}selected{% endif %}>Last 90 Days</option>
+                        <option value="all" {% if filters.date_range == "all" %}selected{% endif %}>All Time</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">Search</label>
+                    <input type="text" name="search" class="form-control" 
+                           placeholder="Search activities..." 
+                           value="{{ filters.search_query }}">
+                </div>
+                
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-2">
+                <div class="stats-card text-center">
+                    <h3>{{ statistics.total|intcomma }}</h3>
+                    <p>Total Activities</p>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stats-card text-center">
+                    <h3>{{ statistics.today|intcomma }}</h3>
+                    <p>Today</p>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stats-card text-center">
+                    <h3>{{ statistics.this_week|intcomma }}</h3>
+                    <p>This Week</p>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stats-card text-center">
+                    <h3>{{ statistics.unique_applicants|intcomma }}</h3>
+                    <p>Active Users</p>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stats-card text-center">
+                    <h3>{{ statistics.avg_per_day|floatformat:1 }}</h3>
+                    <p>Avg/Day</p>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stats-card text-center">
+                    <h3 style="font-size: 1.2rem;">{{ statistics.most_common_type|truncatechars:20 }}</h3>
+                    <p>Most Common</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="chart-container">
+                    <h5 class="mb-3">Activity Trend</h5>
+                    <canvas id="activityTrendChart"></canvas>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="chart-container">
+                    <h5 class="mb-3">Activity Types</h5>
+                    <canvas id="activityTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Activity Heatmap -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="chart-container" style="height: 250px;">
+                    <h5 class="mb-3">Activity Heatmap - Peak Hours by Day</h5>
+                    <canvas id="activityHeatmap"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="row">
+            <!-- Activity Feed -->
+            <div class="col-md-8">
+                <div class="activity-feed">
+                    <h5 class="mb-3">
+                        Recent Activities 
+                        <span class="badge bg-secondary">{{ total_count|intcomma }}</span>
+                    </h5>
+                    
+                    {% for activity in page_obj %}
+                    <div class="activity-item">
+                        <div class="activity-icon {{ activity.get_activity_color }}" 
+                             style="background-color: rgba(52, 152, 219, 0.1);">
+                            <i class="{{ activity.get_activity_icon }}"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">
+                                {{ activity.applicant.first_name }} {{ activity.applicant.last_name }}
+                            </div>
+                            <div class="activity-description">
+                                {{ activity.description }}
+                                {% if activity.triggered_by and activity.triggered_by != activity.applicant.user %}
+                                <small class="text-muted">
+                                    (by {{ activity.triggered_by.email }})
+                                </small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="activity-time">
+                            {{ activity.created_at|timesince }} ago
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted text-center py-4">No activities found</p>
+                    {% endfor %}
+                    
+                    <!-- Pagination -->
+                    {% if page_obj.has_other_pages %}
+                    <nav aria-label="Activity pagination" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if filters.applicant_id %}&applicant={{ filters.applicant_id }}{% endif %}{% if filters.activity_type %}&type={{ filters.activity_type }}{% endif %}{% if filters.date_range %}&range={{ filters.date_range }}{% endif %}{% if filters.search_query %}&search={{ filters.search_query }}{% endif %}">
+                                    Previous
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            <li class="page-item active">
+                                <span class="page-link">
+                                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                                </span>
+                            </li>
+                            
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if filters.applicant_id %}&applicant={{ filters.applicant_id }}{% endif %}{% if filters.activity_type %}&type={{ filters.activity_type }}{% endif %}{% if filters.date_range %}&range={{ filters.date_range }}{% endif %}{% if filters.search_query %}&search={{ filters.search_query }}{% endif %}">
+                                    Next
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Side Panels -->
+            <div class="col-md-4">
+                <!-- Most Active Applicants -->
+                <div class="stats-card mb-3">
+                    <h5 class="mb-3">Most Active Applicants</h5>
+                    <ul class="top-list">
+                        {% for applicant in active_applicants %}
+                        <li>
+                            <a href="{% url 'activity_timeline' applicant.applicant__id %}" 
+                               class="text-decoration-none">
+                                {{ applicant.applicant__first_name }} {{ applicant.applicant__last_name }}
+                            </a>
+                            <span class="badge-count">{{ applicant.activity_count }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="text-muted">No data available</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                
+                <!-- Activity Type Breakdown -->
+                <div class="stats-card">
+                    <h5 class="mb-3">Activity Breakdown</h5>
+                    <ul class="top-list">
+                        {% for type in type_breakdown %}
+                        <li>
+                            <span>{{ type.activity_type|title|truncatechars:25 }}</span>
+                            <span class="badge-count">{{ type.count }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="text-muted">No data available</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Fetch analytics data and render charts
+async function loadCharts() {
+    const params = new URLSearchParams(window.location.search);
+    const response = await fetch(`{% url 'activity_analytics_api' %}?${params.toString()}`);
+    const data = await response.json();
+    
+    // Activity Trend Chart
+    const trendCtx = document.getElementById('activityTrendChart').getContext('2d');
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: data.daily_trend.map(d => d.date),
+            datasets: [{
+                label: 'Activities',
+                data: data.daily_trend.map(d => d.count),
+                borderColor: 'rgb(52, 152, 219)',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+    
+    // Activity Type Chart
+    const typeCtx = document.getElementById('activityTypeChart').getContext('2d');
+    new Chart(typeCtx, {
+        type: 'doughnut',
+        data: {
+            labels: data.type_distribution.map(d => d.activity_type),
+            datasets: [{
+                data: data.type_distribution.map(d => d.count),
+                backgroundColor: [
+                    'rgba(52, 152, 219, 0.8)',
+                    'rgba(46, 204, 113, 0.8)',
+                    'rgba(155, 89, 182, 0.8)',
+                    'rgba(241, 196, 15, 0.8)',
+                    'rgba(231, 76, 60, 0.8)',
+                    'rgba(149, 165, 166, 0.8)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 12
+                    }
+                }
+            }
+        }
+    });
+    
+    // Activity Heatmap
+    if (data.heatmap_data) {
+        const heatmapCtx = document.getElementById('activityHeatmap').getContext('2d');
+        
+        // Prepare data for heatmap
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const hours = Array.from({length: 24}, (_, i) => i);
+        
+        const heatmapDataset = [];
+        data.heatmap_data.forEach(item => {
+            heatmapDataset.push({
+                x: item.hour,
+                y: days[item.day_of_week],
+                v: item.count
+            });
+        });
+        
+        // Find max count for color scaling
+        const maxCount = Math.max(...data.heatmap_data.map(d => d.count), 1);
+        
+        new Chart(heatmapCtx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Activity Count',
+                    data: heatmapDataset.map(d => ({
+                        x: d.x,
+                        y: days.indexOf(d.y),
+                        r: Math.max(3, (d.v / maxCount) * 20)
+                    })),
+                    backgroundColor: heatmapDataset.map(d => 
+                        `rgba(52, 152, 219, ${Math.max(0.2, d.v / maxCount)})`
+                    ),
+                    borderColor: 'rgba(52, 152, 219, 0.8)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const dataIndex = context.dataIndex;
+                                const original = heatmapDataset[dataIndex];
+                                return `${original.y} ${original.x}:00 - ${original.v} activities`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom',
+                        min: 0,
+                        max: 23,
+                        ticks: {
+                            stepSize: 1,
+                            callback: function(value) {
+                                return value + ':00';
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Hour of Day'
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        min: -0.5,
+                        max: 6.5,
+                        ticks: {
+                            stepSize: 1,
+                            callback: function(value) {
+                                return days[Math.round(value)] || '';
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Day of Week'
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+function refreshData() {
+    window.location.reload();
+}
+
+// Load charts on page load
+document.addEventListener('DOMContentLoaded', loadCharts);
+</script>
+{% endblock %}

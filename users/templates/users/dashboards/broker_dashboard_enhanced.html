@@ -1,0 +1,411 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Broker Dashboard - Doorway{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
+<style>
+    .metric-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+        transition: transform 0.2s;
+    }
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .metric-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    .metric-label {
+        color: #7f8c8d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .alert-banner {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    .quick-action-card {
+        text-align: center;
+        padding: 20px;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        transition: all 0.3s;
+        height: 100%;
+    }
+    .quick-action-card:hover {
+        border-color: #007bff;
+        background: #f8f9fa;
+    }
+    .quick-action-card i {
+        font-size: 2.5rem;
+        color: #007bff;
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Enhanced Header with Profile Info -->
+    <div class="page-header bg-light py-4">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-0">
+                        <i class="fas fa-briefcase"></i> 
+                        {% if broker_profile %}
+                            Welcome back, {{ broker_profile.first_name }} {{ broker_profile.last_name }}!
+                        {% else %}
+                            Welcome back, {{ user.email }}!
+                        {% endif %}
+                    </h1>
+                    <p class="text-muted mb-0">
+                        {% if broker_profile %}
+                            {{ broker_profile.business_name }} | {{ broker_profile.job_title }}
+                        {% else %}
+                            Real Estate Professional
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    {% if not broker_profile %}
+                    <a href="{% url 'broker_progressive_profile' %}" class="btn btn-warning">
+                        <i class="fas fa-exclamation-triangle"></i> Complete Your Profile
+                    </a>
+                    {% else %}
+                    <a href="{% url 'broker_progressive_profile' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-user-edit"></i> Update Profile
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        <!-- Alert Banner for Important Actions -->
+        {% if not broker_profile %}
+        <div class="alert-banner">
+            <i class="fas fa-info-circle"></i>
+            <strong>Action Required:</strong> Please complete your broker profile to unlock all features and get building assignments.
+            <a href="{% url 'broker_progressive_profile' %}" class="btn btn-white btn-sm float-end">Complete Profile</a>
+        </div>
+        {% endif %}
+
+        {% if pending_applications > 0 %}
+        <div class="alert alert-info">
+            <i class="fas fa-bell"></i>
+            You have <strong>{{ pending_applications }}</strong> applications requiring attention.
+            <a href="{% url 'applications_list' %}" class="alert-link">View Now →</a>
+        </div>
+        {% endif %}
+
+        <!-- Key Metrics Row -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value">{{ total_applications }}</div>
+                    <div class="metric-label">Total Applications</div>
+                    <small class="text-success">
+                        <i class="fas fa-arrow-up"></i> {{ monthly_applications }} this month
+                    </small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value">{{ assigned_buildings.count }}</div>
+                    <div class="metric-label">Buildings Assigned</div>
+                    <small class="text-muted">
+                        {{ assigned_apartments.count }} total units
+                    </small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value">{{ pending_applications }}</div>
+                    <div class="metric-label">Pending Review</div>
+                    <small class="text-warning">
+                        <i class="fas fa-clock"></i> Needs attention
+                    </small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value">
+                        {% if potential_commission > 0 %}
+                            ${{ potential_commission|floatformat:0 }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </div>
+                    <div class="metric-label">Potential Commission</div>
+                    <small class="text-info">
+                        {% if broker_profile and broker_profile.standard_commission_rate %}
+                            {{ broker_profile.standard_commission_rate }}% rate
+                        {% else %}
+                            Set rate in profile
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Smart Quick Actions (Context-Aware) -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-bolt"></i> Quick Actions
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% if not broker_profile %}
+                    <!-- Priority: Complete Profile -->
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'broker_progressive_profile' %}" class="text-decoration-none">
+                            <div class="quick-action-card">
+                                <i class="fas fa-user-plus text-warning"></i>
+                                <h6>Complete Profile</h6>
+                                <small>Required for assignments</small>
+                            </div>
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'broker_create_application' %}" class="text-decoration-none">
+                            <div class="quick-action-card">
+                                <i class="fas fa-file-plus"></i>
+                                <h6>New Application</h6>
+                                <small>Start rental process</small>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    {% if assigned_apartments.count > 0 %}
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'applicants_list' %}" class="text-decoration-none">
+                            <div class="quick-action-card">
+                                <i class="fas fa-users"></i>
+                                <h6>Match Applicants</h6>
+                                <small>Smart matching</small>
+                            </div>
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'buildings_list' %}" class="text-decoration-none">
+                            <div class="quick-action-card">
+                                <i class="fas fa-building"></i>
+                                <h6>Browse Properties</h6>
+                                <small>View available units</small>
+                            </div>
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'applications_list' %}" class="text-decoration-none">
+                            <div class="quick-action-card">
+                                <i class="fas fa-tasks"></i>
+                                <h6>Manage Applications</h6>
+                                <small>{{ pending_applications }} pending</small>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'activity_dashboard' %}" class="text-decoration-none">
+                            <div class="quick-action-card">
+                                <i class="fas fa-chart-line text-success"></i>
+                                <h6>Activity Heatmap</h6>
+                                <small>Analytics & Insights</small>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- My Properties Section -->
+        {% if assigned_apartments %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-home"></i> My Properties
+                <span class="badge bg-primary float-end">{{ assigned_apartments.count }} Units</span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Property</th>
+                                <th>Unit</th>
+                                <th>Rent</th>
+                                <th>Status</th>
+                                <th>Smart Matches</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for apartment in assigned_apartments|slice:":5" %}
+                            <tr>
+                                <td>
+                                    <strong>{{ apartment.building.name|default:apartment.building.street_address_1 }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ apartment.building.city }}, {{ apartment.building.state }}</small>
+                                </td>
+                                <td>
+                                    <strong>{{ apartment.unit_number }}</strong>
+                                    <br>
+                                    <small>{{ apartment.bedrooms|floatformat:0|default:"Studio" }}BR/{{ apartment.bathrooms|floatformat:1 }}BA</small>
+                                </td>
+                                <td>${{ apartment.rent_price|floatformat:0 }}</td>
+                                <td>
+                                    <span class="badge 
+                                        {% if apartment.status == 'available' %}bg-success
+                                        {% elif apartment.status == 'pending' %}bg-warning
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ apartment.get_status_display|default:apartment.status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ apartment.smart_matches_count|default:0 }}</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'apartment_overview' apartment.id %}" class="btn btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'broker_create_application' %}?apartment={{ apartment.id }}" class="btn btn-outline-success">
+                                            <i class="fas fa-plus"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if assigned_apartments.count > 5 %}
+                <div class="text-center mt-3">
+                    <a href="{% url 'apartments_list' %}" class="btn btn-outline-primary">
+                        View All {{ assigned_apartments.count }} Units →
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <!-- No Properties Assigned -->
+        <div class="card mb-4 border-warning">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-building fa-4x text-warning mb-3"></i>
+                <h4>No Properties Assigned Yet</h4>
+                <p class="text-muted">Complete your profile to get property assignments from your administrator.</p>
+                <div class="mt-3">
+                    <a href="{% url 'broker_progressive_profile' %}" class="btn btn-primary">
+                        <i class="fas fa-user-edit"></i> Complete Profile
+                    </a>
+                    <a href="{% url 'buildings_list' %}" class="btn btn-outline-secondary ms-2">
+                        <i class="fas fa-search"></i> Browse All Properties
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Recent Applications -->
+        {% if recent_applications %}
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-history"></i> Recent Applications
+                <a href="{% url 'applications_list' %}" class="btn btn-sm btn-outline-primary float-end">
+                    View All →
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Applicant</th>
+                                <th>Property</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for app in recent_applications|slice:":5" %}
+                            <tr>
+                                <td>
+                                    {% if app.applicant %}
+                                        <strong>{{ app.applicant.first_name }} {{ app.applicant.last_name }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ app.applicant.email }}</small>
+                                    {% else %}
+                                        <span class="text-muted">No applicant assigned</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if app.apartment %}
+                                        {{ app.apartment.building.name|default:app.apartment.building.street_address_1 }}
+                                        <br>
+                                        <small>Unit {{ app.apartment.unit_number }}</small>
+                                    {% else %}
+                                        <span class="text-muted">Property pending</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge 
+                                        {% if app.status == 'APPROVED' %}bg-success
+                                        {% elif app.status in 'PENDING,IN_PROGRESS' %}bg-warning
+                                        {% elif app.status == 'REJECTED' %}bg-danger
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ app.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>{{ app.created_at|date:"M d" }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'application_detail' app.id %}" class="btn btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'send_application_link' app.id %}" class="btn btn-outline-success">
+                                            <i class="fas fa-paper-plane"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                <h4>No Applications Yet</h4>
+                <p class="text-muted">Start your first rental application to begin.</p>
+                <a href="{% url 'broker_create_application' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Create First Application
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

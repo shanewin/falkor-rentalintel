@@ -1,28 +1,350 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block extra_css %}
+<style>
+.map-shell {
+    position: relative;
+    border: 2px solid #ffcc00;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+
+.sticky-map {
+    position: sticky;
+    top: 88px;
+    height: calc(100vh - 120px);
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+    border-radius: 16px;
+}
+
+.map-overlay {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 2;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+    padding: 10px 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.map-card-hover {
+    border: 2px solid #000;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+.genz-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid #e5e5e5;
+    background: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.genz-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.06);
+}
+
+.results-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    border: 1px solid #e5e5e5;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+}
+.filter-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+}
+.filter-chip .filter-label {
+    font-weight: 600;
+    color: #000;
+}
+.filter-chip .filter-value {
+    color: #555;
+    font-size: 0.9rem;
+}
+
+.filter-popover {
+    position: fixed;
+    top: 20%;
+    left: 50%;
+    transform: translate(-50%, -20%);
+    width: min(420px, 90%);
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    z-index: 2000;
+    display: none;
+    border: 2px solid #ffcc00;
+}
+.filter-popover.active {
+    display: block;
+}
+.popover-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    font-weight: 700;
+}
+.popover-body {
+    padding: 16px;
+}
+.multi-list {
+    max-height: 260px;
+    overflow-y: auto;
+}
+.multi-list.two-col {
+    columns: 2;
+}
+.btn-doorway-primary {
+    background-color: #ffcc00;
+    border-color: #ffcc00;
+    color: #000;
+    font-weight: 700;
+}
+.btn-doorway-primary:hover {
+    color: #000;
+    background-color: #ffd633;
+    border-color: #ffd633;
+}
+@media (max-width: 991.98px) {
+    .multi-list.two-col {
+        columns: 1;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .sticky-map {
+        position: relative;
+        height: 360px;
+        top: 0;
+    }
+    .results-meta {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+/* Enhanced apartment card styling */
+.rental-card {
+    transition: all 0.3s ease;
+    border: 2px solid #ffcc00 !important;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(255, 204, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+.rental-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(255, 204, 0, 0.4), 0 4px 15px rgba(0, 0, 0, 0.15) !important;
+    border-color: #ffd700;
+}
+
+.rental-price-badge {
+    background: linear-gradient(135deg, #ffcc00 0%, #ffd700 100%);
+    color: #000;
+    font-weight: 700;
+    border-radius: 12px;
+    padding: 8px 12px;
+    font-size: 0.95rem;
+    box-shadow: 0 2px 8px rgba(255, 204, 0, 0.3);
+}
+
+.image-count-badge {
+    background: rgba(0, 0, 0, 0.75);
+    color: white;
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+}
+
+.card-title {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 1.1rem;
+}
+
+.badge.bg-light {
+    background: #f8f9fa !important;
+    color: #495057 !important;
+    border: 1px solid #e9ecef;
+    font-weight: 500;
+    padding: 6px 10px;
+    border-radius: 12px;
+}
+
+.btn.rounded-pill {
+    border-radius: 25px !important;
+    font-weight: 600;
+    padding: 8px 16px;
+    transition: all 0.2s ease;
+}
+
+.btn.rounded-pill:hover {
+    transform: translateY(-1px);
+}
+
+.btn-warning.rounded-pill:hover {
+    background-color: #000 !important;
+    border-color: #000 !important;
+    color: #ffcc00 !important;
+}
+
+.amenities-preview {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 6px 10px;
+    margin: 8px 0;
+}
+
+.apartment-carousel .carousel-control-prev,
+.apartment-carousel .carousel-control-next {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.save-button {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+}
+
+.save-apartment-btn {
+    border-color: #ffcc00;
+    color: #333;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+}
+
+.save-apartment-btn:hover {
+    background-color: #ffcc00;
+    border-color: #ffcc00;
+    color: #000;
+    transform: translateY(-1px);
+}
+
+.save-apartment-btn.saved {
+    background-color: #ffcc00;
+    border-color: #ffcc00;
+    color: #000;
+}
+
+.save-apartment-btn.saved i {
+    color: #dc3545;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid px-4 py-3">
 
-    <!-- Header Section -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h2 mb-1">Apartments for Rent</h1>
-            <p class="text-muted mb-0">{{ apartments.count }} results</p>
-        </div>
-        <div>
-            <a href="{% url 'create_apartment' %}" class="btn btn-doorway-primary">List Rental</a>
-        </div>
+    <!-- Smart Matches Hero Section -->
+    <div class="mb-4" style="background: linear-gradient(135deg, #fffdf5 0%, #fff9e6 100%); border-radius: 12px; border: 2px solid #ffcc00; box-shadow: 0 4px 12px rgba(255, 204, 0, 0.1);">
+        {% if user.is_authenticated and smart_matches %}
+            <!-- Authenticated User with Smart Matches -->
+            <div class="p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h3 class="mb-1" style="color: #000; font-weight: 700; letter-spacing: 1px;">
+                            <i class="fas fa-magic me-2" style="color: #ffcc00;"></i>SMART MATCHES
+                        </h3>
+                        <p class="text-muted mb-0">AI-powered recommendations tailored to your lifestyle and budget</p>
+                    </div>
+                    <a href="{% url 'applicant_dashboard' %}#smart-matches" class="btn btn-doorway-primary">
+                        View All Matches <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                
+                <div class="row">
+                    {% for match in smart_matches %}
+                    <div class="col-lg-4 col-md-6 mb-4">
+                        {% include 'includes/smart_match_card.html' with match=match show_image=True show_recommend_button=False %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% elif user.is_authenticated %}
+            <!-- Authenticated User without Smart Matches -->
+            <div class="p-4 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-magic" style="font-size: 3rem; color: #ffcc00;"></i>
+                </div>
+                <h3 class="mb-2" style="color: #000;">Smart Matches</h3>
+                <p class="text-muted mb-3">Complete your preferences to get personalized apartment recommendations!</p>
+                <a href="{% url 'applicant_dashboard' %}" class="btn btn-doorway-primary">
+                    Complete Your Profile <i class="fas fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+        {% else %}
+            <!-- Anonymous User CTA - Compact & Dismissible -->
+            <div class="position-relative p-3 text-center" id="smart-matches-cta">
+                <button type="button" class="btn-close position-absolute top-0 end-0 mt-2 me-2" aria-label="Close" onclick="dismissCTA()"></button>
+                
+                <div class="d-flex align-items-center justify-content-center mb-3">
+                    <i class="fas fa-magic me-2" style="font-size: 2rem; color: #ffcc00;"></i>
+                    <h4 class="mb-0" style="color: #000;">Get Personalized Apartment Matches</h4>
+                </div>
+                
+                <p class="text-muted mb-3">Our Smart Matching algorithm finds apartments that perfectly fit your lifestyle, budget, and preferences.</p>
+                
+                <div class="d-flex gap-2 justify-content-center">
+                    <a href="{% url 'register_applicant' %}" class="btn btn-doorway-primary btn-sm px-3">
+                        <i class="fas fa-user-plus me-1"></i>Create Free Account
+                    </a>
+                    <a href="{% url 'login' %}" class="btn btn-outline-dark btn-sm px-3" style="color: #000; border-color: #000;">
+                        <i class="fas fa-sign-in-alt me-1"></i>Sign In
+                    </a>
+                </div>
+            </div>
+        {% endif %}
     </div>
 
     <!-- View Toggle -->
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div class="btn-group btn-group-sm" role="group">
-            <button type="button" class="btn btn-outline-dark active" id="listViewBtn">
+            <button type="button" class="btn btn-outline-dark active" disabled>
                 <i class="bi bi-list"></i> List View
-            </button>
-            <button type="button" class="btn btn-outline-dark" id="mapViewBtn">
-                <i class="bi bi-map"></i> Map View
             </button>
         </div>
         <div class="btn-group btn-group-sm" role="group">
@@ -32,75 +354,210 @@
         </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="row">
-        <!-- Filters Sidebar -->
-        <div class="col-lg-3 col-md-4 mb-4" id="filtersSidebar">
-            <div class="card shadow-sm">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">Filters</h5>
+    <!-- Auto-Applied Preferences Notification -->
+    {% if auto_applied_preferences %}
+    <div class="alert alert-info alert-dismissible fade show mb-3" role="alert">
+        <i class="fas fa-user-check"></i> <strong>Your preferences have been applied!</strong> 
+        We've automatically filtered apartments based on your saved housing preferences. 
+        <a href="{% url 'profile_step2' %}" class="alert-link">Update preferences</a>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
+    <!-- Custom Filters Bar -->
+    <div class="card shadow-sm mb-4 sticky-top" style="top: 72px; z-index: 1020;">
+        <div class="card-body py-3">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <!-- Price Chip -->
+                <div class="filter-chip" data-filter-target="price">
+                    <span class="filter-label">Price</span>
+                    <span class="filter-value" id="priceValue">Any</span>
+                    <i class="bi bi-chevron-down"></i>
                 </div>
-                <div class="card-body">
-                    <!-- Price Filter -->
-                    <div class="mb-4">
-                        <h6 class="mb-2">Price</h6>
-                        <select class="form-select form-select-sm mb-2" id="priceFilter">
-                            <option value="">Any Price</option>
-                            <option value="2000">Under $2,000</option>
-                            <option value="2000-3000">$2,000 - $3,000</option>
-                            <option value="3000-4000">$3,000 - $4,000</option>
-                            <option value="4000">Over $4,000</option>
-                        </select>
-                    </div>
-
-                    <!-- Bedrooms Filter -->
-                    <div class="mb-4">
-                        <h6 class="mb-2">Bedrooms</h6>
-                        <div class="btn-group btn-group-sm w-100" role="group" id="bedroomFilter">
-                            <button type="button" class="btn btn-outline-dark" data-value="0">Studio</button>
-                            <button type="button" class="btn btn-outline-dark" data-value="1">1</button>
-                            <button type="button" class="btn btn-outline-dark" data-value="2">2</button>
-                            <button type="button" class="btn btn-outline-dark" data-value="3">3+</button>
-                        </div>
-                    </div>
-
-                    <!-- Bathrooms Filter -->
-                    <div class="mb-4">
-                        <h6 class="mb-2">Bathrooms</h6>
-                        <div class="btn-group btn-group-sm w-100" role="group" id="bathroomFilter">
-                            <button type="button" class="btn btn-outline-dark" data-value="1">1</button>
-                            <button type="button" class="btn btn-outline-dark" data-value="2">2</button>
-                            <button type="button" class="btn btn-outline-dark" data-value="3">3+</button>
-                        </div>
-                    </div>
-
-                    <!-- Amenities Filter -->
-                    <div class="mb-4">
-                        <h6 class="mb-2">Amenities</h6>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="elevator" value="elevator">
-                            <label class="form-check-label small" for="elevator">Elevator</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="laundry" value="laundry">
-                            <label class="form-check-label small" for="laundry">Laundry in Building</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="pets" value="pets">
-                            <label class="form-check-label small" for="pets">Pets Allowed</label>
-                        </div>
-                    </div>
-
-                    <button class="btn btn-doorway-primary btn-sm w-100" id="applyFilters">Apply Filters</button>
-                    <button class="btn btn-outline-dark btn-sm w-100 mt-2" id="clearFilters">Clear All</button>
+                <!-- Beds Chip -->
+                <div class="filter-chip" data-filter-target="beds">
+                    <span class="filter-label">Beds</span>
+                    <span class="filter-value" id="bedsValue">Any</span>
+                    <i class="bi bi-chevron-down"></i>
                 </div>
+                <!-- Baths Chip -->
+                <div class="filter-chip" data-filter-target="baths">
+                    <span class="filter-label">Baths</span>
+                    <span class="filter-value" id="bathsValue">Any</span>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+                <!-- Neighborhoods Chip -->
+                <div class="filter-chip" data-filter-target="neighborhoods">
+                    <span class="filter-label">Neighborhoods</span>
+                    <span class="filter-value" id="neighborhoodsValue">Anywhere</span>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+                <!-- Amenities/Pets Chip -->
+                <div class="filter-chip" data-filter-target="amenities">
+                    <span class="filter-label">Amenities</span>
+                    <span class="filter-value" id="amenitiesValue">Any</span>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+                <!-- Clear -->
+                <button type="button" class="btn btn-outline-danger btn-sm ms-auto" id="clearFiltersBtn">
+                    <i class="fas fa-times"></i> Clear
+                </button>
             </div>
         </div>
+    </div>
 
+    <!-- Popover Panels -->
+    <div class="filter-popover" id="pricePopover">
+        <div class="popover-header">Price</div>
+        <div class="popover-body">
+            <div class="d-flex flex-column gap-2">
+                <button class="btn btn-outline-dark btn-sm price-option" data-value="">Any</button>
+                <button class="btn btn-outline-dark btn-sm price-option" data-value="under_2000">Under $2K</button>
+                <button class="btn btn-outline-dark btn-sm price-option" data-value="2000_3000">$2K - $3K</button>
+                <button class="btn btn-outline-dark btn-sm price-option" data-value="3000_4000">$3K - $4K</button>
+                <button class="btn btn-outline-dark btn-sm price-option" data-value="over_4000">Over $4K</button>
+                <div class="mt-2">
+                    <label class="form-label small mb-1">Custom</label>
+                    <div class="input-group input-group-sm">
+                        <input type="number" class="form-control" id="minPriceInput" placeholder="Min" value="{{ request.GET.min_price }}">
+                        <input type="number" class="form-control" id="maxPriceInput" placeholder="Max" value="{{ request.GET.max_price }}">
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex justify-content-end gap-2 mt-3">
+                <button class="btn btn-outline-secondary btn-sm" data-popover-close>Cancel</button>
+                <button class="btn btn-doorway-primary btn-sm" id="applyPrice">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="filter-popover" id="bedsPopover">
+        <div class="popover-header">Bedrooms</div>
+        <div class="popover-body">
+            <div class="btn-group w-100 flex-wrap" role="group">
+                <button class="btn btn-outline-dark btn-sm mb-2 bed-option" data-value="">Any</button>
+                <button class="btn btn-outline-dark btn-sm mb-2 bed-option" data-value="studio">Studio</button>
+                <button class="btn btn-outline-dark btn-sm mb-2 bed-option" data-value="1">1</button>
+                <button class="btn btn-outline-dark btn-sm mb-2 bed-option" data-value="2">2</button>
+                <button class="btn btn-outline-dark btn-sm mb-2 bed-option" data-value="3">3</button>
+                <button class="btn btn-outline-dark btn-sm mb-2 bed-option" data-value="4">4</button>
+                <button class="btn btn-outline-dark btn-sm mb-2 bed-option" data-value="5">5+</button>
+            </div>
+            <div class="d-flex justify-content-end gap-2 mt-3">
+                <button class="btn btn-outline-secondary btn-sm" data-popover-close>Cancel</button>
+                <button class="btn btn-doorway-primary btn-sm" id="applyBeds">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="filter-popover" id="bathsPopover">
+        <div class="popover-header">Bathrooms</div>
+        <div class="popover-body">
+            <div class="btn-group w-100 flex-wrap" role="group">
+                <button class="btn btn-outline-dark btn-sm mb-2 bath-option" data-value="">Any</button>
+                <button class="btn btn-outline-dark btn-sm mb-2 bath-option" data-value="1">1</button>
+                <button class="btn btn-outline-dark btn-sm mb-2 bath-option" data-value="1.5">1.5</button>
+                <button class="btn btn-outline-dark btn-sm mb-2 bath-option" data-value="2">2</button>
+                <button class="btn btn-outline-dark btn-sm mb-2 bath-option" data-value="3">3</button>
+                <button class="btn btn-outline-dark btn-sm mb-2 bath-option" data-value="4">4+</button>
+            </div>
+            <div class="d-flex justify-content-end gap-2 mt-3">
+                <button class="btn btn-outline-secondary btn-sm" data-popover-close>Cancel</button>
+                <button class="btn btn-doorway-primary btn-sm" id="applyBaths">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="filter-popover" id="neighborhoodsPopover">
+        <div class="popover-header">Neighborhoods</div>
+        <div class="popover-body">
+            <div class="multi-list">
+                {% for value, label in neighborhood_choices %}
+                <label class="form-check form-check-sm mb-1">
+                    <input class="form-check-input neighborhood-checkbox" name="neighborhoods" type="checkbox" value="{{ value }}" {% if value in selected_neighborhoods %}checked{% endif %}>
+                    <span class="form-check-label">{{ label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <div class="d-flex justify-content-end gap-2 mt-3">
+                <button class="btn btn-outline-secondary btn-sm" data-popover-close>Cancel</button>
+                <button class="btn btn-doorway-primary btn-sm" id="applyNeighborhoods">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="filter-popover" id="amenitiesPopover">
+        <div class="popover-header">Amenities & Pets</div>
+        <div class="popover-body">
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" id="petsAllowedSwitch" name="pets_allowed" value="1" {% if pets_allowed_checked %}checked{% endif %}>
+                <label class="form-check-label" for="petsAllowedSwitch">Pets allowed</label>
+            </div>
+            <div class="multi-list two-col">
+                {% for amenity in all_amenities %}
+                <label class="form-check form-check-sm mb-1">
+                    <input class="form-check-input amenity-checkbox" name="amenities" type="checkbox" value="{{ amenity.id }}" {% if amenity.id|stringformat:'s' in selected_amenities %}checked{% endif %}>
+                    <span class="form-check-label">{{ amenity.name }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <div class="d-flex justify-content-end gap-2 mt-3">
+                <button class="btn btn-outline-secondary btn-sm" data-popover-close>Cancel</button>
+                <button class="btn btn-doorway-primary btn-sm" id="applyAmenities">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden form to hold filter values -->
+    <form id="filtersForm" class="d-none">
+        <input type="hidden" name="price" id="priceField" value="{{ request.GET.price }}">
+        <input type="hidden" name="min_price" id="minPriceField" value="{{ request.GET.min_price }}">
+        <input type="hidden" name="max_price" id="maxPriceField" value="{{ request.GET.max_price }}">
+        <input type="hidden" name="min_bedrooms" id="minBedsField" value="{{ request.GET.min_bedrooms }}">
+        <input type="hidden" name="max_bedrooms" id="maxBedsField" value="{{ request.GET.max_bedrooms }}">
+        <input type="hidden" name="min_bathrooms" id="minBathsField" value="{{ request.GET.min_bathrooms }}">
+        <input type="hidden" name="max_bathrooms" id="maxBathsField" value="{{ request.GET.max_bathrooms }}">
+    </form>
+
+    <!-- Main Content -->
+    <div class="row g-3">
         <!-- List View -->
-        <div class="col-lg-9 col-md-8" id="listView">
-            <!-- Apartments Grid -->
-            <div class="row" id="apartmentsGrid">
+        <div class="col-12" id="listView">
+            <!-- Loading Indicator -->
+            <div id="loadingIndicator" class="text-center py-4" style="display: none;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Filtering apartments...</p>
+            </div>
+            
+
+            <!-- Results Container -->
+            <div id="apartmentsContainer">
+                <div class="results-meta mb-3">
+                    <div>
+                        <h4 class="mb-0" id="resultsCounter">
+                            <i class="fas fa-bolt text-secondary me-2"></i>{{ total_results }} places in NYC
+                        </h4>
+                        <small class="text-muted">Live inventory • synced with map</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <select class="form-select form-select-sm" id="sortSelect" aria-label="Sort apartments" name="sort" onchange="debouncedApplyFilters()">
+                            <option value="">Relevant</option>
+                            <option value="price_asc" {% if sort_by == 'price_asc' %}selected{% endif %}>Price: Low to High</option>
+                            <option value="price_desc" {% if sort_by == 'price_desc' %}selected{% endif %}>Price: High to Low</option>
+                            <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Newest</option>
+                        </select>
+                        {% if user.is_authenticated %}
+                        <a href="#" class="btn btn-outline-dark btn-sm">Save Search</a>
+                        {% else %}
+                        <a href="{% url 'register_applicant' %}" class="btn btn-outline-dark btn-sm">Save Search</a>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Apartments Grid -->
+                <div class="row" id="apartmentsGrid">
                 {% for apartment in apartments %}
                 <div class="col-xl-4 col-lg-6 col-md-12 mb-4 apartment-card" 
                      data-apartment-id="{{ apartment.id }}"
@@ -112,25 +569,75 @@
                     <div class="card h-100 shadow-sm rental-card">
                         <!-- Image Carousel -->
                         <div class="rental-image-container">
-                            {% if apartment.images.all %}
-                                <img src="{{ apartment.images.first.thumbnail_url }}" 
-                                     class="card-img-top rental-image" 
-                                     alt="{{ apartment.building.name }} - Unit {{ apartment.unit_number }}"
-                                     style="height: 200px; object-fit: cover;">
+                            {# Combine apartment and building images - apartment first #}
+                            {% with apartment_images=apartment.images.all building_images=apartment.building.images.all %}
+                            {% if apartment_images or building_images %}
+                                <div id="carousel-{{ apartment.id }}" class="carousel slide apartment-carousel" data-bs-ride="false">
+                                    <div class="carousel-inner">
+                                        {# Show apartment images first #}
+                                        {% for image in apartment_images %}
+                                        <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                                            <img src="{{ image.thumbnail_url }}" loading="lazy" 
+                                                 class="d-block w-100 rental-image" 
+                                                 alt="Apartment - {{ apartment.building.name }} Unit {{ apartment.unit_number }}"
+                                                 style="height: 200px; object-fit: cover;">
+                                        </div>
+                                        {% endfor %}
+                                        
+                                        {# Then show building images #}
+                                        {% for image in building_images %}
+                                        <div class="carousel-item {% if not apartment_images and forloop.first %}active{% endif %}">
+                                            <img src="{{ image.thumbnail_url }}" loading="lazy" 
+                                                 class="d-block w-100 rental-image" 
+                                                 alt="Building - {{ apartment.building.name }}"
+                                                 style="height: 200px; object-fit: cover;">
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    
+                                    {# Navigation arrows (only show if more than 1 image total) #}
+                                    {% with total_images=apartment_images.count|add:building_images.count %}
+                                    {% if total_images > 1 %}
+                                    <button class="carousel-control-prev" type="button" data-bs-target="#carousel-{{ apartment.id }}" data-bs-slide="prev">
+                                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                        <span class="visually-hidden">Previous</span>
+                                    </button>
+                                    <button class="carousel-control-next" type="button" data-bs-target="#carousel-{{ apartment.id }}" data-bs-slide="next">
+                                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                        <span class="visually-hidden">Next</span>
+                                    </button>
+                                    {% endif %}
+                                    {% endwith %}
+                                </div>
                             {% else %}
                                 <div class="card-img-top rental-image-placeholder" 
                                      style="height: 200px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center;">
                                     <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
                                 </div>
                             {% endif %}
+                            {% endwith %}
+                            
                             <div class="rental-price-badge">
                                 ${{ apartment.rent_price|floatformat:0 }}
                             </div>
-                            {% if apartment.images.all.count > 1 %}
+                            
+                            {# Show total image count #}
+                            {% with total_images=apartment.images.all.count|add:apartment.building.images.all.count %}
+                            {% if total_images > 1 %}
                             <div class="image-count-badge">
-                                <i class="bi bi-camera"></i> {{ apartment.images.all.count }}
+                                <i class="fas fa-camera me-1"></i>{{ total_images }}
                             </div>
                             {% endif %}
+                            {% endwith %}
+                            
+                        </div>
+
+                        <!-- Save Button Below Image -->
+                        <div class="px-3 pt-2 pb-0">
+                            <button class="btn btn-outline-warning btn-sm w-100 save-apartment-btn" onclick="toggleSave({{ apartment.id }}, event)">
+                                <i class="far fa-heart me-2" id="heart-{{ apartment.id }}"></i>
+                                <span id="save-text-card-{{ apartment.id }}">Save Apartment</span>
+                            </button>
                         </div>
 
                         <div class="card-body">
@@ -139,15 +646,33 @@
                             </h6>
                             <p class="card-text text-muted small mb-2">
                                 {{ apartment.building.address }}
+                                {% if apartment.building.neighborhood %}
+                                    <br><span class="badge bg-secondary text-white" style="font-size: 0.85rem; padding: 4px 10px;">{{ apartment.building.neighborhood }}</span>
+                                {% endif %}
                             </p>
 
-                            <div class="d-flex justify-content-between align-items-center mb-2">
+
+                        <div class="d-flex gap-1 mb-2">
+                            {% if apartment.is_new %}<span class="badge bg-success text-uppercase">New</span>{% endif %}
+                            {% if apartment.has_special %}<span class="badge bg-warning text-dark">Special</span>{% endif %}
+                        </div>
+                        {% if apartment.pet_policy_display %}
+                        <div class="mb-2">
+                            <small class="text-muted"><i class="bi bi-paw"></i> {{ apartment.pet_policy_display }}</small>
+                        </div>
+                        {% endif %}
+                        {% if apartment.available_display %}
+                        <div class="available-date mb-2">
+                            <small class="text-success"><i class="bi bi-calendar-check"></i> Available {{ apartment.available_display|date:"M d, Y" }}</small>
+                        </div>
+                        {% endif %}
+                            <div class="d-flex justify-content-start align-items-center gap-2 mb-2">
                                 <span class="badge bg-light text-dark">
-                                    <i class="bi bi-door-closed"></i> 
+                                    <i class="fas fa-bed me-1"></i>
                                     {% if apartment.bedrooms == 0 %}Studio{% else %}{{ apartment.bedrooms|floatformat:0 }} bed{% endif %}
                                 </span>
                                 <span class="badge bg-light text-dark">
-                                    <i class="bi bi-droplet"></i> {{ apartment.bathrooms|floatformat:0 }} bath
+                                    <i class="fas fa-bath me-1"></i>{{ apartment.bathrooms|floatformat:0 }} bath
                                 </span>
                                 {% if apartment.square_feet %}
                                 <span class="badge bg-light text-dark">
@@ -175,13 +700,28 @@
                             {% endif %}
                         </div>
 
+
+                        <div class="px-3 pt-2 pb-0">
+                            {% if apartment.is_new %}
+                            <span class="badge bg-success me-1">New</span>
+                            {% endif %}
+                            {% if apartment.has_special %}
+                            <span class="badge bg-warning text-dark">Special</span>
+                            {% endif %}
+                            {% if apartment.pet_policy_display %}
+                            <div class="mt-1 small text-muted"><i class="bi bi-paw"></i> {{ apartment.pet_policy_display }}</div>
+                            {% endif %}
+                            {% if apartment.available_display %}
+                            <div class="mt-1 small text-success"><i class="bi bi-calendar-check"></i> Available {{ apartment.available_display|date:'M d, Y' }}</div>
+                            {% endif %}
+                        </div>
                         <div class="card-footer bg-white border-0 pt-0">
-                            <div class="d-grid gap-2">
-                                <a href="{% url 'apartment_overview' apartment.id %}" class="btn btn-outline-dark btn-sm">
-                                    View Details
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'apartment_overview' apartment.id %}" class="btn btn-outline-dark btn-sm flex-fill rounded-pill">
+                                    <i class="fas fa-eye me-1"></i>View Details
                                 </a>
-                                <a href="{% url 'create_application' apartment.id %}" class="btn btn-doorway-primary btn-sm">
-                                    Apply Now
+                                <a href="{% url 'apartment_overview' apartment.id %}#broker-contact" class="btn btn-warning btn-sm flex-fill rounded-pill" style="background-color: #ffcc00; border-color: #ffcc00; color: #000; font-weight: 600;">
+                                    <i class="fas fa-user-tie me-1"></i>Contact Broker
                                 </a>
                             </div>
                         </div>
@@ -223,54 +763,11 @@
                 </ul>
             </nav>
             {% endif %}
+            </div> <!-- End apartmentsContainer -->
         </div>
 
-        <!-- Map View (Hidden by default) -->
-        <div class="col-lg-9 col-md-8 d-none" id="mapView">
-            <div class="card shadow-sm">
-                <div class="card-body p-0" style="height: 600px;">
-                    <div id="map" style="height: 100%; width: 100%; border-radius: 0.375rem;"></div>
-                </div>
-            </div>
-            
-            <!-- Map Results List -->
-            <div class="mt-3">
-                <h6 class="mb-2">Apartments on Map</h6>
-                <div class="row" id="mapResults">
-                    {% for apartment in apartments|slice:":6" %}
-                    <div class="col-md-6 col-lg-4 mb-3">
-                        <div class="card h-100 map-result-card" data-apartment-id="{{ apartment.id }}">
-                            <div class="card-body py-2">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <h6 class="mb-0">${{ apartment.rent_price|floatformat:0 }}</h6>
-                                        <small class="text-muted">
-                                            {{ apartment.bedrooms|floatformat:0 }} bed, {{ apartment.bathrooms|floatformat:0 }} bath
-                                        </small>
-                                    </div>
-                                    {% if apartment.images.all %}
-                                    <img src="{{ apartment.images.first.thumbnail_url }}" 
-                                         class="rounded" 
-                                         style="width: 50px; height: 40px; object-fit: cover;">
-                                    {% endif %}
-                                </div>
-                                <small class="text-muted d-block mt-1">
-                                    {{ apartment.building.name }} - Unit {{ apartment.unit_number }}
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
     </div>
 </div>
-
-<!-- Include Leaflet CSS & JS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <style>
 .rental-card, .map-result-card {
     transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
@@ -357,177 +854,499 @@
 .leaflet-popup-content-wrapper {
     border-radius: 8px;
 }
+/* Image carousel styles */
+.image-type-badge {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background: rgba(255, 204, 0, 0.9);
+    color: #000;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    z-index: 2;
+}
+.apartment-carousel .carousel-control-prev,
+.apartment-carousel .carousel-control-next {
+    width: 40px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.apartment-carousel:hover .carousel-control-prev,
+.apartment-carousel:hover .carousel-control-next {
+    opacity: 0.8;
+}
+.apartment-carousel .carousel-control-prev-icon,
+.apartment-carousel .carousel-control-next-icon {
+    background-color: rgba(0,0,0,0.6);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+}
+.image-count-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(255,255,255,0.9);
+    color: #333;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    z-index: 2;
+}
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const listViewBtn = document.getElementById('listViewBtn');
-    const mapViewBtn = document.getElementById('mapViewBtn');
-    const listView = document.getElementById('listView');
-    const mapView = document.getElementById('mapView');
     const apartmentsGrid = document.getElementById('apartmentsGrid');
-    const mapResults = document.getElementById('mapResults');
-    let map = null;
-    let markers = [];
+    const filtersForm = document.getElementById('filtersForm');
+    const resultsCounter = document.getElementById('resultsCounter');
+    const chipTriggers = document.querySelectorAll('.filter-chip');
+    const popovers = {
+        price: document.getElementById('pricePopover'),
+        beds: document.getElementById('bedsPopover'),
+        baths: document.getElementById('bathsPopover'),
+        neighborhoods: document.getElementById('neighborhoodsPopover'),
+        amenities: document.getElementById('amenitiesPopover'),
+    };
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.inset = '0';
+    overlay.style.background = 'rgba(0,0,0,0.15)';
+    overlay.style.zIndex = '1999';
+    overlay.style.display = 'none';
+    document.body.appendChild(overlay);
 
-    // View toggle functionality
-    listViewBtn.addEventListener('click', function() {
-        listView.classList.remove('d-none');
-        mapView.classList.add('d-none');
-        listViewBtn.classList.add('active');
-        mapViewBtn.classList.remove('active');
-    });
+    let filterTimeout;
 
-    mapViewBtn.addEventListener('click', function() {
-        listView.classList.add('d-none');
-        mapView.classList.remove('d-none');
-        mapViewBtn.classList.add('active');
-        listViewBtn.classList.remove('active');
-        initializeMap();
-    });
-
-    // Filter button functionality
-    const filterButtons = document.querySelectorAll('#bedroomFilter button, #bathroomFilter button');
-    filterButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            this.classList.toggle('filter-active');
-        });
-    });
-
-    // Clear filters
-    document.getElementById('clearFilters').addEventListener('click', function() {
-        // Reset price filter
-        document.getElementById('priceFilter').value = '';
-        
-        // Reset bedroom buttons
-        document.querySelectorAll('#bedroomFilter button').forEach(btn => {
-            btn.classList.remove('filter-active');
-        });
-        
-        // Reset bathroom buttons
-        document.querySelectorAll('#bathroomFilter button').forEach(btn => {
-            btn.classList.remove('filter-active');
-        });
-        
-        // Reset checkboxes
-        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-            checkbox.checked = false;
-        });
-        
-        // Show all apartments
-        document.querySelectorAll('.apartment-card').forEach(card => {
-            card.style.display = 'block';
-        });
-    });
-
-    // Apply filters
-    document.getElementById('applyFilters').addEventListener('click', function() {
-        const priceFilter = document.getElementById('priceFilter').value;
-        const activeBedrooms = Array.from(document.querySelectorAll('#bedroomFilter button.filter-active'))
-            .map(btn => parseInt(btn.dataset.value));
-        const activeBathrooms = Array.from(document.querySelectorAll('#bathroomFilter button.filter-active'))
-            .map(btn => parseInt(btn.dataset.value));
-
-        document.querySelectorAll('.apartment-card').forEach(card => {
-            let show = true;
-            const price = parseFloat(card.dataset.price);
-            const bedrooms = parseFloat(card.dataset.bedrooms);
-            const bathrooms = parseFloat(card.dataset.bathrooms);
-
-            // Price filter
-            if (priceFilter) {
-                if (priceFilter === '2000' && price >= 2000) show = false;
-                else if (priceFilter === '2000-3000' && (price < 2000 || price > 3000)) show = false;
-                else if (priceFilter === '3000-4000' && (price < 3000 || price > 4000)) show = false;
-                else if (priceFilter === '4000' && price <= 4000) show = false;
-            }
-
-            // Bedroom filter
-            if (activeBedrooms.length > 0) {
-                if (activeBedrooms.includes(3)) {
-                    if (bedrooms < 3) show = false;
-                } else if (!activeBedrooms.includes(bedrooms)) {
-                    show = false;
-                }
-            }
-
-            // Bathroom filter
-            if (activeBathrooms.length > 0) {
-                if (activeBathrooms.includes(3)) {
-                    if (bathrooms < 3) show = false;
-                } else if (!activeBathrooms.includes(bathrooms)) {
-                    show = false;
-                }
-            }
-
-            card.style.display = show ? 'block' : 'none';
-        });
-    });
-
-    // Initialize map
-    function initializeMap() {
-        if (map) return; // Map already initialized
-
-        // Default to NYC coordinates
-        map = L.map('map').setView([40.7128, -74.0060], 13);
-        
-        // Add OpenStreetMap tiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
-
-        // Add markers for each apartment
-        document.querySelectorAll('.apartment-card').forEach(card => {
-            const lat = parseFloat(card.dataset.lat);
-            const lng = parseFloat(card.dataset.lng);
-            const apartmentId = card.dataset.apartmentId;
-            
-            if (!isNaN(lat) && !isNaN(lng)) {
-                const marker = L.marker([lat, lng]).addTo(map);
-                
-                // Add popup content
-                const popupContent = card.querySelector('.card-body').innerHTML;
-                marker.bindPopup(`
-                    <div style="min-width: 250px; max-height: 300px; overflow-y: auto;">
-                        ${popupContent}
-                        <div class="text-center mt-2">
-                            <a href="/apartments/${apartmentId}/overview/" class="btn btn-doorway-primary btn-sm">View Details</a>
-                        </div>
-                    </div>
-                `);
-                
-                markers.push(marker);
-                
-                // Add click event to map result cards
-                const resultCard = document.querySelector(`.map-result-card[data-apartment-id="${apartmentId}"]`);
-                if (resultCard) {
-                    resultCard.addEventListener('click', function() {
-                        // Remove active class from all cards
-                        document.querySelectorAll('.map-result-card').forEach(c => {
-                            c.classList.remove('active');
-                        });
-                        // Add active class to clicked card
-                        this.classList.add('active');
-                        // Open popup on map
-                        marker.openPopup();
-                        // Pan to marker
-                        map.panTo(marker.getLatLng());
-                    });
-                }
-            }
-        });
-
-        // Fit map to show all markers
-        if (markers.length > 0) {
-            const group = new L.featureGroup(markers);
-            map.fitBounds(group.getBounds().pad(0.1));
+    function updateResultsCounter(count) {
+        if (resultsCounter) {
+            resultsCounter.innerHTML = `<i class="fas fa-bolt text-secondary me-2"></i>${count} places in NYC`;
         }
     }
 
-    // Initialize map if hash parameter is present
-    if (window.location.hash === '#map') {
-        mapViewBtn.click();
+    function applyFilters() {
+        const params = new URLSearchParams();
+
+        const sortSelect = document.getElementById('sortSelect');
+        if (sortSelect && sortSelect.value) {
+            params.set('sort', sortSelect.value);
+        }
+
+        // include hidden fields and any text/number inputs
+        filtersForm.querySelectorAll('input').forEach(input => {
+            if (!input.name) return;
+            if (input.type === 'checkbox') return; // handled below
+            if (input.value) params.set(input.name, input.value);
+        });
+
+        const checkboxGroups = {};
+        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            if (!checkbox.name) return;
+            if (checkbox.checked) {
+                if (!checkboxGroups[checkbox.name]) checkboxGroups[checkbox.name] = [];
+                checkboxGroups[checkbox.name].push(checkbox.value || '1');
+            }
+        });
+        for (const [name, values] of Object.entries(checkboxGroups)) {
+            values.forEach(value => params.append(name, value));
+        }
+
+        document.getElementById('loadingIndicator').style.display = 'block';
+        document.getElementById('apartmentsContainer').style.opacity = '0.5';
+
+        const url = `{% url 'apartments_list' %}${params.toString() ? '?' + params.toString() : ''}`;
+
+        fetch(url, {
+            method: 'GET',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        })
+        .then(response => response.json())
+        .then(data => {
+            updateApartmentsDisplay(data);
+            updateActiveFilters(data.active_filters);
+            updateResultsCounter(data.total_results || data.apartments.length);
+        })
+        .catch(error => console.error('Error filtering apartments:', error))
+        .finally(() => {
+            document.getElementById('loadingIndicator').style.display = 'none';
+            document.getElementById('apartmentsContainer').style.opacity = '1';
+        });
     }
+
+    function hideAllPopovers() {
+        Object.values(popovers).forEach(p => p.classList.remove('active'));
+        overlay.style.display = 'none';
+    }
+
+    chipTriggers.forEach(chip => {
+        chip.addEventListener('click', () => {
+            const target = chip.dataset.filterTarget;
+            hideAllPopovers();
+            const pop = popovers[target];
+            if (pop) {
+                pop.classList.add('active');
+                overlay.style.display = 'block';
+            }
+        });
+    });
+
+    overlay.addEventListener('click', hideAllPopovers);
+    document.querySelectorAll('[data-popover-close]').forEach(btn => btn.addEventListener('click', hideAllPopovers));
+
+    // Price logic
+    let selectedPriceValue = "{{ request.GET.price }}";
+    const priceValueLabel = document.getElementById('priceValue');
+    document.querySelectorAll('.price-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.price-option').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedPriceValue = btn.dataset.value;
+        });
+    });
+    document.getElementById('applyPrice').addEventListener('click', () => {
+        document.getElementById('priceField').value = selectedPriceValue;
+        document.getElementById('minPriceField').value = document.getElementById('minPriceInput').value;
+        document.getElementById('maxPriceField').value = document.getElementById('maxPriceInput').value;
+        priceValueLabel.textContent = selectedPriceValue ? btnLabel(selectedPriceValue) : 'Any';
+        hideAllPopovers();
+        applyFilters();
+    });
+
+    function btnLabel(val) {
+        switch(val) {
+            case 'under_2000': return 'Under $2K';
+            case '2000_3000': return '$2K - $3K';
+            case '3000_4000': return '$3K - $4K';
+            case 'over_4000': return 'Over $4K';
+            default: return 'Any';
+        }
+    }
+
+    // Beds
+    let selectedBeds = "{{ request.GET.min_bedrooms }}";
+    const bedsValueLabel = document.getElementById('bedsValue');
+    document.querySelectorAll('.bed-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.bed-option').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedBeds = btn.dataset.value;
+        });
+    });
+    document.getElementById('applyBeds').addEventListener('click', () => {
+        document.getElementById('minBedsField').value = selectedBeds;
+        document.getElementById('maxBedsField').value = '';
+        bedsValueLabel.textContent = selectedBeds ? selectedBeds === 'studio' ? 'Studio' : `${selectedBeds}+` : 'Any';
+        hideAllPopovers();
+        applyFilters();
+    });
+
+    // Baths
+    let selectedBaths = "{{ request.GET.min_bathrooms }}";
+    const bathsValueLabel = document.getElementById('bathsValue');
+    document.querySelectorAll('.bath-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.bath-option').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedBaths = btn.dataset.value;
+        });
+    });
+    document.getElementById('applyBaths').addEventListener('click', () => {
+        document.getElementById('minBathsField').value = selectedBaths;
+        document.getElementById('maxBathsField').value = '';
+        bathsValueLabel.textContent = selectedBaths ? `${selectedBaths}+` : 'Any';
+        hideAllPopovers();
+        applyFilters();
+    });
+
+    // Neighborhoods
+    document.getElementById('applyNeighborhoods').addEventListener('click', () => {
+        const checked = Array.from(document.querySelectorAll('.neighborhood-checkbox')).filter(cb => cb.checked);
+        const labels = checked.map(cb => cb.nextElementSibling.textContent.trim());
+        document.getElementById('neighborhoodsValue').textContent = labels.length ? `${labels.length} selected` : 'Anywhere';
+        hideAllPopovers();
+        applyFilters();
+    });
+
+    // Amenities
+    document.getElementById('applyAmenities').addEventListener('click', () => {
+        const checkedAmenities = Array.from(document.querySelectorAll('.amenity-checkbox')).filter(cb => cb.checked);
+        const petsSwitch = document.getElementById('petsAllowedSwitch');
+        const count = checkedAmenities.length + (petsSwitch.checked ? 1 : 0);
+        document.getElementById('amenitiesValue').textContent = count ? `${count} selected` : 'Any';
+        hideAllPopovers();
+        applyFilters();
+    });
+
+    // Keep chip labels in sync on load
+    function initChipLabels() {
+        const priceVal = "{{ request.GET.price }}";
+        if (priceVal) priceValueLabel.textContent = btnLabel(priceVal);
+        const bedsVal = "{{ request.GET.min_bedrooms }}";
+        if (bedsVal) bedsValueLabel.textContent = bedsVal === 'studio' ? 'Studio' : bedsVal + '+';
+        const bathsVal = "{{ request.GET.min_bathrooms }}";
+        if (bathsVal) bathsValueLabel.textContent = bathsVal + '+';
+        const neighCount = {{ selected_neighborhoods|length }};
+        document.getElementById('neighborhoodsValue').textContent = neighCount ? `${neighCount} selected` : 'Anywhere';
+        const amenitiesCount = {{ selected_amenities|length }} + {{ pets_allowed_checked|yesno:'1,0' }};
+        document.getElementById('amenitiesValue').textContent = amenitiesCount ? `${amenitiesCount} selected` : 'Any';
+    }
+    initChipLabels();
+
+    function updateApartmentsDisplay(data) {
+        if (!apartmentsGrid) return;
+
+        if (!data.apartments || data.apartments.length === 0) {
+            apartmentsGrid.innerHTML = `
+                <div class="col-12">
+                    <div class="text-center py-5">
+                        <i class="bi bi-house-x text-muted" style="font-size: 3rem;"></i>
+                        <h4 class="mt-3">No apartments found</h4>
+                        <p class="text-muted">Try adjusting your filters or check back later for new listings.</p>
+                        <a href="{% url 'create_apartment' %}" class="btn btn-doorway-primary">List a Rental</a>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        apartmentsGrid.innerHTML = data.apartments.map(apartment => {
+            let imageHtml = '';
+            if (apartment.all_images && apartment.all_images.length > 0) {
+                const carouselId = `carousel-${apartment.id}`;
+                const carouselItems = apartment.all_images.map((imageUrl, index) => `
+                    <div class="carousel-item ${index === 0 ? 'active' : ''}">
+                        <img src="${imageUrl}" class="d-block w-100 rental-image" loading="lazy" 
+                             alt="${apartment.building_name} Unit ${apartment.unit_number}"
+                             style="height: 200px; object-fit: cover;">
+                    </div>
+                `).join('');
+
+                const navigationControls = apartment.all_images.length > 1 ? `
+                    <button class="carousel-control-prev" type="button" data-bs-target="#${carouselId}" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Previous</span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#${carouselId}" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Next</span>
+                    </button>
+                    <div class="image-count-badge">
+                        <i class="fas fa-images"></i> ${apartment.all_images.length}
+                    </div>
+                ` : '';
+
+                imageHtml = `
+                    <div id="${carouselId}" class="carousel slide apartment-carousel" data-bs-ride="false" 
+                         style="border-radius: 12px 12px 0 0; overflow: hidden;">
+                        <div class="carousel-inner">
+                            ${carouselItems}
+                        </div>
+                        ${navigationControls}
+                    </div>
+                `;
+            } else if (apartment.image_url) {
+                imageHtml = `
+                    <img src="${apartment.image_url}" loading="lazy" 
+                         class="card-img-top rental-image" 
+                         alt="${apartment.building_name}"
+                         style="height: 200px; object-fit: cover;">
+                `;
+            } else {
+                imageHtml = `
+                    <div class="bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                        <div class="text-center">
+                            <i class="bi bi-building" style="font-size: 2rem; color: #adb5bd;"></i>
+                            <p class="text-muted mb-0">Photos coming soon</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+            <div class="col-xl-4 col-lg-6 col-md-12 mb-4 apartment-card" 
+                 data-apartment-id="${apartment.id}"
+                 data-price="${apartment.rent}"
+                 data-bedrooms="${apartment.bedrooms}"
+                 data-bathrooms="${apartment.bathrooms}">
+                <div class="card h-100 shadow-sm rental-card">
+                    <div class="rental-image-container">
+                        ${imageHtml}
+                        <div class="rental-price-badge">
+                            $${apartment.rent.toLocaleString()}/month
+                        </div>
+                    </div>
+                    <div class="px-3 pt-2 pb-0">
+                        <button class="btn btn-outline-warning btn-sm w-100 save-apartment-btn" onclick="toggleSave(${apartment.id}, event)">
+                            <i class="far fa-heart me-2" id="heart-${apartment.id}"></i>
+                            <span id="save-text-card-${apartment.id}">Save Apartment</span>
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="card-title mb-2">${apartment.title}</h6>
+                        <p class="card-text mb-2">
+                            <small class="text-muted">${apartment.building_address}</small>
+                            ${apartment.neighborhood ? `<br><span class="badge bg-secondary text-white" style="font-size: 0.85rem; padding: 4px 10px;">${apartment.neighborhood}</span>` : ''}
+                        </p>
+                        <div class="apartment-details mb-2 d-flex justify-content-start align-items-center gap-2">
+                            <span class="badge bg-light text-dark me-1">
+                                <i class="fas fa-bed me-1"></i>${apartment.bedrooms === 0 ? 'Studio' : apartment.bedrooms + ' bed'}
+                            </span>
+                            <span class="badge bg-light text-dark me-1">
+                                <i class="fas fa-bath me-1"></i>${apartment.bathrooms} bath
+                            </span>
+                            ${apartment.square_feet ? `<span class="badge bg-light text-dark">${apartment.square_feet} sq ft</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="px-3 pt-2 pb-0">
+                        ${apartment.is_new ? '<span class=\"badge bg-success me-1\">New</span>' : ''}
+                        ${apartment.has_special ? '<span class=\"badge bg-warning text-dark\">Special</span>' : ''}
+                        ${apartment.pet_policy ? `<div class=\"mt-1 small text-muted\"><i class=\"bi bi-paw\"></i> ${apartment.pet_policy}</div>` : ''}
+                        ${apartment.available_from ? `<div class=\"mt-1 small text-success\"><i class=\"bi bi-calendar-check\"></i> Available ${new Date(apartment.available_from).toLocaleDateString()}</div>` : ''}
+                    </div>
+                    <div class="card-footer bg-white border-0 pt-0">
+                        <div class="d-flex gap-2">
+                            <a href="${apartment.detail_url}" class="btn btn-outline-dark btn-sm flex-fill rounded-pill">
+                                <i class="fas fa-eye me-1"></i>View Details
+                            </a>
+                            <a href="${apartment.detail_url}#broker-contact" class="btn btn-warning btn-sm flex-fill rounded-pill" style="background-color: #ffcc00; border-color: #ffcc00; color: #000; font-weight: 600;">
+                                <i class="fas fa-user-tie me-1"></i>Contact Broker
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            `;
+        }).join('');
+
+        document.querySelectorAll('.apartment-card').forEach(card => {
+            card.style.cursor = 'pointer';
+        });
+    }
+
+    function updateActiveFilters(filters) {
+        console.log('Active filters:', filters);
+    }
+
+    function debouncedApplyFilters() {
+        clearTimeout(filterTimeout);
+        filterTimeout = setTimeout(applyFilters, 300);
+    }
+
+    function updateDropdownLabels() {
+        const neighborhoodCheckboxes = document.querySelectorAll('input[name="neighborhoods"]:checked');
+        const neighborhoodLabel = document.getElementById('neighborhoodsValue');
+        if (neighborhoodLabel) {
+            const count = neighborhoodCheckboxes.length;
+            neighborhoodLabel.textContent = count ? `${count} selected` : 'Anywhere';
+        }
+
+        const amenityCheckboxes = document.querySelectorAll('input[name="amenities"]:checked');
+        const petsCheckbox = document.querySelector('input[name="pets_allowed"]:checked');
+        const amenitiesLabel = document.getElementById('amenitiesValue');
+        if (amenitiesLabel) {
+            const totalSelected = amenityCheckboxes.length + (petsCheckbox ? 1 : 0);
+            amenitiesLabel.textContent = totalSelected ? `${totalSelected} selected` : 'Any';
+        }
+    }
+
+    document.getElementById('sortSelect')?.addEventListener('change', debouncedApplyFilters);
+
+    filtersForm.addEventListener('change', function() {
+        updateDropdownLabels();
+        debouncedApplyFilters();
+    });
+
+    filtersForm.addEventListener('input', function(e) {
+        if (e.target.type === 'number' || e.target.type === 'text') {
+            debouncedApplyFilters();
+        }
+    });
+
+    document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('click', function() {
+            updateDropdownLabels();
+            debouncedApplyFilters();
+        });
+    });
+
+    document.querySelectorAll('.dropdown-menu').forEach(menu => {
+        menu.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    });
+
+    document.getElementById('clearFiltersBtn').addEventListener('click', function() {
+        filtersForm.querySelectorAll('select').forEach(select => select.value = '');
+        filtersForm.querySelectorAll('input[type="number"], input[type="text"]').forEach(input => input.value = '');
+        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => checkbox.checked = false);
+        updateDropdownLabels();
+        window.history.pushState({}, '', '{% url "apartments_list" %}');
+        applyFilters();
+    });
+
+    document.addEventListener('click', function(e) {
+        const card = e.target.closest('.apartment-card');
+        if (card && !e.target.closest('a, button')) {
+            const apartmentId = card.dataset.apartmentId;
+            if (apartmentId) window.location.href = `/apartments/${apartmentId}/overview/`;
+        }
+    });
+
+    const cta = document.getElementById('smart-matches-cta');
+    if (cta && localStorage.getItem('smartMatchesCTADismissed') === 'true') {
+        cta.style.display = 'none';
+    }
+
+    updateDropdownLabels();
 });
+
+// Function to handle save/heart toggle
+function toggleSave(apartmentId, event) {
+    event.stopPropagation();
+    {% if user.is_authenticated %}
+        const heartIcon = document.getElementById(`heart-${apartmentId}`);
+        const saveText = document.getElementById(`save-text-card-${apartmentId}`);
+        const saveBtn = event.target.closest('.save-apartment-btn');
+        const isSaved = heartIcon.classList.contains('fas');
+        
+        if (isSaved) {
+            heartIcon.classList.remove('fas');
+            heartIcon.classList.add('far');
+            saveText.textContent = 'Save Apartment';
+            saveBtn.classList.remove('saved');
+        } else {
+            heartIcon.classList.remove('far');
+            heartIcon.classList.add('fas');
+            saveText.textContent = 'Saved';
+            saveBtn.classList.add('saved');
+        }
+    {% else %}
+        if (confirm('You need to be logged in to save apartments. Would you like to create an account or sign in?')) {
+            window.location.href = '{% url "register_applicant" %}';
+        }
+    {% endif %}
+}
+
+// Function to dismiss CTA banner
+function dismissCTA() {
+    const cta = document.getElementById('smart-matches-cta');
+    if (cta) {
+        cta.style.transition = 'opacity 0.3s ease, height 0.3s ease';
+        cta.style.opacity = '0';
+        cta.style.height = '0';
+        cta.style.overflow = 'hidden';
+        cta.style.paddingTop = '0';
+        cta.style.paddingBottom = '0';
+        cta.style.marginBottom = '0';
+        
+        setTimeout(() => cta.remove(), 300);
+        localStorage.setItem('smartMatchesCTADismissed', 'true');
+    }
+}
 </script>
 {% endblock %}

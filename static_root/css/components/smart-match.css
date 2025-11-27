@@ -1,0 +1,214 @@
+/* ================================================
+   Smart Match Card Component Styles
+   Extracted from inline styles for better maintainability
+   ================================================ */
+
+:root {
+    --match-primary-yellow: #ffcc00;
+    --match-card-bg: #ffffff;
+    --match-border-radius: 12px;
+    --match-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    --match-text-dark: #2c3e50;
+    --match-text-muted: #6c757d;
+    --match-border-light: #f0f0f0;
+    --match-border-gray: #dee2e6;
+    --match-bg-light: #f8f9fa;
+    --match-success: #28a745;
+    --match-danger: #dc3545;
+    --match-warning: #ffc107;
+}
+
+/* Main Card Container */
+.smart-match-card {
+    background: var(--match-card-bg);
+    border: none;
+    border-radius: var(--match-border-radius);
+    box-shadow: var(--match-shadow);
+    transition: none;
+    transform: none;
+}
+
+/* Carousel Styles */
+.apartment-carousel {
+    border-radius: var(--match-border-radius) var(--match-border-radius) 0 0;
+    overflow: hidden;
+}
+
+.apartment-carousel .carousel-control-prev,
+.apartment-carousel .carousel-control-next {
+    width: 40px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.apartment-carousel:hover .carousel-control-prev,
+.apartment-carousel:hover .carousel-control-next {
+    opacity: 0.8;
+}
+
+.apartment-carousel .carousel-control-prev-icon,
+.apartment-carousel .carousel-control-next-icon {
+    background-color: rgba(0,0,0,0.6);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+}
+
+/* Carousel Images */
+.carousel-image {
+    height: 200px;
+    object-fit: cover;
+}
+
+/* Image Count Badge */
+.image-count-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(255,255,255,0.9);
+    color: #333;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    z-index: 2;
+}
+
+/* Match Score Header */
+.smart-match-header {
+    background: transparent !important;
+    border: none !important;
+    padding: 1.5rem;
+    color: inherit !important;
+    border-radius: 0;
+}
+
+/* Circular Progress Indicator */
+.circular-progress {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.circular-progress-inner {
+    background: white;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: var(--match-text-dark);
+    font-size: 14px;
+}
+
+/* Match Badge */
+.match-badge {
+    font-size: 0.75rem;
+}
+
+/* Match Body */
+.smart-match-body {
+    padding: 0 1.5rem 1.5rem 1.5rem;
+}
+
+/* Match Categories */
+.match-category {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--match-border-light);
+}
+
+.match-category:last-child {
+    border-bottom: none;
+}
+
+/* Category Descriptions */
+.category-description {
+    font-size: 0.75rem;
+}
+
+/* Reasons List */
+.reasons-list {
+    margin-top: 0.5rem;
+}
+
+.reason-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 0.25rem;
+    padding-left: 0.5rem;
+}
+
+.reason-item:last-child {
+    margin-bottom: 0;
+}
+
+.reason-item i {
+    margin-top: 0.2rem;
+    flex-shrink: 0;
+}
+
+.reason-item-icon {
+    font-size: 0.6rem;
+}
+
+.reason-item-icon-check {
+    font-size: 0.7rem;
+}
+
+/* Toggle Button */
+.match-toggle-btn {
+    text-decoration: none !important;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+    min-width: 120px;
+    border-color: var(--match-border-gray);
+    color: var(--match-text-muted);
+    font-weight: 500;
+}
+
+.match-toggle-btn:hover {
+    background-color: var(--match-bg-light) !important;
+    border-color: #000 !important;
+    color: #000 !important;
+}
+
+.match-toggle-btn .toggle-icon {
+    transition: transform 0.2s ease;
+}
+
+.match-toggle-btn[aria-expanded="true"] .toggle-icon {
+    transform: rotate(180deg);
+}
+
+/* Action Section */
+.action-section {
+    border-top: 1px solid var(--match-border-light);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .smart-match-header {
+        padding: 1rem;
+    }
+    
+    .smart-match-body {
+        padding: 0 1rem 1rem 1rem;
+    }
+    
+    .circular-progress {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .circular-progress-inner {
+        width: 46px;
+        height: 46px;
+        font-size: 12px;
+    }
+}

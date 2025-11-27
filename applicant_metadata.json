@@ -1,0 +1,11 @@
+{
+    "critical_fields": [
+        "annual_income",
+        "max_rent_budget",
+        "employment_start_date",
+        "employment_status",
+        "current_address_years"
+    ],
+    "description": "Top 5 most heavily weighted fields for the Smart Match Algorithm.",
+    "generated_at": "2025-11-26T17:37:31-05:00"
+}

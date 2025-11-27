@@ -31,6 +31,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_owner = models.BooleanField(default=False, verbose_name="Owner (Manages Buildings)")  # 🚫 Owners are NOT admins
     is_superuser = models.BooleanField(default=False, verbose_name="Superuser (Full Admin Access)")
 
+    # Email Verification (Primary security - required for all users)
+    email_verified = models.BooleanField(default=False, verbose_name="Email Verified")
+    email_verified_at = models.DateTimeField(null=True, blank=True, verbose_name="Email Verified At")
+
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
 
@@ -45,4 +49,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 # Import profile models to make them discoverable by Django migrations
 from .profiles_models import BrokerProfile, OwnerProfile, StaffProfile, AdminProfile
+
+# Import SMS models for migrations
+from .sms_models import SMSPreferences, SMSVerificationLog, SMSMessage
 

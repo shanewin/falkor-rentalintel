@@ -4,18 +4,28 @@ from .views import (
     broker_create_application, broker_confirmation, create_v2_application, v2_application_overview, v2_section1_personal_info,
     v2_section2_income, v2_section3_legal, v2_section4_review, v2_section5_payment,
     v2_section_navigation, add_previous_address, remove_previous_address,
+    # Progressive broker application creation
+    broker_create_step1, broker_create_step2, broker_create_step3, broker_create_step4,
     # Separated broker and applicant interfaces
     broker_application_management, applicant_application_interface,
     # Keep existing views for file management and analysis
     application, application_detail, applicant_complete, application_list, 
-    delete_uploaded_file, application_edit, analyze_uploaded_file, check_analysis_status, send_application_link, test_email_send, test_sms_send,
+    delete_uploaded_file, application_edit, analyze_uploaded_file, check_analysis_status, send_application_link, revoke_application, test_email_send, test_sms_send,
+    nudge_applicant, approve_application,
     application_preview, broker_prefill_dashboard, broker_prefill_section1, prefill_status_api
 )
 from .account_views import create_account_after_application, application_completion_success
 
 urlpatterns = [
-    # Enhanced Broker Application Creation
-    path('broker/create/', broker_create_application, name='broker_create_application'),
+    # Progressive Broker Application Creation
+    path('broker/create/step1/', broker_create_step1, name='broker_create_step1'),
+    path('broker/create/step2/', broker_create_step2, name='broker_create_step2'), 
+    path('broker/create/step3/', broker_create_step3, name='broker_create_step3'),
+    path('broker/create/step4/', broker_create_step4, name='broker_create_step4'),
+    
+    # Enhanced Broker Application Creation (Legacy - keep for backward compatibility)
+    path('broker/create/', broker_create_step1, name='broker_create_application'),  # Redirect to step 1
+    path('broker/create-legacy/', broker_create_application, name='broker_create_application_legacy'),
     path('broker/confirmation/<int:application_id>/', broker_confirmation, name='broker_confirmation'),
     
     # 5-Section Application System
@@ -48,6 +58,9 @@ urlpatterns = [
     path('', application_list, name='applications_list'),
     path('<int:application_id>/edit/', application_edit, name='application_edit'),
     path('<int:application_id>/send-link/', send_application_link, name='send_application_link'),
+    path('<int:application_id>/revoke/', revoke_application, name='revoke_application'),
+    path('<int:application_id>/nudge/', nudge_applicant, name='nudge_applicant'),
+    path('<int:application_id>/approve/', approve_application, name='approve_application'),
     path('test-email/', test_email_send, name='test_email_send'),
     path('test-sms/', test_sms_send, name='test_sms_send'),
     path('<int:application_id>/preview/', application_preview, name='application_preview'),

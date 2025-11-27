@@ -1,6 +1,8 @@
 from django.urls import path, include
 from . import views
 from . import profile_views
+from . import sms_views
+from . import email_views
 
 urlpatterns = [
     # Authentication
@@ -12,6 +14,10 @@ urlpatterns = [
     path('register/applicant/', views.register_applicant, name='register_applicant'),
     path('register/staff/', views.register_staff, name='register_staff'),
     path('register/owner/', views.register_owner, name='register_owner'),
+    
+    # Secure token-based account setup
+    path('set-password/<str:uidb64>/<str:token>/', views.set_password_view, name='set_password'),
+    path('activate/<str:uidb64>/<str:token>/', views.activate_account_view, name='activate_account'),
     
     # Dashboards
     path('dashboard/admin/', views.admin_dashboard, name='admin_dashboard'),
@@ -37,4 +43,18 @@ urlpatterns = [
     
     # Django built-in auth views (password change, reset, etc.)
     path('', include('django.contrib.auth.urls')),
+    
+    # Email Verification (Primary - Required)
+    path('verify-email/<str:email>/', email_views.email_verification_view, name='email_verification'),
+    path('verify-email/', email_views.email_verification_view, name='email_verification_no_param'),
+    path('resend-email-verification/', email_views.resend_email_verification_view, name='resend_email_verification'),
+    
+    # SMS Verification and Preferences (Secondary - Optional)
+    path('verify-phone/<str:phone_number>/', sms_views.phone_verification_view, name='phone_verification'),
+    path('verify-phone/', sms_views.phone_verification_view, name='phone_verification_no_param'),
+    path('resend-code/', sms_views.resend_verification_code_view, name='resend_verification_code'),
+    path('sms-preferences/', sms_views.sms_preferences_view, name='sms_preferences'),
+    path('verify-my-phone/', sms_views.verify_phone_for_user, name='verify_my_phone'),
+    path('sms-status/', sms_views.sms_verification_status, name='sms_verification_status'),
+    path('webhook/twilio/', sms_views.twilio_webhook, name='twilio_webhook'),
 ]

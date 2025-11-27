@@ -1,0 +1,245 @@
+/* Falkor homepage hero styles - extracted from homepage.css */
+
+:root {
+    --falkor-black: #000000;
+    --falkor-deep: #111111;
+    --falkor-yellow: #ffcc00;
+    --falkor-text-muted: #6c6c6c;
+    --falkor-card-border: rgba(0, 0, 0, 0.06);
+}
+
+.homepage {
+    padding-top: 2rem;
+    padding-bottom: 5rem;
+}
+
+.home-hero {
+    background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.12), transparent 50%),
+        linear-gradient(135deg, var(--falkor-black), var(--falkor-deep) 50%, var(--falkor-yellow) 140%);
+    color: #ffffff;
+    border-radius: 32px;
+    padding: clamp(2.5rem, 6vw, 5rem);
+    margin-bottom: 3.5rem;
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.home-hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), transparent 55%);
+    z-index: -1;
+}
+
+.home-hero h1 {
+    font-size: clamp(2.5rem, 4vw, 4rem);
+    font-weight: 700;
+    line-height: 1.15;
+    margin-bottom: 1rem;
+}
+
+.home-hero p {
+    font-size: 1.15rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.hero-ctas {
+    margin-top: 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.cta-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    font-weight: 600;
+    padding: 0.95rem 2.15rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    text-decoration: none;
+}
+
+.cta-btn.primary {
+    background: var(--falkor-yellow);
+    color: var(--falkor-black);
+    box-shadow: 0 15px 35px rgba(255, 204, 0, 0.35);
+}
+
+.cta-btn.secondary {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.cta-btn:hover {
+    transform: translateY(-3px);
+}
+
+.hero-support-line {
+    margin-top: 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.value-props {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.75rem;
+    margin-bottom: 4rem;
+}
+
+.value-card {
+    background: #ffffff;
+    border-radius: 24px;
+    padding: 2.5rem;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--falkor-card-border);
+}
+
+.value-card h3 {
+    font-size: 1.9rem;
+    margin-bottom: 0.75rem;
+}
+
+.value-card p {
+    color: var(--falkor-text-muted);
+    line-height: 1.65;
+    margin-bottom: 1.4rem;
+}
+
+.value-card ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.5rem;
+}
+
+.value-card li {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-weight: 600;
+    color: #2a2a2a;
+}
+
+.value-card li i {
+    color: var(--falkor-yellow);
+}
+
+.features-section {
+    background: var(--falkor-black);
+    color: #fdfdfd;
+    border-radius: 32px;
+    padding: clamp(2.5rem, 5vw, 4.5rem);
+    margin-bottom: 4rem;
+}
+
+.features-section h2 {
+    font-size: 2.4rem;
+    margin-bottom: 2.5rem;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+}
+
+.feature-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 1.75rem;
+    height: 100%;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255, 204, 0, 0.55);
+}
+
+.feature-card h4 {
+    font-size: 0.9rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.65);
+    margin-bottom: 0.4rem;
+}
+
+.feature-card h3 {
+    font-size: 1.3rem;
+    color: var(--falkor-yellow);
+    margin-bottom: 0.5rem;
+}
+
+.feature-card p {
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.55;
+}
+
+.cta-panel {
+    background: linear-gradient(130deg, var(--falkor-yellow), #ffe177);
+    border-radius: 28px;
+    padding: clamp(2rem, 5vw, 4rem);
+    text-align: center;
+    color: var(--falkor-black);
+    box-shadow: 0 30px 70px rgba(255, 204, 0, 0.3);
+}
+
+.cta-panel h2 {
+    font-size: 2.3rem;
+    margin-bottom: 1rem;
+}
+
+.cta-panel p {
+    font-size: 1.1rem;
+    color: #3a3200;
+    margin-bottom: 2rem;
+}
+
+.cta-panel .cta-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.cta-panel .cta-btn.primary {
+    background: var(--falkor-black);
+    color: var(--falkor-yellow);
+    box-shadow: none;
+}
+
+.cta-panel .cta-btn.secondary {
+    background: transparent;
+    color: var(--falkor-black);
+    border: 1px solid rgba(0, 0, 0, 0.35);
+    box-shadow: none;
+}
+
+.trust-line {
+    text-transform: uppercase;
+    font-size: 0.92rem;
+    letter-spacing: 0.08em;
+}
+
+@media (max-width: 768px) {
+    .hero-ctas {
+        flex-direction: column;
+    }
+
+    .value-card {
+        padding: 2rem;
+    }
+}

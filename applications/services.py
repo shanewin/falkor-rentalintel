@@ -66,21 +66,10 @@ class ApplicationDataService:
             'school_address': applicant.school_address,
             'school_phone': applicant.school_phone,
             
-            # Employment fields
-            'company_name': applicant.company_name,
-            'position': applicant.position,
-            'annual_income': applicant.annual_income,
-            'supervisor_name': applicant.supervisor_name,
-            'supervisor_email': applicant.supervisor_email,
-            
             # Emergency Contact
             'emergency_contact_name': applicant.emergency_contact_name,
             'emergency_contact_relationship': applicant.emergency_contact_relationship,
             'emergency_contact_phone': applicant.emergency_contact_phone,
-            
-            # Additional housing fields
-            'length_at_current_address': applicant.length_at_current_address,
-            'reason_for_moving': applicant.reason_for_moving,
         }
         
         # Get data from most recent completed application if available
@@ -335,27 +324,35 @@ class ProfileProgressService:
         if not broker_profile:
             return 0, []
         
-        # Define required fields and their weights for brokers
+        # All form fields counted equally (19 fields total)
         required_fields = {
+            'Profile Photo': [
+                ('profile_photo', 1),
+            ],
             'Personal Information': [
-                ('first_name', 2),
-                ('last_name', 2),
-                ('phone_number', 1),
+                ('first_name', 1),
+                ('last_name', 1),
+                ('mobile_phone', 1),
+                ('professional_email', 1),
             ],
             'Business Information': [
-                ('business_name', 2),
-                ('business_address_1', 2),
+                ('business_name', 1),
+                ('business_address_1', 1),
                 ('business_city', 1),
                 ('business_state', 1),
                 ('business_zip', 1),
             ],
             'License Information': [
-                ('broker_license_number', 3),
-                ('license_state', 2),
+                ('broker_license_number', 1),
+                ('license_state', 1),
+                ('license_expiration', 1),
                 ('years_experience', 1),
             ],
             'Professional Details': [
-                ('position', 1),
+                ('job_title', 1),
+                ('bio', 1),
+                ('linkedin_url', 1),
+                ('website_url', 1),
                 ('preferred_contact_method', 1),
             ],
         }
@@ -451,7 +448,7 @@ class ProfileProgressService:
                 # Handle different field types
                 if isinstance(value, (list, dict)) and value:
                     completed_weight += weight
-                elif value and str(value).strip():
+                elif value is not None and str(value).strip():
                     completed_weight += weight
                 else:
                     section_missing.append(field_name.replace('_', ' ').title())

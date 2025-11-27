@@ -23,63 +23,103 @@
         <!-- Property Hero Section -->
         {% if application.apartment %}
         <div class="property-hero">
-            {% if application.apartment.building.images.first %}
-                <div class="property-hero-image" style="background-image: url('{{ application.apartment.building.images.first.large_url }}');">
-                    <div class="property-hero-overlay">
-                        <h1 class="property-hero-title">{{ application.apartment.building.name }}</h1>
-                        <p class="property-hero-subtitle">
-                            <i class="fas fa-map-marker-alt me-2"></i>
-                            {{ application.apartment.building.street_address_1 }}, {{ application.apartment.building.city }}
-                            {% if application.apartment.building.neighborhood %}
-                                • {{ application.apartment.building.neighborhood.name }}
-                            {% endif %}
-                        </p>
-                    </div>
+            <!-- Image Carousel -->
+            <div id="propertyCarousel" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-inner">
+                    {% comment %}Track slide counter across both image sets{% endcomment %}
+                    {% if application.apartment.images.exists or application.apartment.building.images.exists %}
+                        {% comment %}Apartment images first{% endcomment %}
+                        {% for image in application.apartment.images.all %}
+                            <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                                <div class="property-hero-image" style="background-image: url('{{ image.large_url }}');">
+                                    {% if forloop.first %}
+                                        <div class="property-hero-overlay">
+                                            <h1 class="property-hero-title">{{ application.apartment.building.name }}</h1>
+                                            <p class="property-hero-subtitle">
+                                                <i class="fas fa-map-marker-alt me-2"></i>
+                                                {{ application.apartment.building.street_address_1 }}, {{ application.apartment.building.city }}
+                                                {% if application.apartment.building.neighborhood %}
+                                                    • {{ application.apartment.building.neighborhood.name }}
+                                                {% endif %}
+                                            </p>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                        
+                        {% comment %}Building images second{% endcomment %}
+                        {% for image in application.apartment.building.images.all %}
+                            <div class="carousel-item {% if not application.apartment.images.exists and forloop.first %}active{% endif %}">
+                                <div class="property-hero-image" style="background-image: url('{{ image.large_url }}');">
+                                    {% if not application.apartment.images.exists and forloop.first %}
+                                        <div class="property-hero-overlay">
+                                            <h1 class="property-hero-title">{{ application.apartment.building.name }}</h1>
+                                            <p class="property-hero-subtitle">
+                                                <i class="fas fa-map-marker-alt me-2"></i>
+                                                {{ application.apartment.building.street_address_1 }}, {{ application.apartment.building.city }}
+                                                {% if application.apartment.building.neighborhood %}
+                                                    • {{ application.apartment.building.neighborhood.name }}
+                                                {% endif %}
+                                            </p>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="carousel-item active">
+                            <div class="property-hero-image" style="background: linear-gradient(135deg, #000814 0%, #1a1a1a 100%);">
+                                <div class="property-hero-overlay">
+                                    <h1 class="property-hero-title">{{ application.apartment.building.name }}</h1>
+                                    <p class="property-hero-subtitle">
+                                        <i class="fas fa-map-marker-alt me-2"></i>
+                                        {{ application.apartment.building.street_address_1 }}, {{ application.apartment.building.city }}
+                                        {% if application.apartment.building.neighborhood %}
+                                            • {{ application.apartment.building.neighborhood.name }}
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
                 </div>
-            {% else %}
-                <div class="property-hero-image" style="background: linear-gradient(135deg, #000814 0%, #1a1a1a 100%);">
-                    <div class="property-hero-overlay">
-                        <h1 class="property-hero-title">{{ application.apartment.building.name }}</h1>
-                        <p class="property-hero-subtitle">
-                            <i class="fas fa-map-marker-alt me-2"></i>
-                            {{ application.apartment.building.street_address_1 }}, {{ application.apartment.building.city }}
-                            {% if application.apartment.building.neighborhood %}
-                                • {{ application.apartment.building.neighborhood.name }}
-                            {% endif %}
-                        </p>
-                    </div>
-                </div>
-            {% endif %}
+                
+                {% comment %}Carousel controls - only show if there are multiple images{% endcomment %}
+                {% if application.apartment.images.count|add:application.apartment.building.images.count > 1 %}
+                    <button class="carousel-control-prev" type="button" data-bs-target="#propertyCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Previous</span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#propertyCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Next</span>
+                    </button>
+                {% endif %}
+            </div>
             
             <!-- Property Quick Details -->
             <div class="p-4">
                 <div class="row">
-                    <div class="col-md-3 text-center mb-3">
+                    <div class="col-md-4 text-center mb-3">
                         <div class="d-flex flex-column align-items-center">
                             <i class="fas fa-dollar-sign fa-2x text-warning mb-2"></i>
                             <h5 class="mb-1">${{ application.apartment.rent_price|floatformat:0 }}</h5>
                             <small class="text-muted">Monthly Rent</small>
                         </div>
                     </div>
-                    <div class="col-md-3 text-center mb-3">
+                    <div class="col-md-4 text-center mb-3">
                         <div class="d-flex flex-column align-items-center">
                             <i class="fas fa-bed fa-2x text-warning mb-2"></i>
                             <h5 class="mb-1">{{ application.apartment.bedrooms|default:"Studio" }}</h5>
                             <small class="text-muted">{% if application.apartment.bedrooms %}Bedroom{{ application.apartment.bedrooms|pluralize }}{% else %}Studio{% endif %}</small>
                         </div>
                     </div>
-                    <div class="col-md-3 text-center mb-3">
+                    <div class="col-md-4 text-center mb-3">
                         <div class="d-flex flex-column align-items-center">
                             <i class="fas fa-bath fa-2x text-warning mb-2"></i>
                             <h5 class="mb-1">{{ application.apartment.bathrooms|default:"1" }}</h5>
                             <small class="text-muted">Bathroom{{ application.apartment.bathrooms|pluralize }}</small>
-                        </div>
-                    </div>
-                    <div class="col-md-3 text-center mb-3">
-                        <div class="d-flex flex-column align-items-center">
-                            <i class="fas fa-expand-arrows-alt fa-2x text-warning mb-2"></i>
-                            <h5 class="mb-1">{{ application.apartment.square_feet|default:"--" }}</h5>
-                            <small class="text-muted">Sq Ft</small>
                         </div>
                     </div>
                 </div>
@@ -258,20 +298,25 @@
     <!-- Property Details Sidebar -->
     <div class="col-lg-4">
         {% if application.apartment %}
-        <!-- Property Highlights -->
+        <!-- Property Description -->
         <div class="property-sidebar">
-            <h5><i class="fas fa-star me-2"></i>Property Highlights</h5>
+            <h5><i class="fas fa-file-alt me-2"></i>Property Description</h5>
             
             {% if application.apartment.description %}
             <div class="mb-3">
-                <h6 class="text-muted mb-2">DESCRIPTION</h6>
-                <p class="mb-0">{{ application.apartment.description }}</p>
+                <div class="property-description-container">
+                    <div class="property-description-text" id="propertyDescription">
+                        {{ application.apartment.description|safe }}
+                    </div>
+                    <button class="btn btn-link btn-sm p-0 mt-2" id="showMoreBtn" onclick="toggleDescription()">
+                        <i class="fas fa-chevron-down me-1"></i>Show More
+                    </button>
+                </div>
             </div>
             {% endif %}
             
-            <!-- Lease Terms -->
+            <!-- Lease Terms info without heading -->
             <div class="mb-3">
-                <h6 class="text-muted mb-2">LEASE TERMS</h6>
                 {% if application.apartment.lease_term %}
                 <p class="mb-1">
                     <i class="fas fa-calendar-alt me-2"></i>
@@ -293,11 +338,21 @@
             </div>
         </div>
 
-        <!-- Building Amenities -->
-        {% if application.apartment.building.amenities.exists %}
+        <!-- Amenities -->
+        {% if application.apartment.building.amenities.exists or application.apartment.amenities.exists %}
         <div class="property-sidebar">
-            <h5><i class="fas fa-concierge-bell me-2"></i>Building Amenities</h5>
+            <h5><i class="fas fa-concierge-bell me-2"></i>Amenities</h5>
+            
+            {% comment %}Building amenities{% endcomment %}
             {% for amenity in application.apartment.building.amenities.all %}
+            <div class="amenity-item">
+                <i class="fas {{ amenity.icon|default:'fa-check' }} amenity-icon"></i>
+                <span>{{ amenity.name }}</span>
+            </div>
+            {% endfor %}
+            
+            {% comment %}Apartment/Unit amenities{% endcomment %}
+            {% for amenity in application.apartment.amenities.all %}
             <div class="amenity-item">
                 <i class="fas {{ amenity.icon|default:'fa-check' }} amenity-icon"></i>
                 <span>{{ amenity.name }}</span>
@@ -408,5 +463,106 @@
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
+    
+    /* Property Description Show More/Less */
+    .property-description-text {
+        max-height: 150px;
+        overflow: hidden;
+        position: relative;
+        transition: max-height 0.3s ease;
+    }
+    
+    .property-description-text.expanded {
+        max-height: none;
+    }
+    
+    .property-description-text:not(.expanded)::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 50px;
+        background: linear-gradient(to bottom, transparent, white);
+    }
+    
+    #showMoreBtn {
+        color: var(--brand-yellow);
+        text-decoration: none;
+        font-weight: 500;
+    }
+    
+    #showMoreBtn:hover {
+        color: #ffb302;
+    }
+    
+    /* Carousel styling */
+    .carousel-control-prev,
+    .carousel-control-next {
+        width: 5%;
+        opacity: 0.8;
+    }
+    
+    .carousel-control-prev:hover,
+    .carousel-control-next:hover {
+        opacity: 1;
+    }
+    
+    .carousel-control-prev-icon,
+    .carousel-control-next-icon {
+        background-image: none;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
+    }
+    
+    .carousel-control-prev-icon::after {
+        content: '‹';
+        font-size: 55px;
+        color: white;
+        font-weight: 100;
+    }
+    
+    .carousel-control-next-icon::after {
+        content: '›';
+        font-size: 55px;
+        color: white;
+        font-weight: 100;
+    }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleDescription() {
+    const description = document.getElementById('propertyDescription');
+    const button = document.getElementById('showMoreBtn');
+    
+    // Check if the description needs show more functionality
+    if (description.scrollHeight <= 150 && !description.classList.contains('expanded')) {
+        // Hide button if content is short enough
+        button.style.display = 'none';
+        return;
+    }
+    
+    if (description.classList.contains('expanded')) {
+        description.classList.remove('expanded');
+        button.innerHTML = '<i class="fas fa-chevron-down me-1"></i>Show More';
+    } else {
+        description.classList.add('expanded');
+        button.innerHTML = '<i class="fas fa-chevron-up me-1"></i>Show Less';
+    }
+}
+
+// On page load, check if Show More button is needed
+document.addEventListener('DOMContentLoaded', function() {
+    const description = document.getElementById('propertyDescription');
+    const button = document.getElementById('showMoreBtn');
+    
+    if (description && button) {
+        // If content doesn't overflow, hide the button
+        if (description.scrollHeight <= 150) {
+            button.style.display = 'none';
+        }
+    }
+});
+</script>
 {% endblock %}

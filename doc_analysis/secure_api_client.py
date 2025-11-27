@@ -12,6 +12,7 @@ import re
 from typing import Dict, List, Tuple, Optional
 from datetime import datetime, timedelta
 from .redaction_utils import DocumentRedactor, check_for_remaining_sensitive_data
+from .utils import analyze_bank_statement
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -234,21 +235,22 @@ class SecureAPIClient:
             if critical_issues:
                 raise SecurityError(f"Critical PII detected after redaction: {critical_issues}")
         
-        # DEBUG: Print what we're actually sending to external API
-        print("=" * 80)
-        print("🔍 SECURITY AUDIT: Data being sent to external API")
-        print("=" * 80)
-        print(f"Original text length: {len(text)} characters")
-        print(f"Redacted text length: {len(redacted_text)} characters")
-        print(f"Redactions applied: {len(redaction_map)}")
-        print("\n📤 ACTUAL DATA BEING SENT TO ANTHROPIC:")
-        print("-" * 50)
-        print(redacted_text)
-        print("-" * 50)
-        print(f"\n🔐 REDACTION MAPPING (what gets restored):")
-        for token, original in redaction_map.items():
-            print(f"  {token} → {original}")
-        print("=" * 80)
+        # DEBUG logging gated by env flag to avoid leaking content in production
+        if os.getenv("DOC_ANALYSIS_DEBUG") == "1":
+            print("=" * 80)
+            print("🔍 SECURITY AUDIT: Data being sent to external API")
+            print("=" * 80)
+            print(f"Original text length: {len(text)} characters")
+            print(f"Redacted text length: {len(redacted_text)} characters")
+            print(f"Redactions applied: {len(redaction_map)}")
+            print("\n📤 ACTUAL DATA BEING SENT TO ANTHROPIC:")
+            print("-" * 50)
+            print("[REDACTED TEXT HIDDEN - DEBUG MODE ONLY SHOWS LENGTH]")
+            print("-" * 50)
+            print(f"\n🔐 REDACTION MAPPING (what gets restored):")
+            for token, original in redaction_map.items():
+                print(f"  {token} → [HIDDEN]")
+            print("=" * 80)
         
         # Step 4: Add security headers and minimized prompt
         secure_payload = {
@@ -257,7 +259,7 @@ class SecureAPIClient:
             'session_id': self.session_id,
             'security_level': 'maximum',
             'data_retention': 'zero',  # Request zero retention
-            'prompt': self._get_minimal_prompt()
+            'prompt': self._get_prompt_for(document_type)
         }
         
         security_metadata = {
@@ -265,7 +267,8 @@ class SecureAPIClient:
             'redaction_count': len(redaction_map),
             'original_length': len(text),
             'processed_length': len(redacted_text),
-            'redaction_map': redaction_map
+            'redaction_map': redaction_map,
+            'document_type': document_type
         }
         
         self.create_security_audit_log('payload_prepared', {
@@ -276,8 +279,38 @@ class SecureAPIClient:
         
         return secure_payload, security_metadata
     
-    def _get_minimal_prompt(self) -> str:
-        """Focused prompt for rental application analysis"""
+    def _get_prompt_for(self, document_type: str) -> str:
+        """Return a document-type-specific prompt"""
+        doc_type = (document_type or "").lower()
+
+        if doc_type == "pay stub":
+            return """Analyze this redacted pay stub for rental application. Sensitive data is redacted with tokens like [NAME-abc123-0]. Focus on income verification and completeness. Return JSON:
+{
+    "status": "Complete|Not Complete|Needs Manual Review",
+    "summary": "Brief assessment that includes payer/employer, pay period, and earnings",
+    "reasoning": "Why it is complete/not/not sure",
+    "income_details": "Employer, employee, pay period, gross pay, net pay, deductions/taxes if present",
+    "income_consistency": "Whether income looks regular/recurring; note cadence if visible",
+    "red_flags": "Missing pay period, missing deductions, mismatched names, unusual items"
+}
+
+Rules: Complete = has employer/employee, pay period, gross+net pay, and deductions/taxes. Not Complete = missing 2+ of those. Manual Review = unclear/illegible. Always keep redaction tokens in the response."""
+
+        if doc_type == "tax return":
+            return """Analyze this redacted tax return (e.g., Form 1040) for rental application. Sensitive data is redacted with tokens like [NAME-abc123-0]. Focus on completeness and income/tax picture. Return JSON:
+{
+    "status": "Complete|Not Complete|Needs Manual Review",
+    "summary": "Brief assessment that includes form type/year and whether filer/spouse are present",
+    "reasoning": "Why it is complete/not/not sure",
+    "income_summary": "AGI and taxable income if present",
+    "tax_obligations": "Taxes owed/paid/refund if present",
+    "completeness": "Signatures present, key schedules referenced (if visible)",
+    "red_flags": "Missing signatures, missing year, missing income lines, SSN placeholders, anomalies"
+}
+
+Rules: Complete = has form identifier/year, filer info, income lines (AGI/taxable), and signatures. Not Complete = missing 2+ of those. Manual Review = unclear/illegible. Always keep redaction tokens in the response."""
+
+        # Default to bank statement prompt
         return """Analyze this redacted bank statement for rental application. Names and sensitive data are redacted with tokens like [NAME-abc123-0]. Focus on financial stability and income verification. Return JSON:
 {
     "status": "Complete|Not Complete|Needs Manual Review",
@@ -287,7 +320,7 @@ class SecureAPIClient:
     "risk_factors": "Any red flags like overdrafts, irregular income, or financial instability"
 }
 
-Requirements: Complete = has account info, bank, balance, income verification. Not Complete = missing critical rental assessment data. Manual Review = insufficient data or concerning patterns. Always include redaction tokens in your response so they can be restored later."""
+Rules: Complete = has account info, bank, balance, income verification. Not Complete = missing critical rental assessment data. Manual Review = insufficient data or concerning patterns. Always include redaction tokens in your response so they can be restored later."""
     
     def call_anthropic_api(self, payload: Dict, metadata: Dict) -> Dict:
         """
@@ -327,16 +360,17 @@ Requirements: Complete = has account info, bank, balance, income verification. N
                 'model': 'claude-3-5-sonnet'
             })
             
-            # DEBUG: Show exactly what we're sending to Anthropic API
-            print("\n🌐 API REQUEST TO ANTHROPIC:")
-            print("-" * 40)
-            print(f"URL: https://api.anthropic.com/v1/messages")
-            print(f"Model: {api_payload['model']}")
-            print(f"Max tokens: {api_payload['max_tokens']}")
-            print(f"Message content length: {len(api_payload['messages'][0]['content'])} characters")
-            print("First 200 chars of message:")
-            print(api_payload['messages'][0]['content'][:200] + "...")
-            print("-" * 40)
+            # DEBUG: Show exactly what we're sending to Anthropic API (gated)
+            if os.getenv("DOC_ANALYSIS_DEBUG") == "1":
+                print("\n🌐 API REQUEST TO ANTHROPIC:")
+                print("-" * 40)
+                print(f"URL: https://api.anthropic.com/v1/messages")
+                print(f"Model: {api_payload['model']}")
+                print(f"Max tokens: {api_payload['max_tokens']}")
+                print(f"Message content length: {len(api_payload['messages'][0]['content'])} characters")
+                print("First 200 chars of message:")
+                print("[CONTENT HIDDEN IN DEBUG]")
+                print("-" * 40)
             
             response = requests.post(
                 'https://api.anthropic.com/v1/messages',
@@ -351,14 +385,15 @@ Requirements: Complete = has account info, bank, balance, income verification. N
             # Extract and validate response
             ai_response = result['content'][0]['text']
             
-            # DEBUG: Show API response
-            print("\n📥 API RESPONSE FROM ANTHROPIC:")
-            print("-" * 40)
-            print(f"Response length: {len(ai_response)} characters")
-            print(f"Tokens used: {result.get('usage', {})}")
-            print("AI Response:")
-            print(ai_response)
-            print("-" * 40)
+            # DEBUG: Show API response (gated)
+            if os.getenv("DOC_ANALYSIS_DEBUG") == "1":
+                print("\n📥 API RESPONSE FROM ANTHROPIC:")
+                print("-" * 40)
+                print(f"Response length: {len(ai_response)} characters")
+                print(f"Tokens used: {result.get('usage', {})}")
+                print("AI Response:")
+                print("[RESPONSE CONTENT HIDDEN IN DEBUG]")
+                print("-" * 40)
             
             self.create_security_audit_log('api_call_success', {
                 'document_hash': metadata['document_hash'],  
@@ -408,19 +443,38 @@ Requirements: Complete = has account info, bank, balance, income verification. N
                 'api': 'openai',
                 'model': 'gpt-4o-mini'
             })
-            
+
             response = requests.post(
                 'https://api.openai.com/v1/chat/completions',
                 headers=headers,
                 json=api_payload,
                 timeout=30
             )
-            
+
             response.raise_for_status()
             result = response.json()
-            
+
             ai_response = result['choices'][0]['message']['content']
             
+            # DEBUG: show API request/response (gated)
+            if os.getenv("DOC_ANALYSIS_DEBUG") == "1":
+                print("\n🌐 API REQUEST TO OPENAI:")
+                print("-" * 40)
+                print(f"URL: https://api.openai.com/v1/chat/completions")
+                print(f"Model: {api_payload['model']}")
+                print(f"Max tokens: {api_payload['max_tokens']}")
+                print(f"Message content length: {len(api_payload['messages'][0]['content'])} characters")
+                print("First 200 chars of message:")
+                print("[CONTENT HIDDEN IN DEBUG]")
+                print("-" * 40)
+                print("\n📥 API RESPONSE FROM OPENAI:")
+                print("-" * 40)
+                print(f"Response length: {len(ai_response)} characters")
+                print(f"Tokens used: {result.get('usage', {})}")
+                print("AI Response:")
+                print("[RESPONSE CONTENT HIDDEN IN DEBUG]")
+                print("-" * 40)
+
             self.create_security_audit_log('api_call_success', {
                 'document_hash': metadata['document_hash'],
                 'response_length': len(ai_response),
@@ -447,19 +501,21 @@ Requirements: Complete = has account info, bank, balance, income verification. N
             else:
                 response_data = json.loads(ai_response)
             
+            document_type = (metadata.get('document_type') or "").lower()
+            response_data = self._normalize_response(response_data, document_type)
+
             # Restore any redacted information in the summary
             if 'summary' in response_data and metadata.get('redaction_map'):
                 original_summary = response_data['summary']
                 response_data['summary'] = self.redactor.restore_redacted(response_data['summary'])
                 
-                # DEBUG: Show restoration process
-                print("\n🔄 PII RESTORATION:")
-                print("-" * 40)
-                print("Before restoration (what AI returned):")
-                print(original_summary)
-                print("\nAfter restoration (what user sees):")
-                print(response_data['summary'])
-                print("-" * 40)
+                # DEBUG: Show restoration process (gated, content hidden)
+                if os.getenv("DOC_ANALYSIS_DEBUG") == "1":
+                    print("\n🔄 PII RESTORATION:")
+                    print("-" * 40)
+                    print("Before restoration (what AI returned): [HIDDEN]")
+                    print("After restoration (what user sees): [HIDDEN]")
+                    print("-" * 40)
             
             # Add security metadata
             response_data['security_metadata'] = {
@@ -487,6 +543,17 @@ Requirements: Complete = has account info, bank, balance, income verification. N
         """
         Main secure analysis function
         """
+        if os.getenv("DOC_ANALYSIS_SKIP_EXTERNAL") == "1":
+            # Skip external calls in test/safe mode and force manual review
+            heuristic = analyze_bank_statement(text) if document_type == "Bank Statement" else None
+            reasoning = "External analysis disabled via DOC_ANALYSIS_SKIP_EXTERNAL"
+            if heuristic and isinstance(heuristic, dict):
+                reasoning = f"{reasoning}. Heuristic note: {heuristic.get('summary') or heuristic.get('reasoning')}"
+            return {
+                "status": "Needs Manual Review",
+                "summary": f"{document_type} received (external analysis skipped)",
+                "reasoning": reasoning
+            }
         try:
             # Step 1: Assess sensitivity
             sensitivity = self.assess_document_sensitivity(text)
@@ -528,16 +595,57 @@ Requirements: Complete = has account info, bank, balance, income verification. N
                 'error': str(e)
             })
             
-            # Secure fallback
+            # Secure fallback: never mark complete, request manual review
             return {
                 "status": "Needs Manual Review",
-                "summary": "Document received but external analysis failed. Manual review required.",
-                "reasoning": f"Secure analysis pipeline error: {str(e)}",
+                "summary": "Document received. External LLM analysis failed or was skipped.",
+                "reasoning": f"Manual review required: {str(e)}",
                 "security_metadata": {
                     "processing_error": True,
                     "error_type": type(e).__name__
                 }
             }
+
+    def _normalize_response(self, response_data: Dict, document_type: str) -> Dict:
+        """
+        Enforce a consistent schema per document type and add defaults.
+        """
+        allowed_status = {"complete", "not complete", "needs manual review"}
+
+        status_val = str(response_data.get("status", "")).strip()
+        if status_val.lower() not in allowed_status:
+            response_data["status"] = "Needs Manual Review"
+            response_data.setdefault("reasoning", "Status not provided or unrecognized by model")
+        else:
+            # Normalize capitalization
+            if status_val.lower() == "complete":
+                response_data["status"] = "Complete"
+            elif status_val.lower() == "not complete":
+                response_data["status"] = "Not Complete"
+            else:
+                response_data["status"] = "Needs Manual Review"
+
+        # Ensure core fields
+        response_data.setdefault("summary", "Summary not provided by model")
+        response_data.setdefault("reasoning", "Reasoning not provided by model")
+
+        doc_type = document_type.lower()
+
+        if doc_type == "pay stub":
+            response_data.setdefault("income_details", "Income details not provided by model")
+            response_data.setdefault("income_consistency", "Income consistency not provided by model")
+            response_data.setdefault("red_flags", "Red flags not provided by model")
+        elif doc_type == "tax return":
+            response_data.setdefault("income_summary", "Income summary not provided by model")
+            response_data.setdefault("tax_obligations", "Tax obligations not provided by model")
+            response_data.setdefault("completeness", "Completeness not provided by model")
+            response_data.setdefault("red_flags", "Red flags not provided by model")
+        else:
+            # Bank statement / default fields
+            response_data.setdefault("income_analysis", "Income analysis not provided by model")
+            response_data.setdefault("risk_factors", "Risk factors not provided by model")
+
+        return response_data
 
 
 class SecurityError(Exception):
@@ -552,3 +660,19 @@ def analyze_bank_statement_secure(text: str, preferred_api: str = 'anthropic') -
     """
     client = SecureAPIClient()
     return client.analyze_document_securely(text, "Bank Statement", preferred_api)
+
+
+def analyze_pay_stub_secure(text: str, preferred_api: str = 'anthropic') -> Dict:
+    """
+    Secure analysis for pay stubs
+    """
+    client = SecureAPIClient()
+    return client.analyze_document_securely(text, "Pay Stub", preferred_api)
+
+
+def analyze_tax_return_secure(text: str, preferred_api: str = 'anthropic') -> Dict:
+    """
+    Secure analysis for tax returns
+    """
+    client = SecureAPIClient()
+    return client.analyze_document_securely(text, "Tax Return", preferred_api)

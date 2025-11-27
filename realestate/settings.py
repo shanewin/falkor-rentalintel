@@ -19,7 +19,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',  # Required for Sites framework
-    'home',
+    'django.contrib.humanize',  # For number formatting in templates
     'applications',
     'buildings',
     'applicants',
@@ -70,6 +70,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Activity tracking middleware - must be after AuthenticationMiddleware
+    'applicants.middleware.ActivityTrackingMiddleware',
 ]
 
 ROOT_URLCONF = 'realestate.urls'
@@ -79,7 +81,6 @@ TEMPLATES = [
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
             BASE_DIR / 'templates',
-            BASE_DIR / 'home/templates',
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -158,10 +159,10 @@ cloudinary.config(
 
 STATIC_URL = '/static/'
 
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = BASE_DIR / 'static_root'
 
 STATICFILES_DIRS = [
-    BASE_DIR / 'home/static',
+    BASE_DIR / 'staticfiles',  # ensure collected assets are served in dev
     BASE_DIR / 'apartments/static/apartments',
     BASE_DIR / 'applicants/static/applicants',
     BASE_DIR / 'buildings/static/buildings',
@@ -190,9 +191,6 @@ LOGOUT_REDIRECT_URL = '/users/login/'
 # Session settings
 SESSION_COOKIE_AGE = 86400 * 7  # 1 week
 SESSION_SAVE_EVERY_REQUEST = True
-
-# Site URL for development
-SITE_URL = 'http://localhost:8847'  # Development URL
 
 # Field Encryption Settings
 FIELD_ENCRYPTION_KEY = config('FIELD_ENCRYPTION_KEY')
@@ -244,6 +242,9 @@ TWILIO_FROM_PHONE = config('TWILIO_FROM_PHONE', default='')
 # Site URL for generating links in emails/SMS
 SITE_URL = config('SITE_URL', default='http://localhost:8000')
 
+# Mapbox (for map-based apartment search)
+MAPBOX_API_TOKEN = config('MAPBOX_API_TOKEN', default='')
+
 # Celery Configuration
 CELERY_BROKER_URL = config('REDIS_URL', default='redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = config('REDIS_URL', default='redis://localhost:6379/0')
@@ -255,4 +256,19 @@ CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
 CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes
 
+# Sola Payment Gateway Settings
+SOLA_API_KEY = config('SOLA_API_KEY', default='')
+SOLA_SANDBOX_MODE = config('SOLA_SANDBOX_MODE', default=True, cast=bool)
 
+# Note: Sola uses the same URL for sandbox and production
+# The API key determines which environment is used
+SOLA_API_URL = 'https://x1.cardknox.com/gateway'
+SOLA_TIMEOUT = 30  # Request timeout in seconds
+
+# Activity Tracking Settings
+ACTIVITY_TRACKING_ASYNC = config('ACTIVITY_TRACKING_ASYNC', default=True, cast=bool)  # Use async by default
+ACTIVITY_TRACKING_TIMEOUT = config('ACTIVITY_TRACKING_TIMEOUT', default=5.0, cast=float)  # Async timeout in seconds
+ACTIVITY_TRACKING_CLEANUP_DAYS = config('ACTIVITY_TRACKING_CLEANUP_DAYS', default=90, cast=int)
+
+# Suppress known CKEditor 4 deprecation warning from django-ckeditor
+SILENCED_SYSTEM_CHECKS = ['ckeditor.W001']

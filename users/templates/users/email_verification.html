@@ -1,0 +1,395 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Email Verification - DoorWay{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
+<style>
+    .verification-container {
+        max-width: 500px;
+        margin: 60px auto;
+        padding: 30px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+    .verification-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .verification-header img {
+        max-width: 180px;
+        margin-bottom: 20px;
+    }
+    .verification-header h2 {
+        color: #333;
+        font-weight: 600;
+    }
+    .email-display {
+        text-align: center;
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+    }
+    .email-display .email {
+        font-weight: 600;
+        color: #007bff;
+        font-size: 1.1rem;
+    }
+    .verification-code-input {
+        text-align: center;
+        font-size: 2rem;
+        letter-spacing: 8px;
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        width: 100%;
+        transition: border-color 0.3s;
+    }
+    .verification-code-input:focus {
+        border-color: #007bff;
+        outline: none;
+    }
+    .verification-code-input.error {
+        border-color: #dc3545;
+        animation: shake 0.5s;
+    }
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    .timer-container {
+        text-align: center;
+        margin: 20px 0;
+    }
+    .timer {
+        display: inline-block;
+        padding: 8px 16px;
+        background-color: #e9ecef;
+        border-radius: 20px;
+        font-weight: 500;
+    }
+    .timer.expiring {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    .timer.expired {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    .resend-container {
+        text-align: center;
+        margin-top: 20px;
+    }
+    .resend-link {
+        color: #6c757d;
+        text-decoration: none;
+        font-size: 0.9rem;
+    }
+    .resend-link:hover {
+        color: #007bff;
+        text-decoration: underline;
+    }
+    .resend-link.disabled {
+        color: #adb5bd;
+        cursor: not-allowed;
+    }
+    .help-text {
+        text-align: center;
+        color: #6c757d;
+        margin-top: 10px;
+        font-size: 0.9rem;
+    }
+    .registration-progress {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 30px;
+    }
+    .progress-step {
+        display: flex;
+        align-items: center;
+        color: #6c757d;
+    }
+    .progress-step.active {
+        color: #007bff;
+    }
+    .progress-step.completed {
+        color: #28a745;
+    }
+    .step-circle {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        border: 2px solid currentColor;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-right: 10px;
+    }
+    .step-connector {
+        width: 50px;
+        height: 2px;
+        background-color: currentColor;
+        margin: 0 10px;
+    }
+    .success-message {
+        text-align: center;
+        color: #28a745;
+        margin-top: 20px;
+        display: none;
+    }
+    .success-message.show {
+        display: block;
+        animation: fadeIn 0.5s;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const codeInput = document.getElementById('id_verification_code');
+    const timerElement = document.getElementById('timer');
+    const resendLink = document.getElementById('resend-link');
+    const form = document.getElementById('verification-form');
+    let isSubmitting = false;
+    
+    // Auto-focus on code input
+    if (codeInput) {
+        codeInput.focus();
+        
+        // Auto-submit when 6 digits are entered
+        codeInput.addEventListener('input', function(e) {
+            // Remove any non-digit characters
+            e.target.value = e.target.value.replace(/\D/g, '');
+            
+            // Auto-submit when 6 digits are entered
+            if (e.target.value.length === 6 && !isSubmitting) {
+                // isSubmitting = true;
+                // form.submit();
+            }
+                        
+            // Remove error state on new input
+            e.target.classList.remove('error');
+        });
+        
+        // Handle paste events
+        codeInput.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+            const cleanedText = pastedText.replace(/\D/g, '').substring(0, 6);
+            e.target.value = cleanedText;
+            
+            if (cleanedText.length === 6 && !isSubmitting) {
+                // isSubmitting = true;
+                // form.submit();
+            }
+        });
+    }
+    
+    // Timer countdown
+    let timeRemaining = 600; // 10 minutes in seconds
+    const startTime = Date.now();
+    
+    function updateTimer() {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        timeRemaining = Math.max(0, 600 - elapsed);
+        
+        const minutes = Math.floor(timeRemaining / 60);
+        const seconds = timeRemaining % 60;
+        
+        if (timerElement) {
+            timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Update timer appearance based on time remaining
+            timerElement.classList.remove('expiring', 'expired');
+            if (timeRemaining === 0) {
+                timerElement.classList.add('expired');
+                timerElement.textContent = 'Code expired';
+                if (codeInput) codeInput.disabled = true;
+                if (resendLink) resendLink.classList.remove('disabled');
+            } else if (timeRemaining <= 60) {
+                timerElement.classList.add('expiring');
+            }
+        }
+        
+        if (timeRemaining > 0) {
+            setTimeout(updateTimer, 1000);
+        }
+    }
+    
+    updateTimer();
+    
+    // Resend code functionality
+    let resendCooldown = 60; // 60 seconds cooldown
+    let lastResendTime = 0;
+    
+    if (resendLink) {
+        resendLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            if (this.classList.contains('disabled')) {
+                return;
+            }
+            
+            const now = Date.now();
+            if (now - lastResendTime < resendCooldown * 1000) {
+                const remaining = Math.ceil((resendCooldown * 1000 - (now - lastResendTime)) / 1000);
+                alert(`Please wait ${remaining} seconds before requesting a new code.`);
+                return;
+            }
+            
+            // Disable link temporarily
+            this.classList.add('disabled');
+            this.textContent = 'Sending...';
+            
+            // Make AJAX request to resend code
+            fetch('{% url "resend_email_verification" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    'email': '{{ email }}'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reset timer
+                    timeRemaining = 600;
+                    lastResendTime = Date.now();
+                    
+                    // Show success message
+                    const successMsg = document.createElement('div');
+                    successMsg.className = 'alert alert-success mt-3';
+                    successMsg.textContent = data.message;
+                    this.parentElement.appendChild(successMsg);
+                    
+                    // Remove success message after 5 seconds
+                    setTimeout(() => successMsg.remove(), 5000);
+                    
+                    // Update link text
+                    this.textContent = 'Code sent!';
+                    setTimeout(() => {
+                        this.textContent = 'Resend verification code';
+                        this.classList.remove('disabled');
+                    }, 3000);
+                } else {
+                    alert(data.message || 'Failed to resend code. Please try again.');
+                    this.textContent = 'Resend verification code';
+                    this.classList.remove('disabled');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.');
+                this.textContent = 'Resend verification code';
+                this.classList.remove('disabled');
+            });
+        });
+    }
+    
+    // Show error animation on failed submission
+    if (form) {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('error') === 'invalid_code') {
+            codeInput.classList.add('error');
+        }
+    }
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="verification-container">
+    <div class="verification-header">
+        <img src="{% static 'images/falkor-horizontal-transparent-blacktext.png' %}" alt="DoorWay Logo">
+        <h2>Email Verification</h2>
+    </div>
+    
+    {% if is_registration %}
+    <div class="registration-progress">
+        <div class="progress-step completed">
+            <span class="step-circle">✓</span>
+            <span>Account Info</span>
+        </div>
+        <div class="step-connector"></div>
+        <div class="progress-step active">
+            <span class="step-circle">2</span>
+            <span>Email Verification</span>
+        </div>
+        {% if has_phone %}
+        <div class="step-connector"></div>
+        <div class="progress-step">
+            <span class="step-circle">3</span>
+            <span>Phone Verification</span>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div class="email-display">
+        <p>We've sent a verification code to:</p>
+        <p class="email">{{ email }}</p>
+    </div>
+    
+    <form method="POST" id="verification-form" class="doorway-form">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="{{ form.verification_code.id_for_label }}" class="form-label">
+                Enter 6-Digit Code
+            </label>
+            {{ form.verification_code }}
+            {% if form.verification_code.errors %}
+                <div class="text-danger small mt-1">{{ form.verification_code.errors.0 }}</div>
+            {% endif %}
+            {% if form.verification_code.help_text %}
+                <div class="help-text">{{ form.verification_code.help_text }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="timer-container">
+            <span class="timer" id="timer">10:00</span>
+        </div>
+        
+        <button type="submit" class="btn btn-doorway-primary">
+            <i class="fas fa-check-circle"></i> Verify Email
+        </button>
+    </form>
+    
+    <div class="resend-container">
+        <a href="#" id="resend-link" class="resend-link disabled">
+            Didn't receive the code? Resend verification email
+        </a>
+    </div>
+    
+    <div class="help-text" style="margin-top: 30px;">
+        <p><i class="fas fa-info-circle"></i> Check your spam folder if you don't see the email.</p>
+        {% if is_registration %}
+        <p>Your account will be activated once your email is verified.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

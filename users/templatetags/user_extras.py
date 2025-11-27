@@ -73,6 +73,35 @@ def get_user_avatar_url(user, size=40):
     """
     Get user avatar URL with fallback to default avatar.
     """
+    # Special handling for applicants who use ApplicantPhoto model
+    if user and user.is_authenticated and user.is_applicant:
+        try:
+            applicant_profile = getattr(user, 'applicant_profile', None)
+            if applicant_profile:
+                # Get the first photo from the ApplicantPhoto model
+                first_photo = applicant_profile.photos.first()
+                if first_photo and first_photo.image:
+                    # Use Cloudinary transformations for a round avatar
+                    from cloudinary.utils import cloudinary_url
+                    url, _ = cloudinary_url(
+                        first_photo.image.public_id,
+                        transformation=[
+                            {
+                                "width": size * 2,  # 2x for retina displays
+                                "height": size * 2,
+                                "crop": "fill",
+                                "gravity": "face",
+                                "radius": "max",
+                                "quality": "auto:best",
+                                "fetch_format": "auto"
+                            }
+                        ]
+                    )
+                    return url
+        except Exception as e:
+            pass
+    
+    # For other user types, use the original logic
     profile_info = get_user_profile_info(user)
     
     if profile_info['profile_photo']:

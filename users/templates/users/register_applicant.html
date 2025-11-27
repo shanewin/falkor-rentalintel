@@ -76,6 +76,7 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Phone number formatting
     const phoneInput = document.getElementById('{{ form.phone_number.id_for_label }}');
     
     if (phoneInput) {
@@ -110,6 +111,64 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update placeholder
         phoneInput.placeholder = '(555) 123-4567';
+    }
+    
+    // SMS opt-in logic
+    const smsOptIn = document.getElementById('{{ form.sms_opt_in.id_for_label }}');
+    const verifyPhone = document.getElementById('{{ form.verify_phone.id_for_label }}');
+    const tcpaConsent = document.getElementById('{{ form.tcpa_consent.id_for_label }}');
+    const smsSection = document.querySelector('.sms-preferences-section');
+    
+    // Show/hide SMS section based on phone number
+    if (phoneInput && smsSection) {
+        function toggleSmsSection() {
+            const phoneValue = phoneInput.value.replace(/\D/g, '');
+            if (phoneValue.length >= 10) {
+                smsSection.style.display = 'block';
+            } else {
+                smsSection.style.display = 'none';
+                // Uncheck boxes if phone is removed
+                if (smsOptIn) smsOptIn.checked = false;
+                if (verifyPhone) verifyPhone.checked = false;
+                if (tcpaConsent) tcpaConsent.checked = false;
+            }
+        }
+        
+        phoneInput.addEventListener('input', toggleSmsSection);
+        toggleSmsSection(); // Check initial state
+    }
+    
+    // Auto-check TCPA when SMS opt-in is checked
+    if (smsOptIn && tcpaConsent) {
+        smsOptIn.addEventListener('change', function() {
+            if (this.checked) {
+                // Show TCPA disclaimer prominently
+                const tcpaDiv = tcpaConsent.closest('.form-check');
+                if (tcpaDiv) {
+                    tcpaDiv.style.backgroundColor = '#fff3cd';
+                    setTimeout(() => {
+                        tcpaDiv.style.backgroundColor = '';
+                    }, 2000);
+                }
+            }
+        });
+    }
+    
+    // Recommend verification when phone is entered
+    if (phoneInput && verifyPhone) {
+        phoneInput.addEventListener('blur', function() {
+            const phoneValue = this.value.replace(/\D/g, '');
+            if (phoneValue.length === 10 && !verifyPhone.checked) {
+                // Subtly highlight the verify option
+                const verifyLabel = document.querySelector(`label[for="${verifyPhone.id}"]`);
+                if (verifyLabel) {
+                    verifyLabel.style.color = '#28a745';
+                    setTimeout(() => {
+                        verifyLabel.style.color = '';
+                    }, 3000);
+                }
+            }
+        });
     }
 });
 </script>
@@ -178,11 +237,69 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
         
         <div class="form-group">
-            <label for="{{ form.phone_number.id_for_label }}" class="form-label">Phone Number</label>
+            <label for="{{ form.phone_number.id_for_label }}" class="form-label">
+                Phone Number 
+                <small class="text-muted">(Optional)</small>
+            </label>
             {{ form.phone_number }}
+            {% if form.phone_number.help_text %}
+                <small class="form-text text-muted">{{ form.phone_number.help_text }}</small>
+            {% endif %}
             {% if form.phone_number.errors %}
                 <div class="text-danger small mt-1">{{ form.phone_number.errors.0 }}</div>
             {% endif %}
+        </div>
+        
+        <!-- SMS Opt-in Section -->
+        <div class="sms-preferences-section" style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <h6 class="mb-3">
+                <i class="fas fa-mobile-alt"></i> SMS Notifications
+            </h6>
+            
+            <!-- Verify Phone Checkbox -->
+            <div class="form-check mb-2">
+                {{ form.verify_phone }}
+                <label class="form-check-label" for="{{ form.verify_phone.id_for_label }}">
+                    <strong>{{ form.verify_phone.label }}</strong>
+                    {% if form.verify_phone.help_text %}
+                        <br><small class="text-muted">{{ form.verify_phone.help_text }}</small>
+                    {% endif %}
+                </label>
+                {% if form.verify_phone.errors %}
+                    <div class="text-danger small mt-1">{{ form.verify_phone.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <!-- SMS Updates Checkbox -->
+            <div class="form-check mb-2">
+                {{ form.sms_opt_in }}
+                <label class="form-check-label" for="{{ form.sms_opt_in.id_for_label }}">
+                    {{ form.sms_opt_in.label }}
+                    {% if form.sms_opt_in.help_text %}
+                        <br><small class="text-muted">{{ form.sms_opt_in.help_text }}</small>
+                    {% endif %}
+                </label>
+                {% if form.sms_opt_in.errors %}
+                    <div class="text-danger small mt-1">{{ form.sms_opt_in.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <!-- TCPA Consent -->
+            <div class="form-check" style="border-top: 1px solid #dee2e6; padding-top: 10px; margin-top: 10px;">
+                {{ form.tcpa_consent }}
+                <label class="form-check-label" for="{{ form.tcpa_consent.id_for_label }}">
+                    {{ form.tcpa_consent.label }}
+                </label>
+                {% if form.tcpa_consent.help_text %}
+                    <div class="tcpa-disclaimer" style="background-color: white; padding: 10px; border-left: 3px solid #ffc107; margin-top: 10px; font-size: 0.875rem; color: #6c757d;">
+                        <i class="fas fa-info-circle text-warning"></i>
+                        {{ form.tcpa_consent.help_text|safe }}
+                    </div>
+                {% endif %}
+                {% if form.tcpa_consent.errors %}
+                    <div class="text-danger small mt-1">{{ form.tcpa_consent.errors.0 }}</div>
+                {% endif %}
+            </div>
         </div>
         
         <div class="form-group">

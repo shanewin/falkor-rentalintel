@@ -297,191 +297,135 @@
         </div>
     </div>
 
-    <!-- Smart Insights Section (Only for Brokers and Admins) -->
+    <!-- Smart Insights Section (Only for Brokers, Admins, Staff & Owners) -->
     {% if smart_insights %}
-    <div class="profile-section" style="border-left: 4px solid #17a2b8; background: linear-gradient(135deg, #f8f9fa 0%, #e3f2fd 100%);">
+    <div class="profile-section">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3><i class="fas fa-brain"></i>Smart Insights <span class="badge bg-primary ms-2">AI Analysis</span></h3>
-            <button class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#privacyModal">
+            <h3><i class="fas fa-chart-line"></i>Smart Insights</h3>
+            <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#privacyModal">
                 <i class="fas fa-shield-alt me-2"></i>Privacy Info
             </button>
         </div>
         
         <!-- Privacy Notice -->
-        <div class="alert alert-info alert-dismissible fade show mb-3" role="alert">
+        <div class="alert alert-light border mb-3" role="alert">
             <div class="d-flex align-items-start">
-                <i class="fas fa-lock me-2 mt-1"></i>
-                <div>
-                    <strong>Privacy Protected:</strong> This analysis is performed locally using rule-based algorithms. 
-                    <strong>No personal information is sent to external AI services.</strong> 
-                    All data remains secure within your system.
+                <i class="fas fa-lock me-2 mt-1" style="color: #495057;"></i>
+                <div class="small text-muted">
+                    <strong>Privacy Protected:</strong> Analysis performed locally with rule-based algorithms. 
+                    No personal data sent to external services.
                 </div>
             </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
         
         <!-- Overall Assessment -->
-        <div class="row mb-4">
-            <div class="col-lg-8">
-                <div class="alert alert-{% if smart_insights.overall_score >= 80 %}success{% elif smart_insights.overall_score >= 60 %}warning{% else %}danger{% endif %} mb-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="alert-heading mb-2">
-                                <i class="fas fa-chart-line me-2"></i>Overall Score: {{ smart_insights.overall_score }}/100
-                            </h5>
-                            <p class="mb-0">{{ smart_insights.summary|safe }}</p>
-                        </div>
-                        <div class="text-end">
-                            <div class="badge bg-{% if smart_insights.confidence_level == 'High' %}success{% elif smart_insights.confidence_level == 'Medium' %}warning{% else %}danger{% endif %} fs-6">
-                                {{ smart_insights.confidence_level }} Confidence
-                            </div>
-                        </div>
+        <div class="info-grid mb-4">
+            <div class="info-item">
+                <div class="info-label">Overall Score</div>
+                <div class="info-value">
+                    <span class="{% if smart_insights.overall_score >= 80 %}text-success{% elif smart_insights.overall_score >= 60 %}text-warning{% else %}text-danger{% endif %} fw-bold fs-4">
+                        {{ smart_insights.overall_score }}/100
+                    </span>
+                    <div class="progress mt-2" style="height: 8px;">
+                        <div class="progress-bar bg-{% if smart_insights.overall_score >= 80 %}success{% elif smart_insights.overall_score >= 60 %}warning{% else %}danger{% endif %}" 
+                             style="width: {{ smart_insights.overall_score }}%"></div>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-4">
-                <div class="text-center">
-                    <div class="progress mb-2" style="height: 20px;">
-                        <div class="progress-bar bg-{% if smart_insights.overall_score >= 80 %}success{% elif smart_insights.overall_score >= 60 %}warning{% else %}danger{% endif %}" 
-                             style="width: {{ smart_insights.overall_score }}%">
-                            {{ smart_insights.overall_score }}%
-                        </div>
-                    </div>
-                    <small class="text-muted">Risk Assessment Score</small>
+            <div class="info-item">
+                <div class="info-label">Assessment</div>
+                <div class="info-value">{{ smart_insights.summary|safe }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Data Confidence</div>
+                <div class="info-value">
+                    <span class="badge bg-{% if smart_insights.confidence_level == 'High' %}success{% elif smart_insights.confidence_level == 'Medium' %}warning{% else %}secondary{% endif %}">
+                        {{ smart_insights.confidence_level }}
+                    </span>
                 </div>
             </div>
         </div>
         
         <!-- Detailed Analysis -->
-        <div class="row">
+        <div class="info-grid">
             <!-- Affordability Analysis -->
-            <div class="col-lg-4 mb-3">
-                <div class="card h-100">
-                    <div class="card-header bg-{% if smart_insights.affordability.can_afford %}success{% elif smart_insights.affordability.income_multiple >= 2.5 %}warning{% else %}danger{% endif %} text-white">
-                        <h6 class="mb-0"><i class="fas fa-dollar-sign me-2"></i>Affordability</h6>
-                    </div>
-                    <div class="card-body">
-                        {% if smart_insights.affordability.recommended_rent > 0 %}
-                            <p class="card-text">
-                                <strong>Recommended Rent:</strong><br>
-                                <span class="text-success fs-5">${{ smart_insights.affordability.recommended_rent|floatformat:0 }}/month</span>
-                            </p>
-                        {% endif %}
-                        {% if smart_insights.affordability.income_multiple > 0 %}
-                            <p class="card-text">
-                                <strong>Income Multiple:</strong><br>
-                                <span class="{% if smart_insights.affordability.income_multiple >= 3 %}text-success{% elif smart_insights.affordability.income_multiple >= 2.5 %}text-warning{% else %}text-danger{% endif %}">
-                                    {{ smart_insights.affordability.income_multiple|floatformat:1 }}x
-                                </span>
-                            </p>
-                        {% endif %}
-                        <small class="text-muted">{{ smart_insights.affordability.details }}</small>
-                    </div>
+            <div class="info-item">
+                <div class="info-label">
+                    <i class="fas fa-dollar-sign" style="color: #ffcc00;"></i> Affordability Analysis
+                </div>
+                <div class="info-value">
+                    {% if smart_insights.affordability.recommended_rent > 0 %}
+                        <strong>Recommended Max Rent:</strong> 
+                        <span class="text-success">${{ smart_insights.affordability.recommended_rent|floatformat:0 }}/month</span><br>
+                    {% endif %}
+                    {% if smart_insights.affordability.income_multiple > 0 %}
+                        <strong>Income Multiple:</strong> 
+                        <span class="{% if smart_insights.affordability.income_multiple >= 3 %}text-success{% elif smart_insights.affordability.income_multiple >= 2.5 %}text-warning{% else %}text-danger{% endif %}">
+                            {{ smart_insights.affordability.income_multiple|floatformat:1 }}x
+                        </span><br>
+                    {% endif %}
+                    <small class="text-muted">{{ smart_insights.affordability.details }}</small>
                 </div>
             </div>
             
-            <!-- Employment Analysis -->
-            <div class="col-lg-4 mb-3">
-                <div class="card h-100">
-                    <div class="card-header bg-info text-white">
-                        <h6 class="mb-0"><i class="fas fa-briefcase me-2"></i>Employment Stability</h6>
-                    </div>
-                    <div class="card-body">
-                        <p class="card-text">
-                            <strong>Employment Length:</strong><br>
-                            {{ smart_insights.employment_stability.employment_length }}
-                        </p>
-                        <p class="card-text">
-                            <strong>Job Count:</strong> {{ smart_insights.employment_stability.job_count }}
-                        </p>
-                        {% if smart_insights.employment_stability.strengths %}
-                            <div class="mb-2">
-                                <small class="text-success">
-                                    <i class="fas fa-check-circle me-1"></i>
-                                    {{ smart_insights.employment_stability.strengths.0 }}
-                                </small>
-                            </div>
-                        {% endif %}
-                        {% if smart_insights.employment_stability.concerns %}
-                            <div>
-                                <small class="text-warning">
-                                    <i class="fas fa-exclamation-triangle me-1"></i>
-                                    {{ smart_insights.employment_stability.concerns.0 }}
-                                </small>
-                            </div>
-                        {% endif %}
-                    </div>
+            <!-- Employment Stability -->
+            <div class="info-item">
+                <div class="info-label">
+                    <i class="fas fa-briefcase" style="color: #ffcc00;"></i> Employment Stability
+                </div>
+                <div class="info-value">
+                    <strong>Employment Length:</strong> {{ smart_insights.employment_stability.employment_length }}<br>
+                    <strong>Job Count:</strong> {{ smart_insights.employment_stability.job_count }}<br>
+                    {% if smart_insights.employment_stability.strengths %}
+                        <small class="text-success">
+                            <i class="fas fa-check-circle me-1"></i>{{ smart_insights.employment_stability.strengths.0 }}
+                        </small><br>
+                    {% endif %}
+                    {% if smart_insights.employment_stability.concerns %}
+                        <small class="text-warning">
+                            <i class="fas fa-exclamation-triangle me-1"></i>{{ smart_insights.employment_stability.concerns.0 }}
+                        </small>
+                    {% endif %}
                 </div>
             </div>
             
-            <!-- Rental History Analysis -->
-            <div class="col-lg-4 mb-3">
-                <div class="card h-100">
-                    <div class="card-header bg-secondary text-white">
-                        <h6 class="mb-0"><i class="fas fa-home me-2"></i>Rental History</h6>
-                    </div>
-                    <div class="card-body">
-                        <p class="card-text">
-                            <strong>Previous Addresses:</strong> {{ smart_insights.rental_history.address_count }}
-                        </p>
-                        {% if smart_insights.rental_history.strengths %}
-                            {% for strength in smart_insights.rental_history.strengths %}
-                                <div class="mb-1">
-                                    <small class="text-success">
-                                        <i class="fas fa-check-circle me-1"></i>{{ strength }}
-                                    </small>
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-                        {% if smart_insights.rental_history.concerns %}
-                            {% for concern in smart_insights.rental_history.concerns %}
-                                <div class="mb-1">
-                                    <small class="text-warning">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>{{ concern }}
-                                    </small>
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-                    </div>
+            <!-- Rental History -->
+            <div class="info-item">
+                <div class="info-label">
+                    <i class="fas fa-home" style="color: #ffcc00;"></i> Rental History
                 </div>
-            </div>
-        </div>
-        
-        <!-- Red Flags and Recommendations -->
-        <div class="row">
-            <!-- Red Flags -->
-            {% if smart_insights.red_flags %}
-            <div class="col-lg-6 mb-3">
-                <div class="card border-danger">
-                    <div class="card-header bg-danger text-white">
-                        <h6 class="mb-0"><i class="fas fa-flag me-2"></i>Red Flags ({{ smart_insights.red_flags|length }})</h6>
-                    </div>
-                    <div class="card-body">
-                        {% for flag in smart_insights.red_flags %}
-                            <div class="mb-2">
-                                <small class="text-danger">{{ flag }}</small>
-                            </div>
+                <div class="info-value">
+                    <strong>Previous Addresses:</strong> {{ smart_insights.rental_history.address_count }}<br>
+                    {% if smart_insights.rental_history.strengths %}
+                        {% for strength in smart_insights.rental_history.strengths %}
+                            <small class="text-success">
+                                <i class="fas fa-check-circle me-1"></i>{{ strength }}
+                            </small><br>
                         {% endfor %}
-                    </div>
+                    {% endif %}
+                    {% if smart_insights.rental_history.concerns %}
+                        {% for concern in smart_insights.rental_history.concerns %}
+                            <small class="text-warning">
+                                <i class="fas fa-exclamation-triangle me-1"></i>{{ concern }}
+                            </small><br>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Red Flags (if any) -->
+            {% if smart_insights.red_flags %}
+            <div class="info-item">
+                <div class="info-label">
+                    <i class="fas fa-flag" style="color: #dc3545;"></i> Concerns ({{ smart_insights.red_flags|length }})
+                </div>
+                <div class="info-value">
+                    {% for flag in smart_insights.red_flags %}
+                        <small class="text-danger">{{ flag }}</small><br>
+                    {% endfor %}
                 </div>
             </div>
             {% endif %}
-            
-            <!-- Recommendations -->
-            <div class="col-lg-{% if smart_insights.red_flags %}6{% else %}12{% endif %} mb-3">
-                <div class="card border-success">
-                    <div class="card-header bg-success text-white">
-                        <h6 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Next Steps ({{ smart_insights.recommendations|length }})</h6>
-                    </div>
-                    <div class="card-body">
-                        {% for rec in smart_insights.recommendations %}
-                            <div class="mb-2">
-                                <small class="text-success">{{ rec }}</small>
-                            </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
     {% endif %}
@@ -1024,132 +968,7 @@
         <div class="row">
             {% for match in matching_apartments %}
             <div class="col-lg-6 mb-4">
-                <div class="card h-100 border-0" style="box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                    <!-- Match Score Header -->
-                    <div class="card-header bg-transparent border-bottom-0 d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center">
-                            <div class="match-score me-3">
-                                <div class="circular-progress" style="
-                                    background: conic-gradient(
-                                        #ffcc00 0deg {{ match.match_percentage|floatformat:0 }}%,
-                                        #e9ecef {{ match.match_percentage|floatformat:0 }}% 100%
-                                    );
-                                    width: 60px; height: 60px; border-radius: 50%; 
-                                    display: flex; align-items: center; justify-content: center;
-                                    position: relative;
-                                ">
-                                    <div style="
-                                        background: white; width: 46px; height: 46px; 
-                                        border-radius: 50%; display: flex; align-items: center; 
-                                        justify-content: center; font-weight: 700; color: #2c3e50;
-                                    ">
-                                        {{ match.match_percentage|floatformat:0 }}%
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <h6 class="mb-1 fw-bold">{{ match.apartment.building.name }}</h6>
-                                <small class="text-muted">Unit {{ match.apartment.unit_number }}</small>
-                            </div>
-                        </div>
-                        <span class="badge 
-                            {% if match.match_percentage >= 80 %}bg-success
-                            {% elif match.match_percentage >= 60 %}bg-warning
-                            {% else %}bg-secondary{% endif %}">
-                            {% if match.match_percentage >= 80 %}Excellent Match
-                            {% elif match.match_percentage >= 60 %}Good Match
-                            {% else %}Fair Match{% endif %}
-                        </span>
-                    </div>
-                    
-                    <div class="card-body">
-                        <!-- Apartment Details -->
-                        <div class="row mb-3">
-                            <div class="col-6">
-                                <small class="text-muted">Bedrooms</small>
-                                <div class="fw-semibold">{{ match.apartment.bedrooms|default:"Studio" }}</div>
-                            </div>
-                            <div class="col-6">
-                                <small class="text-muted">Rent</small>
-                                <div class="fw-semibold text-success">${{ match.apartment.rent_price|floatformat:0 }}/mo</div>
-                            </div>
-                        </div>
-                        
-                        <div class="row mb-3">
-                            <div class="col-6">
-                                <small class="text-muted">Bathrooms</small>
-                                <div class="fw-semibold">{{ match.apartment.bathrooms }}</div>
-                            </div>
-                            <div class="col-6">
-                                <small class="text-muted">Available</small>
-                                <div class="fw-semibold">
-                                    {% if match.apartment.status == 'available' %}
-                                        <span class="text-success">Now</span>
-                                    {% else %}
-                                        <span class="text-warning">{{ match.apartment.get_status_display }}</span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Match Breakdown -->
-                        <div class="match-details">
-                            <small class="text-muted d-block mb-2">Match Breakdown:</small>
-                            <div class="progress-stack">
-                                {% if match.match_details.basic_score > 0 %}
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <small>Basic Requirements</small>
-                                    <small class="text-success">{{ match.match_details.basic_score|floatformat:0 }}pts</small>
-                                </div>
-                                {% endif %}
-                                
-                                {% if match.match_details.building_amenities_score > 0 %}
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <small>Building Amenities</small>
-                                    <small class="text-primary">{{ match.match_details.building_amenities_score|floatformat:0 }}pts</small>
-                                </div>
-                                {% endif %}
-                                
-                                {% if match.match_details.apartment_amenities_score > 0 %}
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <small>Apartment Features</small>
-                                    <small class="text-info">{{ match.match_details.apartment_amenities_score|floatformat:0 }}pts</small>
-                                </div>
-                                {% endif %}
-                                
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <small>Within Budget</small>
-                                    {% if match.match_details.rent_within_budget %}
-                                        <small class="text-success"><i class="fas fa-check"></i> Yes</small>
-                                    {% else %}
-                                        <small class="text-danger"><i class="fas fa-times"></i> No</small>
-                                    {% endif %}
-                                </div>
-                                
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <small>Preferred Neighborhood</small>
-                                    {% if match.match_details.preferred_neighborhood %}
-                                        <small class="text-success"><i class="fas fa-check"></i> Yes</small>
-                                    {% else %}
-                                        <small class="text-muted"><i class="fas fa-times"></i> No</small>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Action Buttons -->
-                        <div class="d-flex gap-2 mt-3">
-                            <a href="{% url 'apartment_detail' match.apartment.id %}" 
-                               class="btn btn-outline-primary btn-sm flex-fill">
-                                <i class="fas fa-eye"></i> View Details
-                            </a>
-                            <button class="btn btn-primary btn-sm flex-fill" 
-                                    onclick="recommendApartment({{ match.apartment.id }}, {{ applicant.id }})">
-                                <i class="fas fa-paper-plane"></i> Recommend
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                {% include 'includes/smart_match_card.html' with match=match show_image=True show_recommend_button=True %}
             </div>
             {% endfor %}
         </div>

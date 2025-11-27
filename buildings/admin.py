@@ -26,11 +26,16 @@ class BuildingSpecialInline(admin.TabularInline):
 
 @admin.register(Building)
 class BuildingAdmin(admin.ModelAdmin):
-    list_display = ('name', 'street_address_1', 'city', 'state', 'zip_code', 'neighborhood')
+    list_display = ('name', 'street_address_1', 'city', 'state', 'zip_code', 'neighborhood', 'get_broker_count')
     search_fields = ('name', 'street_address_1', 'city', 'state', 'zip_code', 'neighborhood')
     list_filter = ('state', 'amenities', 'pet_policy', 'commission_pay_type')
     inlines = [BuildingImageInline, BuildingAccessInline, BuildingSpecialInline]
-    filter_horizontal = ('amenities',)
+    filter_horizontal = ('amenities', 'brokers')  # ADD BROKERS to enable assignment
+    
+    def get_broker_count(self, obj):
+        """Display number of brokers assigned to this building"""
+        return obj.brokers.count()
+    get_broker_count.short_description = 'Assigned Brokers'
 
 
 @admin.register(Amenity)

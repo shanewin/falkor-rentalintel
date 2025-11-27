@@ -14,6 +14,13 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 # from langchain_ollama import OllamaEmbeddings  # Removed - not using local embeddings
 import numpy as np
 from psycopg2.extras import execute_values
+import hashlib
+import os
+
+try:
+    import openai
+except ImportError:
+    openai = None
 
 
 
@@ -35,7 +42,8 @@ def extract_text_and_metadata(pdf_path):
         full_text = ""
         page_count = len(doc)
         
-        print(f"DEBUG: PDF has {page_count} pages")
+        if os.getenv("DOC_ANALYSIS_DEBUG") == "1":
+            print(f"DEBUG: PDF has {page_count} pages")
         
         for page_num in range(page_count):
             page = doc[page_num]
@@ -43,18 +51,21 @@ def extract_text_and_metadata(pdf_path):
             if page_text.strip():
                 full_text += f"\n--- PAGE {page_num + 1} ---\n"
                 full_text += page_text
-                print(f"DEBUG: Page {page_num + 1} extracted {len(page_text)} characters")
+                if os.getenv("DOC_ANALYSIS_DEBUG") == "1":
+                    print(f"DEBUG: Page {page_num + 1} extracted {len(page_text)} characters")
         
         # If PyMuPDF extraction is poor, try LangChain as backup
         if len(full_text.strip()) < 500:  # Very little text extracted
-            print("DEBUG: PyMuPDF extraction poor, trying LangChain PyPDFLoader")
+            if os.getenv("DOC_ANALYSIS_DEBUG") == "1":
+                print("DEBUG: PyMuPDF extraction poor, trying LangChain PyPDFLoader")
             loader = PyPDFLoader(pdf_path)
             pages = loader.load()
             full_text = "\n".join([f"\n--- PAGE {i+1} ---\n{page.page_content}" for i, page in enumerate(pages)])
         
         # If still poor, try pdfplumber
         if len(full_text.strip()) < 500:
-            print("DEBUG: LangChain extraction poor, trying pdfplumber")
+            if os.getenv("DOC_ANALYSIS_DEBUG") == "1":
+                print("DEBUG: LangChain extraction poor, trying pdfplumber")
             import pdfplumber
             with pdfplumber.open(pdf_path) as pdf:
                 full_text = ""
@@ -64,8 +75,9 @@ def extract_text_and_metadata(pdf_path):
                         full_text += f"\n--- PAGE {i+1} ---\n"
                         full_text += page_text
 
-        print(f"DEBUG: Final extracted text length: {len(full_text)} characters")
-        print(f"DEBUG: First 500 chars: {full_text[:500]}")
+        if os.getenv("DOC_ANALYSIS_DEBUG") == "1":
+            print(f"DEBUG: Final extracted text length: {len(full_text)} characters")
+            print(f"DEBUG: First 500 chars: {full_text[:500]}")
 
         # ✅ Chunk text for embeddings
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
@@ -84,7 +96,8 @@ def extract_text_and_metadata(pdf_path):
         doc.close()
 
     except Exception as e:
-        print(f"DEBUG: Error in text extraction: {str(e)}")
+        if os.getenv("DOC_ANALYSIS_DEBUG") == "1":
+            print(f"DEBUG: Error in text extraction: {str(e)}")
         data["error"] = f"Error processing PDF: {str(e)}"
     
     return data
@@ -146,7 +159,48 @@ def analyze_pay_stub(text):
 
 
 def analyze_tax_return(text):
-    return "Tax Return analysis is not implemented yet."
+    """
+    Basic rule-based analysis for tax returns (e.g., Form 1040).
+    Looks for key elements: form identifiers, filer info, income lines, and signatures.
+    """
+    text_lower = text.lower()
+
+    # Key elements to look for
+    has_form = any(keyword in text_lower for keyword in ['form 1040', 'form 1040-sr', 'form 1040ez', 'schedule'])
+    has_filer_info = any(keyword in text_lower for keyword in ['social security number', 'ssn', 'spouse', 'filing status', 'single', 'married'])
+    has_income_lines = any(keyword in text_lower for keyword in ['wages', 'agi', 'adjusted gross income', 'taxable income', 'total income'])
+    has_signature = any(keyword in text_lower for keyword in ['sign here', 'signature of taxpayer', 'taxpayer signature'])
+    has_year = bool(re.search(r'20\d{2}', text))
+
+    found = [has_form, has_filer_info, has_income_lines, has_signature, has_year]
+    count = sum(found)
+
+    missing = []
+    if not has_form: missing.append("form identifier (e.g., Form 1040)")
+    if not has_filer_info: missing.append("filer information")
+    if not has_income_lines: missing.append("income/AGI lines")
+    if not has_signature: missing.append("signatures")
+    if not has_year: missing.append("tax year")
+
+    if count >= 4:
+        status = "Complete"
+        summary = "Tax return appears complete with form ID, filer info, income lines, and signatures."
+        reasoning = "Most core sections for a Form 1040 are present."
+    elif count >= 2:
+        status = "Not Complete"
+        summary = f"Tax return is missing key sections: {', '.join(missing[:3])}."
+        reasoning = "Some required sections are absent or unclear."
+    else:
+        status = "Needs Manual Review"
+        summary = "Document does not look like a standard tax return or is heavily incomplete."
+        reasoning = "Too few recognizable tax return elements found."
+
+    return {
+        "status": status,
+        "summary": summary,
+        "reasoning": reasoning + " (Basic tax return analysis)",
+        "modification_check": "Not assessed for tax returns"
+    }
 
 
 def provide_basic_analysis(text):
@@ -205,8 +259,211 @@ def provide_basic_analysis(text):
     }
 
 
-def detect_pdf_modifications(metadata):
-    """Checks if a PDF has been modified after creation."""
+def detect_pdf_modifications(metadata, file_path=None, max_pages: int = 20):
+    """
+    Checks for possible PDF tampering using metadata and lightweight content fingerprints.
+    
+    Returns a dict with metadata comparison, page hashes, content sizes, and object counts.
+    """
+    result = {
+        "metadata_check": "No modification metadata found.",
+        "tampering_suspected": None,
+        "page_fingerprints": [],
+        "object_summary": {},
+        "notes": []
+    }
+
+    # Metadata-based check
     if metadata.get("modDate") and metadata.get("creationDate"):
-        return f"Created: {metadata['creationDate']}, Modified: {metadata['modDate']}. Possible tampering: {metadata['creationDate'] != metadata['modDate']}"
-    return "No modification metadata found."
+        tamper_flag = metadata["creationDate"] != metadata["modDate"]
+        result["metadata_check"] = f"Created: {metadata['creationDate']}, Modified: {metadata['modDate']}"
+        result["tampering_suspected"] = bool(tamper_flag)
+        if tamper_flag:
+            result["severity"] = "medium"
+    elif metadata.get("modDate") or metadata.get("creationDate"):
+        result["metadata_check"] = "Partial metadata present (creation or mod date only)"
+
+    # Content-based checks (best-effort)
+    if file_path:
+        try:
+            doc = fitz.open(file_path)
+            page_fingerprints = []
+            total_images = 0
+            total_xobjects = 0
+            total_content_bytes = 0
+            xref_length = getattr(doc, "xref_length", lambda: None)() if callable(getattr(doc, "xref_length", None)) else None
+            is_encrypted = getattr(doc, "is_encrypted", False)
+            is_repaired = getattr(doc, "is_repaired", None)  # Some versions expose this
+
+            for page in doc:
+                if page.number >= max_pages:
+                    result["notes"].append(f"Page fingerprinting truncated at {max_pages} pages")
+                    break
+                text = page.get_text() or ""
+                text_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+                images = page.get_images(full=True)
+                total_images += len(images)
+                # Count XObjects (images + other streams)
+                xobjects = page.get_xobjects()
+                total_xobjects += len(xobjects) if xobjects else 0
+                # Content stream lengths / hash
+                contents = page.get_contents()
+                if contents:
+                    if isinstance(contents, (bytes, bytearray)):
+                        content_bytes = contents
+                    else:
+                        content_bytes = b"".join([c if isinstance(c, (bytes, bytearray)) else b"" for c in contents])
+                else:
+                    content_bytes = b""
+                total_content_bytes += len(content_bytes)
+                content_hash = hashlib.sha256(content_bytes).hexdigest()[:16] if content_bytes else "none"
+
+                page_fingerprints.append({
+                    "page": page.number + 1,
+                    "text_hash": text_hash,
+                    "image_count": len(images),
+                    "xobject_count": len(xobjects) if xobjects else 0,
+                    "content_hash": content_hash,
+                    "content_bytes": len(content_bytes),
+                    "size": {"width": page.rect.width, "height": page.rect.height}
+                })
+
+            result["page_fingerprints"] = page_fingerprints
+            result["object_summary"] = {
+                "total_images": total_images,
+                "total_xobjects": total_xobjects,
+                "total_content_bytes": total_content_bytes,
+                "page_count": len(doc),
+                "xref_length": xref_length,
+                "is_encrypted": is_encrypted,
+                "is_repaired": is_repaired
+            }
+            # Simple heuristic: if multiple pages have identical text hash but different content hash,
+            # flag as potentially modified (e.g., swapped content/overlay)
+            if page_fingerprints:
+                seen_text = {}
+                for fp in page_fingerprints:
+                    key = fp["text_hash"]
+                    if key in seen_text and seen_text[key] != fp["content_hash"]:
+                        result["notes"].append(
+                            f"Identical text hash with different content hash on pages {seen_text[key]} and {fp['page']}"
+                        )
+                        result["tampering_suspected"] = True if result["tampering_suspected"] is None else result["tampering_suspected"]
+                        result["severity"] = result.get("severity") or "medium"
+                    else:
+                        seen_text[key] = fp["content_hash"]
+
+            doc.close()
+        except Exception as e:
+            result["object_summary"] = {"error": f"Content fingerprinting failed: {str(e)}"}
+
+    # Final severity/tampering defaulting
+    if result["tampering_suspected"] is None:
+        result["tampering_suspected"] = False
+        result["severity"] = result.get("severity") or "low"
+    else:
+        result["severity"] = result.get("severity") or ("low" if not result["tampering_suspected"] else "medium")
+
+    return result
+
+
+def store_document_embeddings(file_name: str, text_chunks, max_chunks: int = 20) -> dict:
+    """
+    Generate and persist embeddings for text chunks using OpenAI embeddings.
+    Returns a status dict; no-op if OpenAI client not configured.
+    """
+    if os.getenv("DOC_ANALYSIS_SKIP_EXTERNAL") == "1":
+        return {"status": "skipped", "reason": "External calls disabled (DOC_ANALYSIS_SKIP_EXTERNAL)"}
+    if not openai:
+        return {"status": "skipped", "reason": "openai package not available"}
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return {"status": "skipped", "reason": "OPENAI_API_KEY not set"}
+
+    from .models import DocumentEmbedding
+
+    chunks = list(text_chunks or [])
+    if not chunks:
+        return {"status": "skipped", "reason": "No text chunks to embed"}
+
+    # Trim to avoid excessive calls
+    chunks = chunks[:max_chunks]
+
+    expected_dim = int(os.getenv("OPENAI_EMBEDDING_DIM", "1536"))
+
+    try:
+        client = openai.OpenAI(api_key=api_key) if hasattr(openai, "OpenAI") else openai
+        # Build request for embeddings
+        if hasattr(client, "embeddings"):
+            resp = client.embeddings.create(
+                model=os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
+                input=chunks,
+            )
+            vectors = [data["embedding"] for data in resp["data"]] if isinstance(resp, dict) else [item.embedding for item in resp.data]
+        else:
+            resp = client.Embeddings.create(
+                model=os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
+                input=chunks,
+            )
+            vectors = [item["embedding"] for item in resp["data"]]
+
+        # Validate dimensions
+        if any(len(vec) != expected_dim for vec in vectors):
+            return {
+                "status": "failed",
+                "reason": f"Embedding dimension mismatch (expected {expected_dim}, got {[len(v) for v in vectors]})"
+            }
+
+        docs = []
+        for chunk, vec in zip(chunks, vectors):
+            docs.append(
+                DocumentEmbedding(
+                    file_name=file_name,
+                    content=chunk,
+                    embedding=vec
+                )
+            )
+
+        # Optional: remove old embeddings for this file to avoid duplicates
+        DocumentEmbedding.objects.filter(file_name=file_name).delete()
+        DocumentEmbedding.objects.bulk_create(docs)
+
+        return {"status": "stored", "count": len(docs)}
+    except Exception as e:
+        return {"status": "failed", "reason": str(e)}
+
+
+def get_embedding_for_text(text: str):
+    """
+    Get a single embedding vector for the provided text using OpenAI.
+    Returns list[float] or None.
+    """
+    if os.getenv("DOC_ANALYSIS_SKIP_EXTERNAL") == "1":
+        return None
+    if not openai:
+        return None
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return None
+    expected_dim = int(os.getenv("OPENAI_EMBEDDING_DIM", "1536"))
+
+    try:
+        client = openai.OpenAI(api_key=api_key) if hasattr(openai, "OpenAI") else openai
+        if hasattr(client, "embeddings"):
+            resp = client.embeddings.create(
+                model=os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
+                input=text,
+            )
+            emb = resp["data"][0]["embedding"] if isinstance(resp, dict) else resp.data[0].embedding
+        else:
+            resp = client.Embeddings.create(
+                model=os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
+                input=text,
+            )
+            emb = resp["data"][0]["embedding"]
+        if len(emb) != expected_dim:
+            return None
+        return emb
+    except Exception:
+        return None

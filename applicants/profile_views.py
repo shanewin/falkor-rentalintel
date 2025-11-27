@@ -4,7 +4,23 @@ from django.contrib import messages
 from django.db import transaction
 from .models import Applicant, PreviousAddress, ApplicantJob, ApplicantIncomeSource, ApplicantAsset
 from .forms import ApplicantForm, ApplicantBasicInfoForm, ApplicantHousingForm, ApplicantEmploymentForm
-from applications.services import ProfileProgressService
+
+
+def _format_duration_from_dropdowns(years_str, months_str):
+    """Convert dropdown values to readable duration text"""
+    years = int(years_str) if years_str and years_str.isdigit() else 0
+    months = int(months_str) if months_str and months_str.isdigit() else 0
+    
+    if years == 0 and months == 0:
+        return ''
+    
+    parts = []
+    if years > 0:
+        parts.append(f"{years} year{'s' if years != 1 else ''}")
+    if months > 0:
+        parts.append(f"{months} month{'s' if months != 1 else ''}")
+    
+    return ' and '.join(parts)
 
 
 def get_step_completion_status(applicant):
@@ -70,15 +86,23 @@ def progressive_profile(request):
             # All other fields will use model defaults or be None/blank
         )
     
-    # Use comprehensive field completion tracking
+    # Use the same ProfileProgressService as the dashboard for consistency
     completion_status = applicant.get_field_completion_status()
     completion_percentage = completion_status['overall']['overall_completion_percentage']
-    missing_fields = {
-        section_name: [field_name for field_name, field_data in section_data['fields'].items() if not field_data['filled']]
-        for section_name, section_data in completion_status['sections'].items()
-    }
-    # Remove empty sections
-    missing_fields = {k: v for k, v in missing_fields.items() if v}
+    missing_fields_list = {}
+    for section_name, section_data in completion_status['sections'].items():
+        section_missing = [field_data['label'] for field_name, field_data in section_data['fields'].items() if not field_data['filled']]
+        if section_missing:
+            missing_fields_list[section_name] = section_missing
+        # Keep the detailed completion status for UI purposes but use ProfileProgressService for percentage
+        completion_status = applicant.get_field_completion_status()
+    
+    # Convert missing fields list to dictionary format for compatibility
+    missing_fields = {}
+    if missing_fields_list:
+        for section, fields in missing_fields_list.items():
+            if fields:
+                missing_fields[section] = fields
     
     if request.method == 'POST':
         form = ApplicantForm(request.POST, instance=applicant)
@@ -148,11 +172,15 @@ def progressive_profile(request):
                             'city': request.POST.get(f'prev_city_{i}', '').strip(),
                             'state': request.POST.get(f'prev_state_{i}', '').strip(),
                             'zip_code': request.POST.get(f'prev_zip_code_{i}', '').strip(),
-                            'length_at_address': request.POST.get(f'prev_length_at_address_{i}', '').strip(),
+                            'length_at_address': _format_duration_from_dropdowns(
+                                request.POST.get(f'prev_address_years_{i}', ''),
+                                request.POST.get(f'prev_address_months_{i}', '')
+                            ),
                             'housing_status': request.POST.get(f'prev_housing_status_{i}', 'own'),
                             'landlord_name': request.POST.get(f'prev_landlord_name_{i}', '').strip(),
                             'landlord_phone': request.POST.get(f'prev_landlord_phone_{i}', '').strip(),
                             'landlord_email': request.POST.get(f'prev_landlord_email_{i}', '').strip(),
+                            'monthly_rent': request.POST.get(f'prev_monthly_rent_{i}', '').strip(),
                         })
                 
                 # Clear existing previous addresses and create new ones
@@ -171,6 +199,7 @@ def progressive_profile(request):
                         landlord_name=addr_data['landlord_name'] if addr_data['landlord_name'] else None,
                         landlord_phone=addr_data['landlord_phone'] if addr_data['landlord_phone'] else None,
                         landlord_email=addr_data['landlord_email'] if addr_data['landlord_email'] else None,
+                        monthly_rent=addr_data['monthly_rent'] if addr_data['monthly_rent'] else None,
                     )
                 
                 # Handle dynamic employment data (jobs, income sources, assets)
@@ -178,10 +207,11 @@ def progressive_profile(request):
                 process_dynamic_income_sources(request, applicant) 
                 process_dynamic_assets(request, applicant)
                 
-                # Use new comprehensive completion tracking
-                completion_status = applicant.get_field_completion_status()
-                new_percentage = completion_status['overall']['overall_completion_percentage']
-                
+
+                # Use comprehensive field tracking for consistent percentage calculation
+                new_completion_status = applicant.get_field_completion_status()
+                new_percentage = new_completion_status['overall']['overall_completion_percentage']
+                                
                 if new_percentage == 100:
                     messages.success(request, "Congratulations! Your profile is now complete.")
                 elif new_percentage > completion_percentage:
@@ -238,7 +268,12 @@ def quick_profile_update(request):
         return redirect('progressive_profile')
     
     # Get missing fields
-    _, missing_fields = ProfileProgressService.calculate_profile_completion(applicant)
+    completion_status = applicant.get_field_completion_status()
+    missing_fields = {}
+    for section_name, section_data in completion_status['sections'].items():
+        section_missing = [field_data['label'] for field_name, field_data in section_data['fields'].items() if not field_data['filled']]
+        if section_missing:
+            missing_fields[section_name] = section_missing
     
     if not missing_fields:
         messages.info(request, "Your profile is complete!")
@@ -417,11 +452,15 @@ def profile_step1(request):
                             'city': request.POST.get(f'prev_city_{i}', '').strip(),
                             'state': request.POST.get(f'prev_state_{i}', '').strip(),
                             'zip_code': request.POST.get(f'prev_zip_code_{i}', '').strip(),
-                            'length_at_address': request.POST.get(f'prev_length_at_address_{i}', '').strip(),
+                            'length_at_address': _format_duration_from_dropdowns(
+                                request.POST.get(f'prev_address_years_{i}', ''),
+                                request.POST.get(f'prev_address_months_{i}', '')
+                            ),
                             'housing_status': request.POST.get(f'prev_housing_status_{i}', 'own'),
                             'landlord_name': request.POST.get(f'prev_landlord_name_{i}', '').strip(),
                             'landlord_phone': request.POST.get(f'prev_landlord_phone_{i}', '').strip(),
                             'landlord_email': request.POST.get(f'prev_landlord_email_{i}', '').strip(),
+                            'monthly_rent': request.POST.get(f'prev_monthly_rent_{i}', '').strip(),
                         })
                 
                 # Clear existing previous addresses and create new ones
@@ -440,6 +479,7 @@ def profile_step1(request):
                         landlord_name=addr_data['landlord_name'] if addr_data['landlord_name'] else None,
                         landlord_phone=addr_data['landlord_phone'] if addr_data['landlord_phone'] else None,
                         landlord_email=addr_data['landlord_email'] if addr_data['landlord_email'] else None,
+                        monthly_rent=addr_data['monthly_rent'] if addr_data['monthly_rent'] else None,
                     )
                 
                 messages.success(request, "Basic information saved! Let's continue with your housing preferences.")
@@ -458,7 +498,8 @@ def profile_step1(request):
     completion_status = get_step_completion_status(applicant)
     
     # Calculate actual profile completion percentage
-    completion_percentage, _ = ProfileProgressService.calculate_profile_completion(applicant)
+    completion_status = applicant.get_field_completion_status()
+    completion_percentage = completion_status['overall']['overall_completion_percentage']
     
     context = {
         'form': form,
@@ -590,20 +631,25 @@ def profile_step2(request):
                 # Process building amenity preferences
                 building_preferences_saved = 0
                 for key, value in request.POST.items():
-                    if key.startswith('building_amenity_') and value and int(value) > 0:
-                        amenity_id = key.replace('building_amenity_', '')
-                        slider_value = int(value)
-                        
-                        # Map slider values to database values:
-                        # Slider: 1 (Nice to Have) -> DB: 2
-                        # Slider: 2 (Important) -> DB: 3  
-                        # Slider: 3 (Must Have) -> DB: 4
-                        # Slider: 0 (Don't Care) -> Not saved
-                        value_mapping = {1: 2, 2: 3, 3: 4}
-                        
-                        if slider_value in value_mapping:
-                            db_priority_level = value_mapping[slider_value]
-                            try:
+                    if key.startswith('building_amenity_') and value:
+                        try:
+                            # Validate slider value
+                            slider_value = int(value)
+                            if slider_value <= 0:
+                                continue
+                                
+                            # Validate amenity ID
+                            amenity_id_str = key.replace('building_amenity_', '')
+                            amenity_id = int(amenity_id_str)
+                            
+                            # Map slider values to database values:
+                            # Slider: 1 (Nice to Have) -> DB: 2
+                            # Slider: 2 (Important) -> DB: 3  
+                            # Slider: 3 (Must Have) -> DB: 4
+                            value_mapping = {1: 2, 2: 3, 3: 4}
+                            
+                            if slider_value in value_mapping:
+                                db_priority_level = value_mapping[slider_value]
                                 amenity = BuildingAmenity.objects.get(id=amenity_id)
                                 ApplicantBuildingAmenityPreference.objects.create(
                                     applicant=applicant,
@@ -611,22 +657,30 @@ def profile_step2(request):
                                     priority_level=db_priority_level
                                 )
                                 building_preferences_saved += 1
-                            except (BuildingAmenity.DoesNotExist, ValueError):
-                                continue
+                        except (ValueError, BuildingAmenity.DoesNotExist):
+                            # Log invalid data but continue processing other fields
+                            print(f"Skipping invalid building amenity data: {key}={value}")
+                            continue
                 
                 # Process apartment amenity preferences  
                 apartment_preferences_saved = 0
                 for key, value in request.POST.items():
-                    if key.startswith('apartment_amenity_') and value and int(value) > 0:
-                        amenity_id = key.replace('apartment_amenity_', '')
-                        slider_value = int(value)
-                        
-                        # Map slider values to database values (same mapping as building)
-                        value_mapping = {1: 2, 2: 3, 3: 4}
-                        
-                        if slider_value in value_mapping:
-                            db_priority_level = value_mapping[slider_value]
-                            try:
+                    if key.startswith('apartment_amenity_') and value:
+                        try:
+                            # Validate slider value
+                            slider_value = int(value)
+                            if slider_value <= 0:
+                                continue
+                                
+                            # Validate amenity ID
+                            amenity_id_str = key.replace('apartment_amenity_', '')
+                            amenity_id = int(amenity_id_str)
+                            
+                            # Map slider values to database values
+                            value_mapping = {1: 2, 2: 3, 3: 4}
+                            
+                            if slider_value in value_mapping:
+                                db_priority_level = value_mapping[slider_value]
                                 amenity = ApartmentAmenity.objects.get(id=amenity_id)
                                 ApplicantApartmentAmenityPreference.objects.create(
                                     applicant=applicant,
@@ -634,8 +688,10 @@ def profile_step2(request):
                                     priority_level=db_priority_level
                                 )
                                 apartment_preferences_saved += 1
-                            except (ApartmentAmenity.DoesNotExist, ValueError):
-                                continue
+                        except (ValueError, ApartmentAmenity.DoesNotExist):
+                            # Log invalid data but continue processing other fields
+                            print(f"Skipping invalid apartment amenity data: {key}={value}")
+                            continue
                 
                 # Log the saved preferences
                 print(f"Saved {building_preferences_saved} building amenity preferences and {apartment_preferences_saved} apartment amenity preferences for {applicant.first_name}")
@@ -649,7 +705,8 @@ def profile_step2(request):
     completion_status = get_step_completion_status(applicant)
     
     # Calculate actual profile completion percentage
-    completion_percentage, _ = ProfileProgressService.calculate_profile_completion(applicant)
+    completion_status = applicant.get_field_completion_status()
+    completion_percentage = completion_status['overall']['overall_completion_percentage']
     
     # Get existing pets for the template
     from .models import Pet, NeighborhoodPreference
@@ -733,8 +790,9 @@ def profile_step3(request):
                 process_dynamic_assets(request, applicant)
             
             # Calculate completion after final save
-            completion_percentage, _ = ProfileProgressService.calculate_profile_completion(applicant)
-            
+            completion_status = applicant.get_field_completion_status()
+            completion_percentage = completion_status['overall']['overall_completion_percentage']
+
             if completion_percentage == 100:
                 messages.success(request, "Congratulations! Your profile is now complete.")
             else:
@@ -748,7 +806,8 @@ def profile_step3(request):
     completion_status = get_step_completion_status(applicant)
     
     # Calculate actual profile completion percentage
-    completion_percentage, _ = ProfileProgressService.calculate_profile_completion(applicant)
+    completion_status = applicant.get_field_completion_status()
+    completion_percentage = completion_status['overall']['overall_completion_percentage']
     
     context = {
         'form': form,

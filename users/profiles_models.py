@@ -84,16 +84,22 @@ class BrokerProfile(models.Model):
     # Territory/Coverage Area
     territories = models.JSONField(default=list, help_text="Neighborhoods or areas covered")
     
-    # Commission Information
+    # Commission Information - FIX: Proper validation for percentages
     standard_commission_rate = models.DecimalField(
         max_digits=5, decimal_places=2, blank=True, null=True,
-        validators=[MinValueValidator(0), MaxValueValidator(100)],
-        help_text="Standard commission percentage"
+        validators=[
+            MinValueValidator(0, message="Commission rate cannot be negative"),
+            MaxValueValidator(100, message="Commission rate cannot exceed 100%")
+        ],
+        help_text="Standard commission percentage (0-100)"
     )
     commission_split = models.DecimalField(
         max_digits=5, decimal_places=2, blank=True, null=True,
-        validators=[MinValueValidator(0), MaxValueValidator(100)],
-        help_text="Broker/Agent split percentage"
+        validators=[
+            MinValueValidator(0, message="Commission split cannot be negative"),
+            MaxValueValidator(100, message="Commission split cannot exceed 100%")
+        ],
+        help_text="Broker/Agent split percentage (0-100)"
     )
     
     # Professional Bio

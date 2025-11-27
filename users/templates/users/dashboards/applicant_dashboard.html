@@ -31,6 +31,18 @@
 </div>
 
 <div class="container">
+    <!-- Django Messages Display -->
+    {% if messages %}
+        <div class="mb-4">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    
     <!-- Stats Grid -->
     <div class="stats-grid">
         <div class="stat-card">
@@ -112,132 +124,85 @@
         </div>
     </div>
 
-    <!-- Apartment Matches -->
-    {% if has_matches %}
+    <!-- Smart Apartment Matches Section -->
     <div class="table-container mb-4">
         <div class="table-header">
-            <i class="fas fa-home"></i> Recommended Apartments
-            <small class="float-end text-muted">Based on your preferences</small>
+            <i class="fas fa-lightbulb"></i> Smart Apartment Matches
+            {% if has_matches %}
+                <span class="badge bg-primary ms-2">{{ apartment_matches|length }}</span>
+            {% endif %}
         </div>
         
-        <div class="p-4">
-            <div class="row">
-                {% for match in apartment_matches %}
-                <div class="col-lg-6 mb-4">
-                    <div class="card h-100">
-                        {% if match.apartment.images.all %}
-                            <img src="{{ match.apartment.images.first.thumbnail_url }}" 
-                                 class="card-img-top" 
-                                 alt="{{ match.apartment.building.name }}"
-                                 style="height: 200px; object-fit: cover;">
-                        {% else %}
-                            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
-                                 style="height: 200px;">
-                                <i class="fas fa-home fa-3x text-muted"></i>
-                            </div>
-                        {% endif %}
-                        
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h5 class="card-title mb-0">{{ match.apartment.building.name }}</h5>
-                                <span class="badge bg-{{ match.match_details.match_color }}">
-                                    {{ match.match_percentage }}% Match
-                                </span>
-                            </div>
-                            
-                            <p class="card-text text-muted small mb-2">
-                                <i class="fas fa-map-marker-alt"></i> 
-                                {{ match.apartment.building.neighborhood }}
-                            </p>
-                            
-                            <div class="row text-center mb-3">
-                                <div class="col-4">
-                                    <strong>{{ match.apartment.bedrooms|floatformat:0 }}</strong><br>
-                                    <small class="text-muted">Bed{{ match.apartment.bedrooms|pluralize }}</small>
-                                </div>
-                                <div class="col-4">
-                                    <strong>{{ match.apartment.bathrooms|floatformat:1 }}</strong><br>
-                                    <small class="text-muted">Bath{{ match.apartment.bathrooms|pluralize }}</small>
-                                </div>
-                                <div class="col-4">
-                                    <strong>${{ match.apartment.rent_price|floatformat:0 }}</strong><br>
-                                    <small class="text-muted">per month</small>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <small class="text-success">
-                                    <i class="fas fa-check-circle"></i> {{ match.match_details.match_level }}
-                                </small>
-                                {% if match.match_details.rent_within_budget %}
-                                    <br><small class="text-success">
-                                        <i class="fas fa-dollar-sign"></i> Within your budget
-                                    </small>
-                                {% endif %}
-                                {% if match.match_details.preferred_neighborhood %}
-                                    <br><small class="text-success">
-                                        <i class="fas fa-heart"></i> Preferred neighborhood
-                                    </small>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="row text-center small text-muted mb-3">
-                                <div class="col-4">
-                                    <strong>{{ match.match_details.basic_score|floatformat:0 }}%</strong><br>
-                                    <small>Basic Fit</small>
-                                </div>
-                                <div class="col-4">
-                                    <strong>{{ match.match_details.building_amenities_score|floatformat:0 }}%</strong><br>
-                                    <small>Building</small>
-                                </div>
-                                <div class="col-4">
-                                    <strong>{{ match.match_details.apartment_amenities_score|floatformat:0 }}%</strong><br>
-                                    <small>Apartment</small>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="card-footer">
-                            <div class="d-flex justify-content-between">
-                                <a href="#" class="btn btn-outline-primary btn-sm">
-                                    <i class="fas fa-eye"></i> View Details
-                                </a>
-                                <a href="#" class="btn btn-primary btn-sm">
-                                    <i class="fas fa-paper-plane"></i> Apply Now
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            
-            <div class="text-center mt-4">
-                <a href="#" class="btn btn-outline-primary">
-                    <i class="fas fa-search"></i> View All Matches
+        {% if not can_show_matches %}
+            <!-- Show message when missing required preferences -->
+            <div class="p-5 text-center">
+                <i class="fas fa-info-circle fa-3x text-muted mb-3"></i>
+                <h4>Set Your Housing Preferences</h4>
+                <p class="mb-3 text-muted">We need a few key details to find your perfect apartment:</p>
+                <ul class="list-unstyled mb-3">
+                    {% if not applicant.max_rent_budget %}
+                        <li><i class="fas fa-dollar-sign text-muted me-2"></i>Maximum rent budget</li>
+                    {% endif %}
+                    {% if not applicant.desired_move_in_date %}
+                        <li><i class="fas fa-calendar text-muted me-2"></i>Desired move-in date</li>
+                    {% endif %}
+                </ul>
+                <a href="{% url 'profile_step1' %}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Complete Your Profile
                 </a>
             </div>
-        </div>
+        {% elif has_matches %}
+            <!-- Show matches when available -->
+            <div class="p-4">
+                <p class="text-muted mb-3">
+                    Based on your preferences, we found {{ apartment_matches|length }} apartment{% if apartment_matches|length != 1 %}s{% endif %} that match your needs.
+                </p>
+                <div class="row">
+                    {% for match in apartment_matches %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ match.apartment.building.name }}</h6>
+                                    <p class="card-text text-muted small mb-2">
+                                        Unit {{ match.apartment.unit_number }} • {{ match.apartment.bedrooms }} bed / {{ match.apartment.bathrooms }} bath
+                                    </p>
+                                    <p class="card-text">
+                                        <strong>${{ match.apartment.rent|floatformat:0 }}/mo</strong>
+                                    </p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="badge bg-success">{{ match.match_score }}% Match</span>
+                                        <a href="{% url 'apartment_detail' match.apartment.id %}" class="btn btn-sm btn-outline-primary">
+                                            View Details
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="text-center mt-3">
+                    <a href="{% url 'apartments_list' %}" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Browse All Apartments
+                    </a>
+                </div>
+            </div>
+        {% else %}
+            <!-- Has preferences but no matches found -->
+            <div class="p-5 text-center">
+                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                <h4>No Matches Found</h4>
+                <p class="mb-3 text-muted">We couldn't find apartments matching your exact criteria. Try:</p>
+                <ul class="list-unstyled mb-3 text-muted">
+                    <li><i class="fas fa-check me-2"></i>Increasing your budget range</li>
+                    <li><i class="fas fa-check me-2"></i>Being more flexible with move-in dates</li>
+                    <li><i class="fas fa-check me-2"></i>Adjusting bedroom/bathroom requirements</li>
+                </ul>
+                <a href="{% url 'apartments_list' %}" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Browse All Apartments
+                </a>
+            </div>
+        {% endif %}
     </div>
-    {% elif applicant and completion_percentage >= 25 %}
-    <div class="table-container mb-4">
-        <div class="table-header">
-            <i class="fas fa-home"></i> Apartment Recommendations
-        </div>
-        
-        <div class="p-5 text-center">
-            <i class="fas fa-search fa-3x text-muted mb-3"></i>
-            <h4>No Matches Found</h4>
-            <p class="mb-3 text-muted">
-                We couldn't find apartments matching your current preferences. 
-                Try updating your search criteria in your profile.
-            </p>
-            <a href="{% url 'profile_step2' %}" class="btn btn-primary">
-                <i class="fas fa-sliders-h"></i> Update Preferences
-            </a>
-        </div>
-    </div>
-    {% endif %}
 
     <!-- Applications -->
     <div class="table-container">
@@ -325,14 +290,19 @@
             <a href="{% url 'profile_step1' %}" class="btn btn-primary">
                 <i class="fas fa-user-edit"></i> Complete Your Profile
             </a>
-            {% else %}
-            <div class="alert alert-success">
-                <i class="fas fa-check-circle"></i>
-                Your profile is complete! Brokers can now create applications for you.
-            </div>
             {% endif %}
         </div>
         {% endif %}
     </div>
 </div>
+
+<script>
+    // Initialize Bootstrap tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
 {% endblock %}

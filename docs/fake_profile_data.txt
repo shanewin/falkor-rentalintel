@@ -1,0 +1,190 @@
+
+PROFILE #1 - Andrew Barclay (Tech Professional)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BASIC INFORMATION:
+  First Name: Andrew
+  Last Name: Barlcay
+  Phone: (555) 123-4567
+  Email: andrew.barlcay@example.com
+  Date of Birth: 05/15/1995
+
+CURRENT ADDRESS:
+  Street Address 1: 456 Park Avenue
+  Street Address 2: Apt 3B
+  City: Brooklyn
+  State: NY
+  Zip Code: 11201
+  Length at Address: 2 years
+  Housing Status: Renting
+
+CURRENT HOUSING DETAILS:
+  Current Landlord: Robert Johnson
+  Landlord Phone: (555) 987-6543
+  Landlord Email: rjohnson@properties.com
+  Monthly Rent: $2,400
+  Reason for Moving: Need more space for home office
+
+HOUSING PREFERENCES:
+  Desired Move-in Date: 03/01/2026
+  Min Bedrooms: 2
+  Max Bedrooms: 3
+  Min Bathrooms: 1
+  Max Bathrooms: 2
+  Max Rent Budget: $3,500
+  Open to Roommates: No
+
+IDENTIFICATION:
+  Driver License Number: M123456789
+  Driver License State: NY
+
+EMERGENCY CONTACT:
+  Name: Sarah Martinez
+  Relationship: Sister
+  Phone: (555) 234-5678
+
+EMPLOYMENT:
+  Employment Status: Employed
+  Company Name: Tech Solutions Inc
+  Position: Senior Software Engineer
+  Annual Income: $95,000
+  Supervisor Name: Michael Chen
+  Supervisor Email: mchen@techsolutions.com
+  Supervisor Phone: (555) 345-6789
+  Currently Employed: Yes
+  Start Date: 01/15/2021
+
+RENTAL HISTORY:
+  Previous Landlord: Lisa Anderson
+  Previous Landlord Contact: (555) 456-7890
+  Ever Evicted: No
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PROFILE #2 - Alex Chen (Graduate Student)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BASIC INFORMATION:
+  First Name: Alex
+  Last Name: Chen
+  Phone: (555) 234-5678
+  Email: alex.chen@example.com
+  Date of Birth: 08/22/1998
+
+CURRENT ADDRESS:
+  Street Address 1: 789 University Avenue
+  Street Address 2: Room 204
+  City: Manhattan
+  State: NY
+  Zip Code: 10027
+  Length at Address: 1 year
+  Housing Status: Renting
+
+CURRENT HOUSING DETAILS:
+  Current Landlord: Columbia Housing
+  Landlord Phone: (555) 876-5432
+  Landlord Email: housing@columbia.edu
+  Monthly Rent: $1,800
+  Reason for Moving: Graduating, need own place
+
+HOUSING PREFERENCES:
+  Desired Move-in Date: 06/01/2026
+  Min Bedrooms: 1
+  Max Bedrooms: 1
+  Min Bathrooms: 1
+  Max Bathrooms: 1
+  Max Rent Budget: $2,200
+  Open to Roommates: Yes
+
+IDENTIFICATION:
+  Driver License Number: C987654321
+  Driver License State: CA
+
+EMERGENCY CONTACT:
+  Name: Jennifer Chen
+  Relationship: Mother
+  Phone: (555) 345-6789
+
+EMPLOYMENT:
+  Employment Status: Student
+  Company Name: Columbia University
+  Position: Graduate Research Assistant
+  Annual Income: $32,000
+  Supervisor Name: Dr. Patricia Williams
+  Supervisor Email: pwilliams@columbia.edu
+  Supervisor Phone: (555) 456-7890
+  Currently Employed: Yes
+  Start Date: 09/01/2023
+
+STUDENT INFORMATION:
+  School Name: Columbia University
+  Year of Graduation: 2026
+  School Address: 116th St & Broadway, New York, NY 10027
+  School Phone: (212) 854-1754
+
+RENTAL HISTORY:
+  Previous Landlord: Campus Apartments LLC
+  Previous Landlord Contact: (555) 567-8901
+  Ever Evicted: No
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PROFILE #3 - Taylor Williams (Finance Professional)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BASIC INFORMATION:
+  First Name: Taylor
+  Last Name: Williams
+  Phone: (555) 345-6789
+  Email: taylor.williams@example.com
+  Date of Birth: 03/10/1992
+
+CURRENT ADDRESS:
+  Street Address 1: 321 Wall Street
+  Street Address 2: Unit 12A
+  City: New York
+  State: NY
+  Zip Code: 10005
+  Length at Address: 3 years
+  Housing Status: Renting
+
+CURRENT HOUSING DETAILS:
+  Current Landlord: Downtown Properties LLC
+  Landlord Phone: (555) 765-4321
+  Landlord Email: leasing@dtproperties.com
+  Monthly Rent: $3,200
+  Reason for Moving: Relocating to Brooklyn for better work-life balance
+
+HOUSING PREFERENCES:
+  Desired Move-in Date: 02/15/2026
+  Min Bedrooms: 2
+  Max Bedrooms: 3
+  Min Bathrooms: 2
+  Max Bathrooms: 2
+  Max Rent Budget: $4,500
+  Open to Roommates: No
+
+IDENTIFICATION:
+  Driver License Number: W456789123
+  Driver License State: NY
+
+EMERGENCY CONTACT:
+  Name: Marcus Williams
+  Relationship: Brother
+  Phone: (555) 456-7890
+
+EMPLOYMENT:
+  Employment Status: Employed
+  Company Name: Goldman Sachs
+  Position: Vice President, Investment Banking
+  Annual Income: $165,000
+  Supervisor Name: Rebecca Thompson
+  Supervisor Email: rthompson@gs.com
+  Supervisor Phone: (555) 567-8901
+  Currently Employed: Yes
+  Start Date: 07/01/2018
+
+RENTAL HISTORY:
+  Previous Landlord: Manhattan Luxury Rentals
+  Previous Landlord Contact: (555) 678-9012
+  Ever Evicted: No

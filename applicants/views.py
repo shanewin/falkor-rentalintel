@@ -58,9 +58,14 @@ def applicant_overview(request, applicant_id):
         logger = logging.getLogger(__name__)
         logger.error(f"Error finding matching apartments for applicant {applicant_id}: {str(e)}")
 
-    # Generate Smart Insights for brokers and admins only
+    # Restrict AI insights to business users only
     smart_insights = None
-    if request.user.is_authenticated and (request.user.is_superuser or request.user.is_broker):
+    if request.user.is_authenticated and (
+        request.user.is_superuser or 
+        request.user.is_broker or 
+        request.user.is_staff or
+        getattr(request.user, 'is_owner', False)
+    ):
         try:
             from applicants.smart_insights import SmartInsights
             smart_insights = SmartInsights.analyze_applicant(applicant)
@@ -82,18 +87,17 @@ def applicant_overview(request, applicant_id):
 
 
 def applicants_list(request):
-    # Fetch applicants with related data for CRM functionality
+    # Optimize queries for list display
     applicants = Applicant.objects.select_related(
-        'user',  # User account info
+        'user',
     ).prefetch_related(
-        'neighborhood_preferences',  # Neighborhood preferences
-        'applications',  # Applications
+        'neighborhood_preferences',
+        'applications',
     ).all()
     
-    # Ensure each applicant has a CRM record
+    # Initialize CRM records for workflow
     for applicant in applicants:
         crm, created = ApplicantCRM.objects.get_or_create(applicant=applicant)
-        # Attach the CRM to the applicant for template access
         applicant.crm = crm
 
     context = {
@@ -104,7 +108,7 @@ def applicants_list(request):
 
 
 def get_applicant_data(request, applicant_id):
-    """Fetch comprehensive applicant data with field completion tracking"""
+    # API endpoint for applicant data export
     try:
         applicant = Applicant.objects.get(id=applicant_id)
         
@@ -261,6 +265,7 @@ def get_applicant_data(request, applicant_id):
 
 
 def applicant_crm(request, applicant_id):
+    # Broker communication and activity hub
     applicant = get_object_or_404(Applicant, id=applicant_id)
     crm, created = ApplicantCRM.objects.get_or_create(applicant=applicant)
     history = crm.history.all()
@@ -273,7 +278,7 @@ def applicant_crm(request, applicant_id):
 
     if request.method == "POST":
         if "contact_method" in request.POST:
-            # ✅ Contact form submitted (Email/SMS message)
+            # Track outbound communications
             contact_method = request.POST.get("contact_method")
             message = request.POST.get("message", "")
 
@@ -281,15 +286,15 @@ def applicant_crm(request, applicant_id):
                 InteractionLog.objects.create(
                     crm=crm,
                     broker=request.user if request.user.is_authenticated else None,
-                    note=f"[{contact_method.upper()} SENT] {message}",  # ✅ Prefix with method type
+                    note=f"[{contact_method.upper()} SENT] {message}",
                     created_at=now(),
-                    is_message=True  # ✅ Mark as a message (distinct style in HTML)
+                    is_message=True  # Distinguish from notes
                 )
 
             return redirect('applicant_crm', applicant_id=applicant.id)
 
         else:
-            # ✅ Normal interaction log form submission
+            # Standard note logging
             log_form = InteractionLogForm(request.POST, request.FILES)
             if log_form.is_valid():
                 new_log = log_form.save(commit=False)

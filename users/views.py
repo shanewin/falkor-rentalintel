@@ -1,17 +1,28 @@
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
+from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_str
 from django.conf import settings
-from django.http import HttpResponseForbidden
-import secrets
-import string
+from django.http import HttpResponseForbidden, Http404
+import logging
 from .models import User
 from .forms import LoginForm, BrokerRegistrationForm, ApplicantRegistrationForm, StaffRegistrationForm, OwnerRegistrationForm
+from .token_utils import (
+    generate_invitation_link,
+    generate_activation_link,
+    verify_token,
+    invitation_token,
+    account_activation_token
+)
+
+logger = logging.getLogger(__name__)
 
 
 def require_superuser_or_staff(view_func):
@@ -38,9 +49,13 @@ def user_login(request):
                 login(request, user)
                 messages.success(request, f"Welcome back, {user.email}!")
                 
-                # Redirect to 'next' parameter if it exists, otherwise role-based redirect
+                # FIX: Validate 'next' parameter to prevent open redirect attacks
                 next_url = request.GET.get('next')
-                if next_url:
+                if next_url and url_has_allowed_host_and_scheme(
+                    url=next_url,
+                    allowed_hosts={request.get_host()},
+                    require_https=request.is_secure()
+                ):
                     return redirect(next_url)
                 return redirect_by_role(user)
             else:
@@ -71,7 +86,7 @@ def redirect_by_role(user):
     elif user.is_owner:
         return redirect('owner_dashboard')
     else:
-        return redirect('home')
+        return redirect('apartments_list')
 
 
 @login_required
@@ -84,15 +99,27 @@ def register_broker(request):
     if request.method == 'POST':
         form = BrokerRegistrationForm(request.POST)
         if form.is_valid():
+            # FIX: Validate email doesn't already exist
+            email = form.cleaned_data.get('email')
+            if User.objects.filter(email=email).exists():
+                messages.error(request, f"A user with email {email} already exists.")
+                return render(request, 'users/admin/create_broker.html', {'form': form})
+            
             user = form.save(commit=False)
             user.is_broker = True
-            user.set_password(form.cleaned_data['password'])
+            # Don't set password yet - let them set it via secure link
+            user.set_unusable_password()
+            user.is_active = False  # FIX: Inactive until email verified
             user.save()
             
-            # Send invitation email
-            send_account_invitation_email(user, 'broker', form.cleaned_data['password'])
+            # Send invitation email with secure link
+            if send_secure_invitation_email(user, 'broker', request):
+                messages.success(request, f"Broker account created for {user.email} and invitation email sent.")
+                # Log for audit trail
+                logger.info(f"Broker account created for {user.email} by {request.user.email}")
+            else:
+                messages.warning(request, f"Broker account created but email sending failed. Please resend invitation.")
             
-            messages.success(request, f"Broker account created for {user.email} and invitation email sent.")
             return redirect('admin_user_management')
     else:
         form = BrokerRegistrationForm()
@@ -101,32 +128,59 @@ def register_broker(request):
 
 
 def register_applicant(request):
-    """Registration view for applicants - creates both User and Applicant profile"""
+    """Registration view for applicants with mandatory email verification and optional SMS"""
     if request.user.is_authenticated:
         return redirect_by_role(request.user)
     
     if request.method == 'POST':
-        form = ApplicantRegistrationForm(request.POST)
+        # Use the enhanced form with SMS options
+        from .sms_forms import ApplicantRegistrationWithSMSForm
+        form = ApplicantRegistrationWithSMSForm(request.POST)
+        
         if form.is_valid():
             # Create User account
             user = form.save(commit=False)
             user.is_applicant = True
             user.set_password(form.cleaned_data['password'])
+            
+            # IMPORTANT: Account is ALWAYS inactive until email verification
+            user.is_active = False
             user.save()
+            
+            # Get form data
+            email = form.cleaned_data['email']
+            first_name = form.cleaned_data.get('first_name', '')
+            last_name = form.cleaned_data.get('last_name', '')
+            sms_opt_in = form.cleaned_data.get('sms_opt_in', False)
+            verify_phone = form.cleaned_data.get('verify_phone', False)
+            phone_number = form.cleaned_data.get('phone_number')
+            tcpa_consent = form.cleaned_data.get('tcpa_consent', False)
+            
+            # Store registration data in session for after verification
+            request.session['pending_registration'] = {
+                'user_id': user.id,
+                'email': email,
+                'phone_number': phone_number,
+                'sms_opt_in': sms_opt_in,
+                'verify_phone': verify_phone,
+                'tcpa_consent': tcpa_consent,
+                'first_name': first_name,
+                'last_name': last_name,
+                'password': form.cleaned_data['password']  # For auto-login after verification
+            }
             
             # Create or update Applicant profile
             from applicants.models import Applicant
             from django.utils import timezone
             
-            # Check if an applicant with this email already exists (from previous application)
             applicant, created = Applicant.objects.get_or_create(
                 email=user.email,
                 defaults={
                     'first_name': form.cleaned_data.get('first_name', ''),
                     'last_name': form.cleaned_data.get('last_name', ''),
-                    'phone_number': form.cleaned_data.get('phone_number', ''),
-                    'date_of_birth': timezone.now().date(),  # Temporary, user will update
-                    'street_address_1': '',  # User will fill progressively
+                    'phone_number': phone_number or '',
+                    # 'date_of_birth': timezone.now().date(),  <-- REMOVED: Invalid default
+                    'street_address_1': '',
                     'city': '',
                     'state': 'NY',
                     'zip_code': '',
@@ -136,21 +190,46 @@ def register_applicant(request):
             # Link the applicant profile to the user account
             applicant.user = user
             if not created:
-                # Update existing applicant with new info if provided
                 applicant.first_name = form.cleaned_data.get('first_name', applicant.first_name)
                 applicant.last_name = form.cleaned_data.get('last_name', applicant.last_name)
-                if form.cleaned_data.get('phone_number'):
-                    applicant.phone_number = form.cleaned_data['phone_number']
+                if phone_number:
+                    applicant.phone_number = phone_number
             applicant.save()
             
-            # Auto-login after registration
-            user = authenticate(username=user.email, password=form.cleaned_data['password'])
-            login(request, user)
+            # Create SMS preferences if phone provided
+            if phone_number:
+                from .sms_models import SMSPreferences
+                sms_prefs, _ = SMSPreferences.objects.get_or_create(
+                    user=user,
+                    defaults={
+                        'phone_number': phone_number,
+                        'sms_enabled': sms_opt_in,
+                        'tcpa_consent': tcpa_consent,
+                        'tcpa_consent_date': timezone.now() if tcpa_consent else None,
+                        'tcpa_consent_ip': request.META.get('REMOTE_ADDR') if tcpa_consent else None
+                    }
+                )
+
+            # Send email verification
+            from .email_verification import send_email_verification
+            success, message = send_email_verification(email, user, purpose='registration')
             
-            messages.success(request, "Welcome! Your account has been created. You can now complete your profile.")
-            return redirect('applicant_dashboard')
+            if success:
+                request.session['pending_email_verification'] = email
+                messages.info(request, "We've sent a verification code to your email. Please check your inbox and enter the code to continue.")
+                return redirect('email_verification', email=email)
+            else:
+                # CRITICAL FIX: Do NOT delete the user if email sending fails.
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send verification email to {email}: {message}")
+                
+                request.session['pending_email_verification'] = email
+                messages.warning(request, "Account created, but we couldn't send the verification email right now. Please try resending it from the verification page.")
+                return redirect('email_verification', email=email)
     else:
-        form = ApplicantRegistrationForm()
+        from .sms_forms import ApplicantRegistrationWithSMSForm
+        form = ApplicantRegistrationWithSMSForm()
     
     return render(request, 'users/register_applicant.html', {'form': form})
 
@@ -167,11 +246,11 @@ def register_staff(request):
         if form.is_valid():
             user = form.save(commit=False)
             user.is_staff = True
-            user.set_password(form.cleaned_data['password'])
+            user.set_unusable_password()
             user.save()
             
-            # Send invitation email
-            send_account_invitation_email(user, 'staff', form.cleaned_data['password'])
+            # Send secure invitation email
+            send_secure_invitation_email(user, 'staff', request)
             
             messages.success(request, f"Staff account created for {user.email} and invitation email sent.")
             return redirect('admin_user_management')
@@ -193,11 +272,11 @@ def register_owner(request):
         if form.is_valid():
             user = form.save(commit=False)
             user.is_owner = True
-            user.set_password(form.cleaned_data['password'])
+            user.set_unusable_password()
             user.save()
             
-            # Send invitation email
-            send_account_invitation_email(user, 'owner', form.cleaned_data['password'])
+            # Send secure invitation email
+            send_secure_invitation_email(user, 'owner', request)
             
             messages.success(request, f"Owner account created for {user.email} and invitation email sent.")
             return redirect('admin_user_management')
@@ -283,20 +362,139 @@ def admin_dashboard(request):
 
 @login_required
 def broker_dashboard(request):
-    """Dashboard for brokers"""
+    """Enhanced Dashboard for brokers with profile and metrics"""
     if not request.user.is_broker and not request.user.is_superuser:
         messages.error(request, "Access denied. Broker privileges required.")
         return redirect_by_role(request.user)
     
-    # Get broker's recent applications
+    # Get broker profile for personalization
+    from .profiles_models import BrokerProfile
+    try:
+        broker_profile = BrokerProfile.objects.get(user=request.user)
+    except BrokerProfile.DoesNotExist:
+        broker_profile = None
+    
+    # Get broker's assigned buildings and apartments
+    from buildings.models import Building
+    from apartments.models import Apartment
     from applications.models import Application
-    recent_applications = Application.objects.filter(broker=request.user).order_by('-created_at')[:5]
+    from datetime import datetime, timedelta
+    from django.utils import timezone
+    
+    # Get buildings assigned to this broker
+    assigned_buildings = request.user.buildings.all().prefetch_related('apartments', 'apartments__images')
+    
+    # Get all apartments from assigned buildings
+    assigned_apartments = Apartment.objects.filter(
+        building__in=assigned_buildings
+    ).select_related('building').prefetch_related('images', 'building__images')
+    
+    # FIX: Calculate smart matches efficiently with a single query instead of O(N*M) loop
+    from applicants.models import Applicant
+    from django.db.models import Count, Q
+    
+    # Build a dictionary of match counts in ONE query
+    apartment_match_counts = {}
+    
+    if assigned_apartments:
+        # For each apartment, count matching applicants efficiently
+        for apartment in assigned_apartments:
+            # Simple count query - much faster than calling matching function for every applicant
+            match_count = Applicant.objects.filter(
+                Q(max_rent_budget__gte=apartment.rent_price) | Q(max_rent_budget__isnull=True),
+                desired_move_in_date__isnull=False
+            ).filter(
+                # Additional basic compatibility checks - FIX: use min/max_bedrooms
+                Q(min_bedrooms__lte=apartment.bedrooms) | Q(min_bedrooms__isnull=True),
+                Q(max_bedrooms__gte=apartment.bedrooms) | Q(max_bedrooms__isnull=True)
+            ).count()
+            
+            apartment.smart_matches_count = match_count
+    else:
+        # No apartments, set count to 0
+        for apartment in assigned_apartments:
+            apartment.smart_matches_count = 0
+    
+    # Get broker's assigned applicants with profile completion
+    from applicants.apartment_matching import get_apartment_matches_for_applicant
+    assigned_applicants = Applicant.objects.filter(assigned_broker=request.user)
+    
+    # Calculate profile completion and matches for each applicant
+    for applicant in assigned_applicants:
+        # Calculate profile completion percentage
+        required_fields = [
+            applicant.first_name,
+            applicant.last_name,
+            applicant.email,
+            applicant.phone_number,
+            applicant.date_of_birth,
+            applicant.max_rent_budget,
+            applicant.desired_move_in_date,
+        ]
+        completed = sum(1 for field in required_fields if field)
+        applicant.profile_completion = int((completed / len(required_fields)) * 100)
+        
+        # Check if can calculate matches
+        applicant.can_match = bool(applicant.max_rent_budget and applicant.desired_move_in_date)
+        
+        # Get match count if profile allows
+        if applicant.can_match:
+            try:
+                matches = get_apartment_matches_for_applicant(applicant, limit=10)
+                applicant.match_count = len(matches)
+                applicant.top_matches = matches[:3] if matches else []
+            except:
+                applicant.match_count = 0
+                applicant.top_matches = []
+        else:
+            applicant.match_count = 0
+            applicant.top_matches = []
+    
+    # Get applications for broker's apartments only
+    broker_apartment_ids = assigned_apartments.values_list('id', flat=True)
+    recent_applications = Application.objects.filter(
+        apartment_id__in=broker_apartment_ids
+    ).select_related('applicant', 'apartment', 'apartment__building').order_by('-created_at')[:10]
+    
+    # Calculate broker metrics
+    total_applications = Application.objects.filter(broker=request.user).count()
+    
+    # Applications this month
+    current_month_start = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    monthly_applications = Application.objects.filter(
+        broker=request.user,
+        created_at__gte=current_month_start
+    ).count()
+    
+    # Pending applications needing attention
+    pending_applications = Application.objects.filter(
+        broker=request.user,
+        status__in=['NEW', 'PENDING', 'IN_PROGRESS']
+    ).count()
+    
+    # Calculate potential commission (if profile has commission rate)
+    potential_commission = 0
+    if broker_profile and broker_profile.standard_commission_rate:
+        for apt in assigned_apartments:
+            if apt.rent_price:
+                # Assuming first month's rent as commission base
+                potential_commission += float(apt.rent_price * broker_profile.standard_commission_rate / 100)
     
     context = {
         'user': request.user,
+        'broker_profile': broker_profile,
+        'assigned_buildings': assigned_buildings,
+        'assigned_apartments': assigned_apartments,
+        'assigned_applicants': assigned_applicants,  # ADD THIS
         'recent_applications': recent_applications,
+        'total_applications': total_applications,
+        'monthly_applications': monthly_applications,
+        'pending_applications': pending_applications,
+        'potential_commission': potential_commission,
     }
-    return render(request, 'users/dashboards/broker_dashboard.html', context)
+    # Use the original template for consistent styling with applicant dashboard
+    template = 'users/dashboards/broker_dashboard.html'
+    return render(request, template, context)
 
 
 @login_required
@@ -323,15 +521,36 @@ def applicant_dashboard(request):
                 applicant.user = request.user
                 applicant.save()
         
-        applications = Application.objects.filter(applicant=applicant).order_by('-created_at')
+        # Only show applications that are ready for applicant action (not NEW/draft status)
+        applications = Application.objects.filter(
+            applicant=applicant
+        ).exclude(
+            status__in=['draft', 'NEW']  # Hide drafts and NEW applications from applicants
+        ).order_by('-created_at')
         
-        # Get profile completion status
-        completion_percentage, missing_fields = ProfileProgressService.calculate_profile_completion(applicant)
+        # Get profile completion status - using comprehensive field tracking
+        completion_status = applicant.get_field_completion_status()
+        completion_percentage = completion_status['overall']['overall_completion_percentage']
+
+        # Build missing fields list from sections
+        missing_fields = {}
+        for section_name, section_data in completion_status['sections'].items():
+            section_missing = [
+                field_data['label'] 
+                for field_name, field_data in section_data['fields'].items() 
+                if not field_data['filled']
+            ]
+            if section_missing:
+                missing_fields[section_name] = section_missing
+
+        # Get next steps (keep using ProfileProgressService for this)
         next_steps = ProfileProgressService.get_next_profile_steps(applicant)
-        
-        # Get apartment matches if profile has basic preferences
+                
+        # Always try to get apartment matches
         apartment_matches = []
-        if completion_percentage >= 25 and applicant.max_rent_budget:  # Show matches if basic preferences set
+        can_show_matches = bool(applicant.max_rent_budget and applicant.desired_move_in_date)
+
+        if can_show_matches:
             try:
                 apartment_matches = get_apartment_matches_for_applicant(applicant, limit=6)
             except Exception as e:
@@ -356,6 +575,7 @@ def applicant_dashboard(request):
         'next_steps': next_steps,
         'apartment_matches': apartment_matches,
         'has_matches': len(apartment_matches) > 0,
+        'can_show_matches': can_show_matches,
     }
     return render(request, 'users/dashboards/applicant_dashboard.html', context)
 
@@ -386,24 +606,20 @@ def staff_dashboard(request):
     return render(request, 'users/dashboards/staff_dashboard.html', context)
 
 
-def generate_temporary_password(length=12):
-    """Generate a secure temporary password"""
-    alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-    password = ''.join(secrets.choice(alphabet) for i in range(length))
-    return password
-
-
-def send_account_invitation_email(user, role, temporary_password):
-    """Send invitation email to new user with temporary password"""
+def send_secure_invitation_email(user, role, request=None):
+    """Send invitation email with secure token link instead of password"""
     try:
         subject = f"Welcome to Doorway - Your {role.title()} Account"
+        
+        # Generate secure invitation link
+        invitation_link = generate_invitation_link(user, request)
         
         # Create the email context
         context = {
             'user': user,
             'role': role.title(),
-            'temporary_password': temporary_password,
-            'login_url': f"{settings.SITE_URL}/users/login/" if hasattr(settings, 'SITE_URL') else "http://localhost:8000/users/login/",
+            'invitation_link': invitation_link,
+            'expiry_hours': 48,  # Link expires in 48 hours
         }
         
         # Render email template
@@ -421,8 +637,68 @@ def send_account_invitation_email(user, role, temporary_password):
         )
         return True
     except Exception as e:
-        print(f"Failed to send invitation email: {e}")
+        logger.error(f"Failed to send invitation email to {user.email}: {e}")
         return False
+
+
+def set_password_view(request, uidb64, token):
+    """
+    Secure password setting view using tokens instead of temp passwords.
+    Business Impact: More secure than sending passwords via email.
+    """
+    # Verify token
+    user = verify_token(uidb64, token, invitation_token)
+    if user is None:
+        messages.error(request, 'Invalid or expired invitation link.')
+        return redirect('login')
+    
+    if request.method == 'POST':
+        password = request.POST.get('password')
+        password_confirm = request.POST.get('password_confirm')
+        
+        if not password or len(password) < 8:
+            messages.error(request, 'Password must be at least 8 characters long.')
+        elif password != password_confirm:
+            messages.error(request, 'Passwords do not match.')
+        else:
+            # Set password and activate user
+            user.set_password(password)
+            user.is_active = True
+            user.save()
+            
+            # Log them in
+            login(request, user)
+            
+            messages.success(request, 'Password set successfully! Welcome to DoorWay.')
+            return redirect_by_role(user)
+    
+    return render(request, 'users/set_password.html', {
+        'user': user,
+        'uidb64': uidb64,
+        'token': token
+    })
+
+
+def activate_account_view(request, uidb64, token):
+    """
+    Account activation view for email verification.
+    """
+    # Verify token
+    user = verify_token(uidb64, token, account_activation_token)
+    if user is None:
+        messages.error(request, 'Invalid or expired activation link.')
+        return redirect('login')
+    
+    if user.is_active:
+        messages.info(request, 'Account is already activated.')
+        return redirect('login')
+    
+    # Activate the user
+    user.is_active = True
+    user.save()
+    
+    messages.success(request, 'Account activated successfully! You can now log in.')
+    return redirect('login')
 
 
 @login_required
@@ -473,14 +749,11 @@ def admin_create_account(request, account_type):
         if User.objects.filter(email=email).exists():
             messages.error(request, "A user with this email already exists.")
         else:
-            # Generate temporary password
-            temp_password = generate_temporary_password()
-            
-            # Create user
+            # Create user with unusable password (secure approach)
             user = User.objects.create_user(
-                email=email,
-                password=temp_password
+                email=email
             )
+            user.set_unusable_password()
             
             # Set role
             if account_type == 'broker':
@@ -492,8 +765,8 @@ def admin_create_account(request, account_type):
             
             user.save()
             
-            # Send invitation email
-            if send_account_invitation_email(user, account_type, temp_password):
+            # Send secure invitation email
+            if send_secure_invitation_email(user, account_type, request):
                 messages.success(request, f"{account_type.title()} account created for {email} and invitation email sent.")
             else:
                 messages.warning(request, f"{account_type.title()} account created for {email}, but email sending failed.")

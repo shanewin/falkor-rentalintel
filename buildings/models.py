@@ -110,6 +110,13 @@ class Building(models.Model):
         ('zelle', 'Zelle'),
         ('venmo', 'Venmo'),
     ]
+    # Geographic Coordinates
+    latitude = models.DecimalField(max_digits=10, decimal_places=7, blank=True, null=True, 
+                                   help_text='Latitude coordinate for map display')
+    longitude = models.DecimalField(max_digits=10, decimal_places=7, blank=True, null=True,
+                                    help_text='Longitude coordinate for map display')
+    
+    # Financial Information
     credit_screening_fee = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     credit_screening_payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, blank=True, null=True)
 

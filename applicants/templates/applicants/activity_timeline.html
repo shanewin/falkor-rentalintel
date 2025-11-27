@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Activity Timeline - {{ applicant.first_name }} {{ applicant.last_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .timeline {
+        position: relative;
+        padding: 20px 0;
+    }
+    
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 50px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #dee2e6;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-left: 80px;
+        margin-bottom: 30px;
+    }
+    
+    .timeline-icon {
+        position: absolute;
+        left: 30px;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: white;
+        border: 2px solid #dee2e6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1;
+    }
+    
+    .timeline-content {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .timeline-date {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 15px;
+        font-size: 1.1rem;
+    }
+    
+    .timeline-activity {
+        padding: 10px 0;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    
+    .timeline-activity:last-child {
+        border-bottom: none;
+    }
+    
+    .summary-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .summary-stat {
+        text-align: center;
+        padding: 10px;
+    }
+    
+    .summary-stat h3 {
+        font-size: 2rem;
+        color: #2c3e50;
+        margin: 0;
+    }
+    
+    .summary-stat p {
+        color: #7f8c8d;
+        margin: 5px 0 0 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2">
+                Activity Timeline
+            </h1>
+            <p class="text-muted mb-0">
+                {{ applicant.first_name }} {{ applicant.last_name }} 
+                {% if applicant.email %}({{ applicant.email }}){% endif %}
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'applicant_overview' applicant.id %}" class="btn btn-outline-primary">
+                <i class="fas fa-user me-2"></i>View Profile
+            </a>
+            <a href="{% url 'activity_dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+    
+    <!-- Summary Statistics -->
+    <div class="summary-card">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="summary-stat">
+                    <h3>{{ total_activities|intcomma }}</h3>
+                    <p>Total Activities</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="summary-stat">
+                    <h3>{{ summary.total_activities|intcomma }}</h3>
+                    <p>Last 30 Days</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="summary-stat">
+                    <h3>{{ summary.activity_breakdown|length }}</h3>
+                    <p>Activity Types</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="summary-stat">
+                    {% if summary.most_recent %}
+                    <h3>{{ summary.most_recent.created_at|timesince }}</h3>
+                    <p>Last Activity</p>
+                    {% else %}
+                    <h3>-</h3>
+                    <p>No Recent Activity</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Activity Breakdown -->
+    {% if summary.activity_breakdown %}
+    <div class="summary-card">
+        <h5 class="mb-3">Activity Types (Last 30 Days)</h5>
+        <div class="row">
+            {% for activity_type, count in summary.activity_breakdown.items %}
+            <div class="col-md-4 mb-2">
+                <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded">
+                    <span>{{ activity_type }}</span>
+                    <span class="badge bg-primary">{{ count }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Timeline -->
+    <div class="timeline">
+        {% for date, activities in activities_by_date.items %}
+        <div class="timeline-item">
+            <div class="timeline-icon">
+                <i class="fas fa-calendar-day text-primary"></i>
+            </div>
+            <div class="timeline-content">
+                <div class="timeline-date">
+                    {{ date|date:"F j, Y" }}
+                </div>
+                {% for activity in activities %}
+                <div class="timeline-activity">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <i class="{{ activity.get_activity_icon }} {{ activity.get_activity_color }} me-2"></i>
+                            <strong>{{ activity.get_activity_type_display }}</strong>
+                            <p class="mb-1 mt-1 text-muted">
+                                {{ activity.description }}
+                            </p>
+                            {% if activity.metadata %}
+                            <small class="text-muted">
+                                {% for key, value in activity.metadata.items %}
+                                    {% if key != 'applicant_id' %}
+                                        {{ key|title }}: {{ value }}{% if not forloop.last %}, {% endif %}
+                                    {% endif %}
+                                {% endfor %}
+                            </small>
+                            {% endif %}
+                            {% if activity.triggered_by %}
+                            <small class="text-muted d-block">
+                                By: {{ activity.triggered_by.email }}
+                            </small>
+                            {% endif %}
+                        </div>
+                        <small class="text-muted">
+                            {{ activity.created_at|time:"g:i A" }}
+                        </small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-5">
+            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No activities recorded for this applicant</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
