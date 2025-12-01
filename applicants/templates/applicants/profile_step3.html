@@ -8,16 +8,17 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
+<!-- Page Header -->
+<div class="bg-dark text-white py-4 mb-4">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-md-8">
-                <h1>My Applicant Profile</h1>
-                <p>Fill out as much information as possible to receive more matches and make applying easier</p>
+                <h1 class="mb-2">My Applicant Profile</h1>
+                <p class="mb-0">Fill out as much information as possible to receive more matches and make applying easier</p>
             </div>
             <div class="col-md-4 text-end">
-                <a href="{% url 'applicant_dashboard' %}" class="btn btn-outline-primary">
-                    Back to Dashboard
+                <a href="{% url 'applicant_dashboard' %}" class="btn btn-outline-light">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
                 </a>
             </div>
         </div>
@@ -35,36 +36,40 @@
     {% endif %}
 
     <!-- Progress Bar -->
-    <div class="card mb-4">
+    <div class="card shadow-sm mb-4">
         <div class="card-body">
             <h6 class="mb-3">Profile Completion Progress ({{ completion_percentage }}% Complete)</h6>
-            <div class="progress mb-3" style="height: 6px;">
-            <div class="progress mb-3" style="height: 6px;">
-                <div class="progress-bar progress-bar-custom" style="width: 100%;"></div>
-            </div>
+            <div class="progress mb-3" style="height: 8px;">
+                <div class="progress-bar bg-warning" role="progressbar" style="width: 100%;" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
             </div>
             <div class="row text-center">
                 <div class="col-4">
                     <a href="{% url 'profile_step1' %}" class="text-decoration-none">
-                        <div class="step text-muted">
-                            <div class="step-number bg-light text-muted">1</div>
-                            <small>Personal Info</small>
+                        <div class="d-flex flex-column align-items-center">
+                            <div class="rounded-circle bg-light text-muted d-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
+                                <strong>1</strong>
+                            </div>
+                            <small class="text-muted">Personal Info</small>
                         </div>
                     </a>
                 </div>
                 <div class="col-4">
                     <a href="{% url 'profile_step2' %}" class="text-decoration-none">
-                        <div class="step text-muted">
-                            <div class="step-number bg-light text-muted">2</div>
-                            <small>Housing Needs & Preferences</small>
+                        <div class="d-flex flex-column align-items-center">
+                            <div class="rounded-circle bg-light text-muted d-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
+                                <strong>2</strong>
+                            </div>
+                            <small class="text-muted">Housing Needs & Preferences</small>
                         </div>
                     </a>
                 </div>
                 <div class="col-4">
                     <a href="{% url 'profile_step3' %}" class="text-decoration-none">
-                        <div class="step step-active">
-                            <div class="step-number step-number-active">3</div>
-                            <small>Income & Employment</small>
+                        <div class="d-flex flex-column align-items-center">
+                            <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
+                                <strong>3</strong>
+                            </div>
+                            <small class="text-dark fw-bold">Income & Employment</small>
                         </div>
                     </a>
                 </div>
@@ -73,11 +78,11 @@
     </div>
 
     <!-- Step 3: Income & Employment -->
-    <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0">Step 3: Income & Employment</h5>
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0"><i class="fas fa-briefcase me-2"></i>Step 3: Income & Employment</h5>
         </div>
-        <div class="card-body">
+        <div class="card-body p-4">
             <form method="post" class="doorway-form">
                 {% csrf_token %}
                 {% crispy form form.helper %}
