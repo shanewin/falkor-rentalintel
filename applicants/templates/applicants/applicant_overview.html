@@ -9,15 +9,15 @@
 
 {% block content %}
 <!-- Page Header -->
-<div class="page-header">
+<div class="bg-dark text-white py-4 mb-4">
     <div class="container">
         <div class="d-flex justify-content-between align-items-start flex-wrap">
             <div>
-                <h1>{{ applicant.first_name }} {{ applicant.last_name }}</h1>
+                <h1 class="mb-2">{{ applicant.first_name }} {{ applicant.last_name }}</h1>
                 <p class="mb-0">Applicant Profile Overview</p>
             </div>
             <div class="header-actions">
-                <a href="{% url 'profile_step1' %}" class="btn btn-primary">
+                <a href="{% url 'profile_step1' %}" class="btn btn-warning">
                     <i class="fas fa-edit me-2"></i>Edit Profile
                 </a>
                 <a href="{% url 'applicant_crm' applicant.id %}" class="btn btn-outline-light">

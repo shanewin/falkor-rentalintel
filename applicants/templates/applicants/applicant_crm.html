@@ -10,11 +10,11 @@
 
 {% block content %}
 <!-- CRM Header -->
-<div class="crm-header">
+<div class="bg-dark text-white py-4 mb-4">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-md-8">
-                <h1><i class="fas fa-user-circle me-2"></i>{{ applicant.first_name }} {{ applicant.last_name }} - CRM</h1>
+                <h1 class="mb-2"><i class="fas fa-user-circle me-2"></i>{{ applicant.first_name }} {{ applicant.last_name }} - CRM</h1>
                 <p class="mb-0">Comprehensive lead management and activity tracking</p>
             </div>
             <div class="col-md-4 text-end">
@@ -28,82 +28,100 @@
 
 <div class="container">
     <!-- Applicant Summary Card -->
-    <div class="applicant-header">
-        <div class="row align-items-center">
-            <div class="col-md-2 text-center">
-                {% if applicant.photos.all %}
-                    <img src="{{ applicant.photos.first.large_url }}" class="applicant-avatar" style="background: none; width: 80px; height: 80px; object-fit: cover;">
-                {% else %}
-                    <div class="applicant-avatar">
-                        {{ applicant.first_name|first }}{{ applicant.last_name|first }}
-                    </div>
-                {% endif %}
-            </div>
-            
-            <div class="col-md-6">
-                <h3 class="mb-2">{{ applicant.first_name }} {{ applicant.last_name }}</h3>
-                <div class="row">
-                    <div class="col-6">
-                        <p class="mb-1"><i class="fas fa-envelope text-muted me-2"></i>{{ applicant.email|default:"No email" }}</p>
-                        <p class="mb-1"><i class="fas fa-phone text-muted me-2"></i>{{ applicant.phone_number|default:"No phone" }}</p>
-                    </div>
-                    <div class="col-6">
-                        <p class="mb-1"><i class="fas fa-bed text-muted me-2"></i>{{ applicant.min_bedrooms|default:"Any" }}-{{ applicant.max_bedrooms|default:"Any" }} BR</p>
-                        <p class="mb-1"><i class="fas fa-dollar-sign text-muted me-2"></i>Budget: ${{ applicant.max_rent_budget|default:"Not set" }}</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-md-2">
-                <div class="text-center">
-                    <strong>Move-in Date:</strong><br>
-                    {% if applicant.desired_move_in_date %}
-                        {% with days_until=applicant.desired_move_in_date|timeuntil %}
-                            <div class="
-                                {% if "day" in days_until and "week" not in days_until and "month" not in days_until %}urgency-urgent
-                                {% elif "week" in days_until %}urgency-soon
-                                {% else %}urgency-flexible{% endif %}
-                            ">
-                                {{ applicant.desired_move_in_date|date:"M d, Y" }}<br>
-                                <small>({{ days_until }})</small>
-                            </div>
-                        {% endwith %}
+    <div class="card shadow-sm border-start border-warning border-4 mb-4">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <div class="col-md-2 text-center">
+                    {% if applicant.photos.all %}
+                        <img src="{{ applicant.photos.first.large_url }}" class="rounded-circle" style="width: 80px; height: 80px; object-fit: cover;">
                     {% else %}
-                        <span class="text-muted">Not specified</span>
+                        <div class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center fw-bold" style="width: 80px; height: 80px; font-size: 1.5rem; margin: 0 auto;">
+                            {{ applicant.first_name|first }}{{ applicant.last_name|first }}
+                        </div>
                     {% endif %}
                 </div>
-            </div>
-            
-            <div class="col-md-2">
-                <div class="contact-actions">
-                    <button class="contact-btn contact-btn-primary" data-bs-toggle="modal" data-bs-target="#contactModal">
-                        <i class="fas fa-envelope"></i> Contact
-                    </button>
-                    <button class="contact-btn contact-btn-secondary" data-bs-toggle="modal" data-bs-target="#addLogModal">
-                        <i class="fas fa-plus"></i> Add Log
-                    </button>
+                
+                <div class="col-md-6">
+                    <h3 class="mb-2">{{ applicant.first_name }} {{ applicant.last_name }}</h3>
+                    <div class="row">
+                        <div class="col-6">
+                            <p class="mb-1"><i class="fas fa-envelope text-muted me-2"></i>{{ applicant.email|default:"No email" }}</p>
+                            <p class="mb-1"><i class="fas fa-phone text-muted me-2"></i>{{ applicant.phone_number|default:"No phone" }}</p>
+                        </div>
+                        <div class="col-6">
+                            <p class="mb-1"><i class="fas fa-bed text-muted me-2"></i>{{ applicant.min_bedrooms|default:"Any" }}-{{ applicant.max_bedrooms|default:"Any" }} BR</p>
+                            <p class="mb-1"><i class="fas fa-dollar-sign text-muted me-2"></i>Budget: ${{ applicant.max_rent_budget|default:"Not set" }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-2">
+                    <div class="text-center">
+                        <strong>Move-in Date:</strong><br>
+                        {% if applicant.desired_move_in_date %}
+                            {% with days_until=applicant.desired_move_in_date|timeuntil %}
+                                <div class="
+                                    {% if "day" in days_until and "week" not in days_until and "month" not in days_until %}text-danger fw-bold
+                                    {% elif "week" in days_until %}text-warning fw-bold
+                                    {% else %}text-success{% endif %}
+                                ">
+                                    {{ applicant.desired_move_in_date|date:"M d, Y" }}<br>
+                                    <small>({{ days_until }})</small>
+                                </div>
+                            {% endwith %}
+                        {% else %}
+                            <span class="text-muted">Not specified</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-2">
+                    <div class="d-flex flex-column gap-2">
+                        <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#contactModal">
+                            <i class="fas fa-envelope me-1"></i> Contact
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#addLogModal">
+                            <i class="fas fa-plus me-1"></i> Add Log
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Activity Statistics -->
-    <div class="stats-grid">
-        <div class="stat-item">
-            <div class="stat-number">{{ activity_summary.total_activities|default:0 }}</div>
-            <div class="stat-label">Total Activities</div>
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm text-center h-100">
+                <div class="card-body">
+                    <div class="display-4 fw-bold mb-2">{{ activity_summary.total_activities|default:0 }}</div>
+                    <div class="text-muted text-uppercase small fw-semibold">Total Activities</div>
+                </div>
+            </div>
         </div>
-        <div class="stat-item">
-            <div class="stat-number">{{ logs.count }}</div>
-            <div class="stat-label">Interaction Logs</div>
+        <div class="col-md-3">
+            <div class="card shadow-sm text-center h-100">
+                <div class="card-body">
+                    <div class="display-4 fw-bold mb-2">{{ logs.count }}</div>
+                    <div class="text-muted text-uppercase small fw-semibold">Interaction Logs</div>
+                </div>
+            </div>
         </div>
-        <div class="stat-item">
-            <div class="stat-number">{{ activity_summary.activity_breakdown.Login|default:0 }}</div>
-            <div class="stat-label">Logins (30d)</div>
+        <div class="col-md-3">
+            <div class="card shadow-sm text-center h-100">
+                <div class="card-body">
+                    <div class="display-4 fw-bold mb-2">{{ activity_summary.activity_breakdown.Login|default:0 }}</div>
+                    <div class="text-muted text-uppercase small fw-semibold">Logins (30d)</div>
+                </div>
+            </div>
         </div>
-        <div class="stat-item">
-            <div class="stat-number">{{ activity_summary.activity_breakdown.Apartment_Viewed|default:0 }}</div>
-            <div class="stat-label">Apartments Viewed</div>
+        <div class="col-md-3">
+            <div class="card shadow-sm text-center h-100">
+                <div class="card-body">
+                    <div class="display-4 fw-bold mb-2">{{ activity_summary.activity_breakdown.Apartment_Viewed|default:0 }}</div>
+                    <div class="text-muted text-uppercase small fw-semibold">Apartments Viewed</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -112,84 +130,99 @@
         <div class="col-md-8">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4><i class="fas fa-stream me-2"></i>Activity Feed</h4>
-                <div class="filter-tabs">
-                    <button class="filter-tab active" onclick="filterActivities('all')">All</button>
-                    <button class="filter-tab" onclick="filterActivities('login')">Logins</button>
-                    <button class="filter-tab" onclick="filterActivities('profile')">Profile</button>
-                    <button class="filter-tab" onclick="filterActivities('apartment')">Apartments</button>
-                </div>
+                <ul class="nav nav-tabs border-0">
+                    <li class="nav-item">
+                        <button class="nav-link active" onclick="filterActivities('all')">All</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" onclick="filterActivities('login')">Logins</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" onclick="filterActivities('profile')">Profile</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" onclick="filterActivities('apartment')">Apartments</button>
+                    </li>
+                </ul>
             </div>
             
-            <div class="activity-feed">
-                {% for activity in recent_activities %}
-                    <div class="activity-item d-flex" data-type="{{ activity.activity_type }}">
-                        <div class="activity-icon" style="background-color: {{ activity.color_class }};">
-                            <i class="{{ activity.icon_class }} text-white"></i>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-description">{{ activity.description }}</div>
-                            <div class="activity-meta">
-                                {{ activity.created_at|date:"M d, Y g:i A" }}
-                                {% if activity.triggered_by %} • by {{ activity.triggered_by.username }}{% endif %}
-                                {% if activity.ip_address %} • {{ activity.ip_address }}{% endif %}
+            <div class="card shadow-sm" style="max-height: 600px; overflow-y: auto;">
+                <div class="list-group list-group-flush">
+                    {% for activity in recent_activities %}
+                        <div class="list-group-item d-flex" data-type="{{ activity.activity_type }}">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; background-color: {{ activity.color_class }};">
+                                <i class="{{ activity.icon_class }} text-white"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="fw-semibold mb-1">{{ activity.description }}</div>
+                                <div class="text-muted small">
+                                    {{ activity.created_at|date:"M d, Y g:i A" }}
+                                    {% if activity.triggered_by %} • by {{ activity.triggered_by.username }}{% endif %}
+                                    {% if activity.ip_address %} • {{ activity.ip_address }}{% endif %}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                {% empty %}
-                    <div class="activity-item text-center py-4">
-                        <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
-                        <p class="text-muted mb-0">No activities recorded yet.</p>
-                    </div>
-                {% endfor %}
+                    {% empty %}
+                        <div class="list-group-item text-center py-5">
+                            <i class="fas fa-inbox fa-2x text-muted mb-3 d-block"></i>
+                            <p class="text-muted mb-0">No activities recorded yet.</p>
+                        </div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
         
         <!-- Interaction Logs & Quick Actions -->
         <div class="col-md-4">
             <!-- Quick Actions -->
-            <div class="quick-actions mb-4">
-                <h5 class="mb-3"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
-                <button class="action-btn" data-bs-toggle="modal" data-bs-target="#addLogModal">
-                    <i class="fas fa-plus me-2"></i>Add Interaction Log
-                </button>
-                <button class="action-btn" data-bs-toggle="modal" data-bs-target="#contactModal">
-                    <i class="fas fa-envelope me-2"></i>Send Message
-                </button>
-                <button class="action-btn" onclick="alert('Feature coming soon!')">
-                    <i class="fas fa-calendar me-2"></i>Schedule Follow-up
-                </button>
-                <button class="action-btn" onclick="alert('Feature coming soon!')">
-                    <i class="fas fa-user-tie me-2"></i>Assign Broker
-                </button>
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="mb-3"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addLogModal">
+                            <i class="fas fa-plus me-2"></i>Add Interaction Log
+                        </button>
+                        <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#contactModal">
+                            <i class="fas fa-envelope me-2"></i>Send Message
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="alert('Feature coming soon!')">
+                            <i class="fas fa-calendar me-2"></i>Schedule Follow-up
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="alert('Feature coming soon!')">
+                            <i class="fas fa-user-tie me-2"></i>Assign Broker
+                        </button>
+                    </div>
+                </div>
             </div>
             
             <!-- Recent Interaction Logs -->
-            <div class="interaction-logs">
-                <div class="p-3 border-bottom">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
                     <h5 class="mb-0"><i class="fas fa-comments me-2"></i>Recent Interactions</h5>
                 </div>
-                
-                {% for log in logs|slice:":10" %}
-                    <div class="log-item {% if log.is_message %}message{% endif %}">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="flex-grow-1">
-                                <strong class="d-block mb-1">
-                                    {% if log.broker %}{{ log.broker.get_full_name|default:log.broker.username }}{% else %}System{% endif %}
-                                </strong>
-                                <p class="mb-1">{{ log.note }}</p>
-                                <small class="text-muted">{{ log.created_at|date:"M d, Y g:i A" }}</small>
+                <div class="list-group list-group-flush">
+                    {% for log in logs|slice:":10" %}
+                        <div class="list-group-item {% if log.is_message %}bg-success bg-opacity-10 border-start border-success border-3{% endif %}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <strong class="d-block mb-1">
+                                        {% if log.broker %}{{ log.broker.get_full_name|default:log.broker.username }}{% else %}System{% endif %}
+                                    </strong>
+                                    <p class="mb-1">{{ log.note }}</p>
+                                    <small class="text-muted">{{ log.created_at|date:"M d, Y g:i A" }}</small>
+                                </div>
+                                {% if log.is_message %}
+                                    <span class="badge bg-success ms-2">Message</span>
+                                {% endif %}
                             </div>
-                            {% if log.is_message %}
-                                <span class="badge bg-success ms-2">Message</span>
-                            {% endif %}
                         </div>
-                    </div>
-                {% empty %}
-                    <div class="log-item text-center py-4">
-                        <i class="fas fa-comment-slash fa-2x text-muted mb-2"></i>
-                        <p class="text-muted mb-0">No interaction logs yet.</p>
-                    </div>
-                {% endfor %}
+                    {% empty %}
+                        <div class="list-group-item text-center py-5">
+                            <i class="fas fa-comment-slash fa-2x text-muted mb-3 d-block"></i>
+                            <p class="text-muted mb-0">No interaction logs yet.</p>
+                        </div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
     </div>
