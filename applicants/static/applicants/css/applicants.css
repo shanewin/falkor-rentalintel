@@ -1,187 +1,7 @@
-/* Custom CSS for Profile Page */
-/* :root variables are now inherited from doorway-theme.css */
+/* Custom CSS for Applicants App - Functional Styles Only */
+/* Bootstrap 5 utilities handle all layout, spacing, typography, and standard components */
 
-body {
-    font-family: 'Inter', sans-serif;
-    background-color: var(--brand-light-gray);
-    color: var(--text-dark);
-}
-
-.card {
-    border: none;
-    border-radius: 12px;
-    box-shadow: var(--shadow-sm);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    background-color: #ffffff;
-}
-
-.card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-}
-
-.card-header {
-    background: linear-gradient(135deg, var(--brand-black), var(--brand-dark-gray));
-    color: white;
-    border-radius: 12px 12px 0 0;
-    padding: 1.5rem;
-}
-
-.card-header h2 {
-    font-size: 1.75rem;
-    font-weight: 700;
-    margin: 0;
-}
-
-.card-body {
-    padding: 2rem;
-}
-
-.list-group-item {
-    border: none;
-    padding: 1rem 1.5rem;
-    background-color: var(--brand-light-gray);
-    margin-bottom: 0.5rem;
-    border-radius: 8px;
-    transition: background-color 0.3s ease;
-}
-
-.list-group-item:hover {
-    background-color: #e9ecef;
-}
-
-.list-group-item strong {
-    color: var(--text-dark);
-    font-weight: 600;
-}
-
-.list-group-item span {
-    color: var(--text-muted);
-}
-
-.img-thumbnail {
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 5px;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.img-thumbnail:hover {
-    transform: scale(1.05);
-    box-shadow: var(--shadow-sm);
-}
-
-.btn-outline-primary {
-    border-color: var(--brand-yellow);
-    color: var(--brand-yellow);
-    font-weight: 500;
-    padding: 0.5rem 1.5rem;
-    border-radius: 8px;
-    transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-.btn-outline-primary:hover {
-    background-color: var(--brand-yellow);
-    color: white;
-}
-
-/* Typography */
-h5 {
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-}
-
-.text-muted {
-    color: var(--text-muted) !important;
-}
-
-/* Profile Picture Styling */
-.rounded-circle {
-    border: 4px solid #ffffff;
-    box-shadow: var(--shadow-sm);
-}
-
-/* Pets Section Styling */
-.card-shadow-sm {
-    box-shadow: var(--shadow-sm);
-    border-radius: 8px;
-}
-
-.card-shadow-sm .card-body {
-    padding: 1.5rem;
-}
-
-.card-shadow-sm h6 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--text-dark);
-}
-
-.card-shadow-sm p {
-    color: var(--text-muted);
-    margin-bottom: 1rem;
-}
-
-/* Table Styling */
-.table {
-    width: 100%;
-    margin-bottom: 1rem;
-    color: var(--text-dark);
-}
-
-.table td, .table th {
-    padding: 0.75rem;
-    vertical-align: top;
-    border-top: 1px solid var(--border-color);
-}
-
-.table-borderless td, .table-borderless th {
-    border: 0;
-}
-
-/* Spacing Utilities */
-.mb-3 {
-    margin-bottom: 1.5rem !important;
-}
-
-.mt-4 {
-    margin-top: 2rem !important;
-}
-
-.fw-bold {
-    font-weight: 600;
-}
-
-.border-bottom {
-    border-bottom: 2px solid var(--border-color) !important;
-    padding-bottom: 0.75rem;
-}
-
-.text-center {
-    text-align: center;
-}
-
-/* Progress Bar Styles */
-.progress-bar-custom {
-    background-color: var(--brand-yellow);
-}
-
-.step-active {
-    color: var(--brand-yellow);
-}
-
-.step-number-active {
-    background-color: var(--brand-black);
-    color: var(--brand-white);
-}
-
-.step-number-inactive {
-    background-color: var(--brand-light-gray);
-    color: var(--text-muted);
-}
-
-/* Neighborhood item styles from profile_step2.html */
+/* Neighborhood Drag-and-Drop Styles (Functional - Required for SortableJS) */
 .neighborhood-item {
     padding: 10px;
     margin-bottom: 8px;
@@ -232,7 +52,7 @@ h5 {
     color: var(--link-color);
 }
 
-/* Amenities Slider Styles from profile_step2.html */
+/* Amenity Slider Styles (Functional - Required for custom slider UI) */
 .amenities-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -259,7 +79,7 @@ h5 {
 
 .amenity-slider-item.very-important {
     border-color: var(--brand-orange);
-    background: #fff3e0; /* Keep light orange background or add var if needed, for now keeping as is or mapping to light gray? No, it needs to be orange-ish. */
+    background: #fff3e0;
 }
 
 .amenity-slider-item.must-have {
