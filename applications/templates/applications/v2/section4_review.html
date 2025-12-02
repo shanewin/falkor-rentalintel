@@ -1,249 +1,294 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Application Review - {{ application.id }}{% endblock %}
-
 {% block content %}
-<div class="container mt-5">
-    <h2>Section 4: Review Your Application</h2>
-    <p class="text-muted">Please review all information before proceeding to payment.</p>
-    
-    {% if not all_sections_complete %}
-    <div class="alert alert-warning">
-        <strong>Incomplete Sections:</strong>
-        <ul class="mb-0">
-            {% if not sections_complete.personal %}<li>Personal Information: {{ sections_complete.personal_message }}</li>{% endif %}
-            {% if not sections_complete.income %}<li>Income Information: {{ sections_complete.income_message }}</li>{% endif %}
-            {% if not sections_complete.legal %}<li>Legal Documents not signed</li>{% endif %}
-            {% if not sections_complete.required_docs %}<li>Required Documents: {{ sections_complete.docs_message }}</li>{% endif %}
-        </ul>
-    </div>
-    {% endif %}
-    
-    <!-- Section 1: Personal Information -->
-    <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">Personal Information</h5>
-        </div>
-        <div class="card-body">
-            {% if personal_info %}
-            <div class="row">
-                <div class="col-md-6">
-                    <p><strong>Name:</strong> {{ personal_info.first_name }} {{ personal_info.last_name }}</p>
-                    <p><strong>Email:</strong> {{ personal_info.email|default:"Not provided" }}</p>
-                    <p><strong>Phone:</strong> {{ personal_info.phone_cell|default:"Not provided" }}</p>
-                    <p><strong>Date of Birth:</strong> {{ personal_info.date_of_birth|default:"Not provided" }}</p>
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Application Review</h4>
                 </div>
-                <div class="col-md-6">
-                    <p><strong>Current Address:</strong> {{ personal_info.current_address|default:"Not provided" }}</p>
-                    <p><strong>Desired Property:</strong> {{ property_display }}</p>
-                    <p><strong>Unit:</strong> {{ unit_display }}</p>
-                    <p><strong>Move-in Date:</strong> {{ personal_info.desired_move_in_date|default:"Not provided" }}</p>
+                <div class="card-body">
+                    
+                    <!-- Progress Bar -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Application Progress</label>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: 80%;" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100">Step 4 of 5</div>
+                        </div>
+                    </div>
+
+                    <!-- Section Navigation -->
+                    <div class="d-flex justify-content-between mb-4 text-center">
+                        <div class="flex-fill text-muted">
+                            <span class="badge bg-success rounded-pill mb-1"><i class="fas fa-check"></i></span>
+                            <br><small>Personal</small>
+                        </div>
+                        <div class="flex-fill text-muted">
+                            <span class="badge bg-success rounded-pill mb-1"><i class="fas fa-check"></i></span>
+                            <br><small>Income</small>
+                        </div>
+                        <div class="flex-fill text-muted">
+                            <span class="badge bg-success rounded-pill mb-1"><i class="fas fa-check"></i></span>
+                            <br><small>Legal</small>
+                        </div>
+                        <div class="flex-fill">
+                            <span class="badge bg-primary rounded-pill mb-1">4</span>
+                            <br><small class="fw-bold">Review</small>
+                        </div>
+                        <div class="flex-fill text-muted">
+                            <span class="badge bg-secondary rounded-pill mb-1">5</span>
+                            <br><small>Payment</small>
+                        </div>
+                    </div>
+
+                    <p class="text-muted mb-4">Please review all information before proceeding to payment.</p>
+                    
+                    {% if not all_sections_complete %}
+                    <div class="alert alert-warning mb-4">
+                        <h5 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Incomplete Sections</h5>
+                        <ul class="mb-0 ps-3">
+                            {% if not sections_complete.personal %}<li>Personal Information: {{ sections_complete.personal_message }}</li>{% endif %}
+                            {% if not sections_complete.income %}<li>Income Information: {{ sections_complete.income_message }}</li>{% endif %}
+                            {% if not sections_complete.legal %}<li>Legal Documents not signed</li>{% endif %}
+                            {% if not sections_complete.required_docs %}<li>Required Documents: {{ sections_complete.docs_message }}</li>{% endif %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="row">
+                        <!-- Section 1: Personal Information -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100 border-light shadow-sm">
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0 text-primary">Personal Information</h5>
+                                    {% if is_applicant_access %}
+                                    <a href="{% url 'section1_personal_info' application.id %}?token={{ token }}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
+                                    {% else %}
+                                    <a href="{% url 'section1_personal_info' application.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
+                                    {% endif %}
+                                </div>
+                                <div class="card-body">
+                                    {% if personal_info %}
+                                        <p class="mb-1"><strong>Name:</strong> {{ personal_info.first_name }} {{ personal_info.last_name }}</p>
+                                        <p class="mb-1"><strong>Email:</strong> {{ personal_info.email|default:"Not provided" }}</p>
+                                        <p class="mb-1"><strong>Phone:</strong> {{ personal_info.phone_cell|default:"Not provided" }}</p>
+                                        <p class="mb-1"><strong>DOB:</strong> {{ personal_info.date_of_birth|default:"Not provided" }}</p>
+                                        <hr>
+                                        <p class="mb-1"><strong>Current Address:</strong> {{ personal_info.current_address|default:"Not provided" }}</p>
+                                        <p class="mb-1"><strong>Desired Property:</strong> {{ property_display }}</p>
+                                        <p class="mb-1"><strong>Unit:</strong> {{ unit_display }}</p>
+                                        <p class="mb-0"><strong>Move-in Date:</strong> {{ personal_info.desired_move_in_date|default:"Not provided" }}</p>
+                                        
+                                        {% if previous_addresses %}
+                                        <h6 class="mt-3 text-muted">Previous Addresses:</h6>
+                                        <ul class="list-unstyled mb-0 small">
+                                            {% for addr in previous_addresses %}
+                                            <li><i class="fas fa-map-marker-alt me-1 text-muted"></i> {{ addr.address }} ({{ addr.duration }})</li>
+                                            {% endfor %}
+                                        </ul>
+                                        {% endif %}
+                                    {% else %}
+                                        <p class="text-muted fst-italic">Not yet completed</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Section 2: Income Information -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100 border-light shadow-sm">
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0 text-primary">Income & Employment</h5>
+                                    {% if is_applicant_access %}
+                                    <a href="{% url 'section2_income' application.id %}?token={{ token }}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
+                                    {% else %}
+                                    <a href="{% url 'section2_income' application.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
+                                    {% endif %}
+                                </div>
+                                <div class="card-body">
+                                    {% if income_data %}
+                                        <p class="mb-1"><strong>Employment:</strong> {{ income_data.get_employment_type_display }}</p>
+                                        <p class="mb-1"><strong>Company:</strong> {{ income_data.company_name }}</p>
+                                        <p class="mb-1"><strong>Position:</strong> {{ income_data.position }}</p>
+                                        <p class="mb-1"><strong>Annual Income:</strong> ${{ income_data.annual_income|floatformat:2 }}</p>
+                                        <p class="mb-1"><strong>Supervisor:</strong> {{ income_data.supervisor_name }}</p>
+                                        <p class="mb-0"><strong>Start Date:</strong> {{ income_data.start_date }}</p>
+                                        
+                                        {% if additional_jobs %}
+                                        <h6 class="mt-3 text-muted">Additional Employment:</h6>
+                                        <ul class="list-unstyled mb-0 small">
+                                            {% for job in additional_jobs %}
+                                            <li><i class="fas fa-briefcase me-1 text-muted"></i> {{ job.company_name }} - {{ job.position }} (${{ job.annual_income|floatformat:2 }}/year)</li>
+                                            {% endfor %}
+                                        </ul>
+                                        {% endif %}
+                                        
+                                        {% if additional_income %}
+                                        <h6 class="mt-3 text-muted">Other Income:</h6>
+                                        <ul class="list-unstyled mb-0 small">
+                                            {% for income in additional_income %}
+                                            <li><i class="fas fa-money-bill-wave me-1 text-muted"></i> {{ income.source_name }} (${{ income.annual_amount|floatformat:2 }}/year)</li>
+                                            {% endfor %}
+                                        </ul>
+                                        {% endif %}
+                                        
+                                        {% if assets %}
+                                        <h6 class="mt-3 text-muted">Assets:</h6>
+                                        <ul class="list-unstyled mb-0 small">
+                                            {% for asset in assets %}
+                                            <li><i class="fas fa-piggy-bank me-1 text-muted"></i> {{ asset.asset_name }} (${{ asset.account_balance|floatformat:2 }})</li>
+                                            {% endfor %}
+                                        </ul>
+                                        {% endif %}
+                                    {% else %}
+                                        <p class="text-muted fst-italic">Not yet completed</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Section 3: Legal Documents -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100 border-light shadow-sm">
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0 text-primary">Legal Documents</h5>
+                                    {% if is_applicant_access %}
+                                    <a href="{% url 'section3_legal' application.id %}?token={{ token }}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
+                                    {% else %}
+                                    <a href="{% url 'section3_legal' application.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
+                                    {% endif %}
+                                </div>
+                                <div class="card-body">
+                                    {% if legal_docs %}
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                                            <span>NY Discrimination Form</span>
+                                            {% if legal_docs.discrimination_form_signed %}
+                                            <span class="badge bg-success rounded-pill"><i class="fas fa-check me-1"></i> Signed {{ legal_docs.discrimination_form_signed_at|date:"M d, Y" }}</span>
+                                            {% else %}
+                                            <span class="badge bg-danger rounded-pill"><i class="fas fa-times me-1"></i> Not Signed</span>
+                                            {% endif %}
+                                        </li>
+                                        <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                                            <span>NY Brokers Form</span>
+                                            {% if legal_docs.brokers_form_signed %}
+                                            <span class="badge bg-success rounded-pill"><i class="fas fa-check me-1"></i> Signed {{ legal_docs.brokers_form_signed_at|date:"M d, Y" }}</span>
+                                            {% else %}
+                                            <span class="badge bg-danger rounded-pill"><i class="fas fa-times me-1"></i> Not Signed</span>
+                                            {% endif %}
+                                        </li>
+                                    </ul>
+                                    {% else %}
+                                    <p class="text-muted fst-italic">Not yet completed</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Uploaded Documents -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100 border-light shadow-sm">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0 text-primary">Uploaded Documents</h5>
+                                </div>
+                                <div class="card-body">
+                                    {% if required_documents_list %}
+                                    <h6 class="text-muted">Required:</h6>
+                                    <ul class="list-group list-group-flush mb-3">
+                                        {% for doc_type, status in required_documents_status.items %}
+                                        <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                                            <span>{{ status.display_name }}</span>
+                                            {% if status.uploaded %}
+                                            <span class="badge bg-success rounded-pill"><i class="fas fa-check me-1"></i> Uploaded</span>
+                                            {% else %}
+                                            <span class="badge bg-danger rounded-pill"><i class="fas fa-times me-1"></i> Missing</span>
+                                            {% endif %}
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                    {% endif %}
+                                    
+                                    {% if uploaded_files %}
+                                    <h6 class="text-muted">All Files:</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Type</th>
+                                                    <th>Date</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for file in uploaded_files %}
+                                                <tr>
+                                                    <td>{{ file.document_type|default:"Other" }}</td>
+                                                    <td>{{ file.uploaded_at|date:"M d" }}</td>
+                                                    <td>
+                                                        {% if file.analysis_results %}
+                                                        <span class="badge bg-success">Analyzed</span>
+                                                        {% else %}
+                                                        <span class="badge bg-secondary">Pending</span>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {% else %}
+                                    <p class="text-muted fst-italic">No documents uploaded</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Confirmation and Payment -->
+                    {% if all_sections_complete %}
+                    <div class="card border-success bg-light mb-4">
+                        <div class="card-body text-center">
+                            <h4 class="text-success mb-3"><i class="fas fa-check-circle me-2"></i>Application Ready</h4>
+                            <p class="lead mb-4">All required sections and documents have been completed. Please proceed to payment to finalize your application.</p>
+                            <form method="post">
+                                {% csrf_token %}
+                                <button type="submit" name="confirm_proceed" class="btn btn-success btn-lg px-5 shadow-sm">
+                                    Confirm and Proceed to Payment <i class="fas fa-arrow-right ms-2"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="card border-warning bg-light mb-4">
+                        <div class="card-body text-center">
+                            <h4 class="text-warning mb-3"><i class="fas fa-exclamation-triangle me-2"></i>Application Incomplete</h4>
+                            <p class="lead mb-4">Please complete all required sections and upload all required documents before proceeding to payment.</p>
+                            <button class="btn btn-secondary btn-lg px-5" disabled>
+                                Cannot Proceed - Complete All Sections
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Navigation -->
+                    <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                        {% if is_applicant_access %}
+                        <a href="{% url 'v2_application_overview' application.id %}?token={{ token }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-1"></i> Back to Overview
+                        </a>
+                        {% else %}
+                        <a href="{% url 'application_detail' application.id %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-1"></i> Back to Application
+                        </a>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-            
-            {% if previous_addresses %}
-            <h6 class="mt-3">Previous Addresses:</h6>
-            <ul class="list-unstyled">
-                {% for addr in previous_addresses %}
-                <li>• {{ addr.address }} ({{ addr.duration }})</li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-            
-            {% if is_applicant_access %}
-            <a href="{% url 'section1_personal_info' application.id %}?token={{ token }}" class="btn btn-sm btn-outline-primary">Edit</a>
-            {% else %}
-            <a href="{% url 'section1_personal_info' application.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
-            {% endif %}
-            {% else %}
-            <p class="text-muted">Not yet completed</p>
-            {% endif %}
         </div>
-    </div>
-    
-    <!-- Section 2: Income Information -->
-    <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">Income & Employment</h5>
-        </div>
-        <div class="card-body">
-            {% if income_data %}
-            <div class="row">
-                <div class="col-md-6">
-                    <p><strong>Employment Type:</strong> {{ income_data.get_employment_type_display }}</p>
-                    <p><strong>Company:</strong> {{ income_data.company_name }}</p>
-                    <p><strong>Position:</strong> {{ income_data.position }}</p>
-                </div>
-                <div class="col-md-6">
-                    <p><strong>Annual Income:</strong> ${{ income_data.annual_income|floatformat:2 }}</p>
-                    <p><strong>Supervisor:</strong> {{ income_data.supervisor_name }}</p>
-                    <p><strong>Start Date:</strong> {{ income_data.start_date }}</p>
-                </div>
-            </div>
-            
-            {% if additional_jobs %}
-            <h6 class="mt-3">Additional Employment:</h6>
-            <ul class="list-unstyled">
-                {% for job in additional_jobs %}
-                <li>• {{ job.company_name }} - {{ job.position }} (${{ job.annual_income|floatformat:2 }}/year)</li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-            
-            {% if additional_income %}
-            <h6 class="mt-3">Other Income Sources:</h6>
-            <ul class="list-unstyled">
-                {% for income in additional_income %}
-                <li>• {{ income.source_name }} (${{ income.annual_amount|floatformat:2 }}/year)</li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-            
-            {% if assets %}
-            <h6 class="mt-3">Assets:</h6>
-            <ul class="list-unstyled">
-                {% for asset in assets %}
-                <li>• {{ asset.asset_name }} (${{ asset.account_balance|floatformat:2 }})</li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-            
-            {% if is_applicant_access %}
-            <a href="{% url 'section2_income' application.id %}?token={{ token }}" class="btn btn-sm btn-outline-primary">Edit</a>
-            {% else %}
-            <a href="{% url 'section2_income' application.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
-            {% endif %}
-            {% else %}
-            <p class="text-muted">Not yet completed</p>
-            {% endif %}
-        </div>
-    </div>
-    
-    <!-- Section 3: Legal Documents -->
-    <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">Legal Documents</h5>
-        </div>
-        <div class="card-body">
-            {% if legal_docs %}
-            <ul class="list-unstyled">
-                <li>
-                    {% if legal_docs.discrimination_form_signed %}
-                    ✅ NY Discrimination Form - Signed on {{ legal_docs.discrimination_form_signed_at|date:"M d, Y" }}
-                    {% else %}
-                    ❌ NY Discrimination Form - Not signed
-                    {% endif %}
-                </li>
-                <li>
-                    {% if legal_docs.brokers_form_signed %}
-                    ✅ NY Brokers Form - Signed on {{ legal_docs.brokers_form_signed_at|date:"M d, Y" }}
-                    {% else %}
-                    ❌ NY Brokers Form - Not signed
-                    {% endif %}
-                </li>
-            </ul>
-            {% if is_applicant_access %}
-            <a href="{% url 'section3_legal' application.id %}?token={{ token }}" class="btn btn-sm btn-outline-primary">Edit</a>
-            {% else %}
-            <a href="{% url 'section3_legal' application.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
-            {% endif %}
-            {% else %}
-            <p class="text-muted">Not yet completed</p>
-            {% endif %}
-        </div>
-    </div>
-    
-    <!-- Uploaded Documents -->
-    <div class="card mb-4">
-        <div class="card-header bg-info text-white">
-            <h5 class="mb-0">Uploaded Documents</h5>
-        </div>
-        <div class="card-body">
-            {% if required_documents_list %}
-            <h6>Required Documents:</h6>
-            <ul class="list-unstyled mb-3">
-                {% for doc_type, status in required_documents_status.items %}
-                <li>
-                    {% if status.uploaded %}
-                    ✅ {{ status.display_name }} - Uploaded
-                    {% else %}
-                    ❌ {{ status.display_name }} - Missing
-                    {% endif %}
-                </li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-            
-            {% if uploaded_files %}
-            <h6>All Uploaded Files:</h6>
-            <table class="table table-sm">
-                <thead>
-                    <tr>
-                        <th>Document Type</th>
-                        <th>Upload Date</th>
-                        <th>Analysis Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for file in uploaded_files %}
-                    <tr>
-                        <td>{{ file.document_type|default:"Other" }}</td>
-                        <td>{{ file.uploaded_at|date:"M d, Y" }}</td>
-                        <td>
-                            {% if file.analysis_results %}
-                            <span class="badge bg-success">Analyzed</span>
-                            {% else %}
-                            <span class="badge bg-secondary">Pending</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <p class="text-muted">No documents uploaded</p>
-            {% endif %}
-        </div>
-    </div>
-    
-    <!-- Confirmation and Payment -->
-    {% if all_sections_complete %}
-    <div class="card border-success">
-        <div class="card-body text-center">
-            <h5 class="text-success">✓ Application Ready for Submission</h5>
-            <p>All required sections and documents have been completed. Please review the information above and proceed to payment.</p>
-            <form method="post">
-                {% csrf_token %}
-                <button type="submit" name="confirm_proceed" class="btn btn-success btn-lg">
-                    Confirm and Proceed to Payment →
-                </button>
-            </form>
-        </div>
-    </div>
-    {% else %}
-    <div class="card border-warning">
-        <div class="card-body text-center">
-            <h5 class="text-warning">⚠ Application Incomplete</h5>
-            <p>Please complete all required sections and upload all required documents before proceeding to payment.</p>
-            <button class="btn btn-secondary btn-lg" disabled>
-                Cannot Proceed - Complete All Sections
-            </button>
-        </div>
-    </div>
-    {% endif %}
-    
-    <!-- Navigation -->
-    <div class="mt-4">
-        {% if is_applicant_access %}
-        <a href="{% url 'v2_application_overview' application.id %}?token={{ token }}" class="btn btn-secondary">
-            ← Back to Overview
-        </a>
-        {% else %}
-        <a href="{% url 'application_detail' application.id %}" class="btn btn-secondary">
-            ← Back to Application
-        </a>
-        {% endif %}
     </div>
 </div>
 {% endblock %}

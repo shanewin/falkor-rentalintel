@@ -1,372 +1,250 @@
-{% extends 'applications/applicant_base.html' %}
+{% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Income & Employment - {% if application.apartment %}{{ application.apartment.building.name }}{% else %}{{ application.get_building_display }}{% endif %}{% endblock %}
-
-{% block header_title %}
-    {% if application.apartment %}
-        {{ application.apartment.building.name }}
-    {% else %}
-        {{ application.get_building_display }}
-    {% endif %}
-{% endblock %}
-
-{% block header_subtitle %}
-    Income & Employment • Step 2 of 5
-{% endblock %}
-
 {% block content %}
-<div class="row">
-    <!-- Main Form Area -->
-    <div class="col-lg-8">
-        
-        <!-- Section Progress Header -->
-        <div class="application-progress">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0"><i class="fas fa-dollar-sign me-2"></i>Income & Employment</h4>
-                <span class="badge" style="background-color: var(--brand-yellow); color: var(--brand-black); font-size: 1rem;">
-                    Step 2 of 5
-                </span>
-            </div>
-            
-            <!-- Progress Bar -->
-            <div class="progress mb-3" style="height: 12px; border-radius: 6px; background-color: #e9ecef;">
-                <div class="progress-bar" style="width: {{ progress_percent }}%"></div>
-            </div>
-            
-            <!-- Section Navigation -->
-            <div class="section-nav">
-                {% if is_applicant_access %}
-                    <a href="{% url 'section1_personal_info' application.id %}?token={{ token }}" class="section-badge">
-                        <i class="fas fa-user me-2"></i>Personal Info
-                    </a>
-                {% endif %}
-                <span class="section-badge active">
-                    <i class="fas fa-dollar-sign me-2"></i>Income
-                </span>
-                {% if is_applicant_access %}
-                    <a href="{% url 'section3_legal' application.id %}?token={{ token }}" class="section-badge">
-                        <i class="fas fa-gavel me-2"></i>Legal
-                    </a>
-                    <a href="{% url 'section4_review' application.id %}?token={{ token }}" class="section-badge">
-                        <i class="fas fa-eye me-2"></i>Review
-                    </a>
-                    <a href="{% url 'section5_payment' application.id %}?token={{ token }}" class="section-badge">
-                        <i class="fas fa-credit-card me-2"></i>Payment
-                    </a>
-                {% endif %}
-            </div>
-        </div>
-        
-        <!-- Form Section -->
-        <div class="card">
-            <div class="card-body">
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-
-                <form method="post" id="incomeForm">
-                    {% csrf_token %}
+<div class="container mt-4">
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Application - Income & Employment</h4>
+                </div>
+                <div class="card-body">
                     
-                    <!-- Employment Information -->
-                    <div class="section-group mb-4">
-                        <h5 class="section-title">
-                            <i class="fas fa-briefcase me-2"></i>Employment Information
-                        </h5>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.employment_type.id_for_label }}" class="form-label">
-                                    Employment Type *
-                                </label>
-                                {{ form.employment_type }}
-                                {% if form.employment_type.errors %}
-                                    <div class="invalid-feedback">{{ form.employment_type.errors.0 }}</div>
-                                {% endif %}
+                    <!-- Progress Bar -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Application Progress</label>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: 40%;" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100">Step 2 of 5</div>
+                        </div>
+                    </div>
+
+                    <!-- Section Navigation -->
+                    <div class="d-flex justify-content-between mb-4 text-center">
+                        <div class="flex-fill text-muted">
+                            <span class="badge bg-success rounded-pill mb-1"><i class="fas fa-check"></i></span>
+                            <br><small>Personal</small>
+                        </div>
+                        <div class="flex-fill">
+                            <span class="badge bg-primary rounded-pill mb-1">2</span>
+                            <br><small class="fw-bold">Income</small>
+                        </div>
+                        <div class="flex-fill text-muted">
+                            <span class="badge bg-secondary rounded-pill mb-1">3</span>
+                            <br><small>Legal</small>
+                        </div>
+                        <div class="flex-fill text-muted">
+                            <span class="badge bg-secondary rounded-pill mb-1">4</span>
+                            <br><small>Review</small>
+                        </div>
+                        <div class="flex-fill text-muted">
+                            <span class="badge bg-secondary rounded-pill mb-1">5</span>
+                            <br><small>Payment</small>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Please provide your employment details and annual income. This information is confidential and used only for qualification purposes.
+                    </div>
+
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <!-- Employment Information -->
+                        <h5 class="mb-3 border-bottom pb-2">Employment Information</h5>
+                        <div class="mb-3">
+                            <label for="{{ form.employer.id_for_label }}" class="form-label">Current Employer</label>
+                            {{ form.employer }}
+                            {% if form.employer.errors %}
+                                <div class="text-danger small">{{ form.employer.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.job_title.id_for_label }}" class="form-label">Job Title</label>
+                            {{ form.job_title }}
+                            {% if form.job_title.errors %}
+                                <div class="text-danger small">{{ form.job_title.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.annual_income.id_for_label }}" class="form-label">Annual Income</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                {{ form.annual_income }}
                             </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.company_name.id_for_label }}" class="form-label">
-                                    Company Name *
+                            {% if form.annual_income.errors %}
+                                <div class="text-danger small">{{ form.annual_income.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">Gross annual income before taxes.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.employment_length.id_for_label }}" class="form-label">Length of Employment</label>
+                            {{ form.employment_length }}
+                            {% if form.employment_length.errors %}
+                                <div class="text-danger small">{{ form.employment_length.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Additional Income -->
+                        <h5 class="mb-3 border-bottom pb-2 mt-4">Additional Income (Optional)</h5>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="has_additional_income" name="has_additional_income">
+                                <label class="form-check-label" for="has_additional_income">
+                                    I have additional sources of income (e.g., bonuses, investments, freelance)
                                 </label>
-                                {{ form.company_name }}
-                                {% if form.company_name.errors %}
-                                    <div class="invalid-feedback">{{ form.company_name.errors.0 }}</div>
-                                {% endif %}
                             </div>
                         </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.position.id_for_label }}" class="form-label">
-                                    Position/Job Title *
-                                </label>
-                                {{ form.position }}
-                                {% if form.position.errors %}
-                                    <div class="invalid-feedback">{{ form.position.errors.0 }}</div>
-                                {% endif %}
+
+                        <div id="additional-income-section" class="d-none">
+                            <div class="mb-3">
+                                <label for="{{ form.additional_income_source.id_for_label }}" class="form-label">Source</label>
+                                {{ form.additional_income_source }}
                             </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.annual_income.id_for_label }}" class="form-label">
-                                    Annual Income *
-                                </label>
+                            <div class="mb-3">
+                                <label for="{{ form.additional_income_amount.id_for_label }}" class="form-label">Annual Amount</label>
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
-                                    {{ form.annual_income }}
-                                </div>
-                                {% if form.annual_income.errors %}
-                                    <div class="invalid-feedback">{{ form.annual_income.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.start_date.id_for_label }}" class="form-label">
-                                    Start Date *
-                                </label>
-                                {{ form.start_date }}
-                                {% if form.start_date.errors %}
-                                    <div class="invalid-feedback">{{ form.start_date.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.end_date.id_for_label }}" class="form-label">
-                                    End Date (if not currently employed)
-                                </label>
-                                {{ form.end_date }}
-                                {% if form.end_date.errors %}
-                                    <div class="invalid-feedback">{{ form.end_date.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-12 mb-3">
-                                <div class="form-check">
-                                    {{ form.currently_employed }}
-                                    <label class="form-check-label" for="{{ form.currently_employed.id_for_label }}">
-                                        Currently employed at this position
-                                    </label>
+                                    {{ form.additional_income_amount }}
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- Supervisor Information -->
-                    <div class="section-group mb-4">
-                        <h5 class="section-title">
-                            <i class="fas fa-user-tie me-2"></i>Supervisor Information
-                        </h5>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.supervisor_name.id_for_label }}" class="form-label">
-                                    Supervisor Name *
-                                </label>
-                                {{ form.supervisor_name }}
-                                {% if form.supervisor_name.errors %}
-                                    <div class="invalid-feedback">{{ form.supervisor_name.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.supervisor_email.id_for_label }}" class="form-label">
-                                    Supervisor Email *
-                                </label>
-                                {{ form.supervisor_email }}
-                                {% if form.supervisor_email.errors %}
-                                    <div class="invalid-feedback">{{ form.supervisor_email.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.supervisor_phone.id_for_label }}" class="form-label">
-                                    Supervisor Phone *
-                                </label>
-                                {{ form.supervisor_phone }}
-                                {% if form.supervisor_phone.errors %}
-                                    <div class="invalid-feedback">{{ form.supervisor_phone.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Additional Income -->
-                    <div class="section-group mb-4">
-                        <h5 class="section-title">
-                            <i class="fas fa-plus-circle me-2"></i>Additional Information
-                        </h5>
-                        
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <div class="form-check">
-                                    {{ form.has_multiple_jobs }}
-                                    <label class="form-check-label" for="{{ form.has_multiple_jobs.id_for_label }}">
-                                        I have multiple jobs
-                                    </label>
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-4 mb-3">
-                                <div class="form-check">
-                                    {{ form.has_additional_income }}
-                                    <label class="form-check-label" for="{{ form.has_additional_income.id_for_label }}">
-                                        I have additional income
-                                    </label>
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-4 mb-3">
-                                <div class="form-check">
-                                    {{ form.has_assets }}
-                                    <label class="form-check-label" for="{{ form.has_assets.id_for_label }}">
-                                        I have assets
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Form Actions -->
-                    <div class="form-actions">
-                        <div class="d-flex justify-content-between">
-                            {% if is_applicant_access %}
-                                <a href="{% url 'section1_personal_info' application.id %}?token={{ token }}" 
-                                   class="btn btn-outline-secondary">
-                                    <i class="fas fa-arrow-left me-2"></i>Previous
-                                </a>
-                                
-                                <button type="submit" class="btn btn-primary">
-                                    Save & Continue<i class="fas fa-arrow-right ms-2"></i>
-                                </button>
-                            {% else %}
-                                <a href="{% url 'application_overview' application.id %}" 
-                                   class="btn btn-outline-secondary">
-                                    <i class="fas fa-arrow-left me-2"></i>Back to Overview
-                                </a>
-                                
-                                <button type="submit" class="btn btn-primary">
-                                    Save Changes
-                                </button>
+
+                        <!-- Proof of Income -->
+                        <h5 class="mb-3 border-bottom pb-2 mt-4">Proof of Income</h5>
+                        <div class="mb-3">
+                            <label for="{{ form.proof_of_income.id_for_label }}" class="form-label">Upload Pay Stubs or Offer Letter</label>
+                            {{ form.proof_of_income }}
+                            {% if form.proof_of_income.errors %}
+                                <div class="text-danger small">{{ form.proof_of_income.errors }}</div>
                             {% endif %}
+                            <div class="form-text">Accepted formats: PDF, JPG, PNG. Max size: 5MB.</div>
                         </div>
-                    </div>
-                </form>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                            <a href="{% url 'section1_personal_info' application.id %}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i> Back</a>
+                            <button type="submit" class="btn btn-primary px-4">Save & Continue <i class="fas fa-arrow-right ms-1"></i></button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
-    </div>
-    
-    <!-- Sidebar -->
-    <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header">
-                <h6 class="card-title mb-0">
-                    <i class="fas fa-info-circle me-2"></i>Income & Employment Tips
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info">
-                    <h6><i class="fas fa-lightbulb me-2"></i>Tips:</h6>
-                    <ul class="mb-0">
-                        <li>Provide accurate employment information</li>
-                        <li>Include your gross annual income (before taxes)</li>
-                        <li>Supervisor contact info may be used for verification</li>
-                        <li>Check additional income/assets if applicable</li>
-                    </ul>
+
+        <!-- Sidebar: Property Summary -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Property Summary</h5>
                 </div>
-                
-                {% if application %}
-                    <div class="application-details">
-                        <h6><i class="fas fa-home me-2"></i>Application Details</h6>
-                        <p class="text-muted mb-1">
-                            <strong>Property:</strong><br>
-                            {% if application.apartment %}
-                                {{ application.apartment.building.name }}
-                            {% else %}
-                                {{ application.get_building_display }}
-                            {% endif %}
-                        </p>
-                        {% if application.apartment %}
-                            <p class="text-muted mb-1">
-                                <strong>Unit:</strong> {{ application.apartment.unit_number }}
-                            </p>
-                        {% endif %}
+                {% if application.apartment.image_url %}
+                    <img src="{{ application.apartment.image_url }}" class="card-img-top" alt="Apartment Image" style="height: 200px; object-fit: cover;">
+                {% else %}
+                    <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 200px;">
+                        <span>No Image Available</span>
                     </div>
                 {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ application.apartment.building.name }}</h5>
+                    <p class="card-text text-muted">{{ application.apartment.building.address }}</p>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Unit:</span>
+                        <span class="fw-bold">{{ application.apartment.unit_number }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Rent:</span>
+                        <span class="fw-bold">${{ application.apartment.rent }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Bedrooms:</span>
+                        <span class="fw-bold">{{ application.apartment.bedrooms }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Bathrooms:</span>
+                        <span class="fw-bold">{{ application.apartment.bathrooms }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Application Status Sidebar -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Application Status</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Personal Info
+                            {% if application.personal_info_data %}
+                                <span class="badge bg-success rounded-pill"><i class="fas fa-check"></i></span>
+                            {% else %}
+                                <span class="badge bg-secondary rounded-pill"><i class="fas fa-clock"></i></span>
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Income
+                            {% if application.income_data %}
+                                <span class="badge bg-success rounded-pill"><i class="fas fa-check"></i></span>
+                            {% else %}
+                                <span class="badge bg-primary rounded-pill">Current</span>
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Legal
+                            {% if application.legal_documents %}
+                                <span class="badge bg-success rounded-pill"><i class="fas fa-check"></i></span>
+                            {% else %}
+                                <span class="badge bg-secondary rounded-pill"><i class="fas fa-clock"></i></span>
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Review
+                            {% if application.review_completed %}
+                                <span class="badge bg-success rounded-pill"><i class="fas fa-check"></i></span>
+                            {% else %}
+                                <span class="badge bg-secondary rounded-pill"><i class="fas fa-clock"></i></span>
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Payment
+                            {% if application.application_payment %}
+                                <span class="badge bg-success rounded-pill"><i class="fas fa-check"></i></span>
+                            {% else %}
+                                <span class="badge bg-secondary rounded-pill"><i class="fas fa-clock"></i></span>
+                            {% endif %}
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<style>
-.section-group {
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    padding: 1.5rem;
-    background: #f8f9fa;
-}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const additionalIncomeCheckbox = document.getElementById('has_additional_income');
+        const additionalIncomeSection = document.getElementById('additional-income-section');
 
-.section-title {
-    color: var(--brand-black);
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 2px solid var(--brand-yellow);
-}
+        function toggleAdditionalIncome() {
+            if (additionalIncomeCheckbox.checked) {
+                additionalIncomeSection.classList.remove('d-none');
+            } else {
+                additionalIncomeSection.classList.add('d-none');
+            }
+        }
 
-.section-nav {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-bottom: 1rem;
-}
-
-.section-badge {
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    text-decoration: none;
-    font-size: 0.9rem;
-    border: 2px solid #dee2e6;
-    color: #6c757d;
-    transition: all 0.2s;
-}
-
-.section-badge:hover {
-    border-color: var(--brand-yellow);
-    color: var(--brand-black);
-}
-
-.section-badge.active {
-    background-color: var(--brand-yellow);
-    border-color: var(--brand-yellow);
-    color: var(--brand-black);
-    font-weight: 600;
-}
-
-.progress-bar {
-    background-color: var(--brand-yellow);
-    border-radius: 6px;
-}
-
-.form-actions {
-    margin-top: 2rem;
-    padding-top: 1rem;
-    border-top: 1px solid #dee2e6;
-}
-
-.application-details {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #dee2e6;
-}
-</style>
+        additionalIncomeCheckbox.addEventListener('change', toggleAdditionalIncome);
+        // Initial check in case of form errors re-rendering
+        if (document.getElementById('{{ form.additional_income_amount.id_for_label }}').value) {
+            additionalIncomeCheckbox.checked = true;
+        }
+        toggleAdditionalIncome();
+    });
+</script>
 {% endblock %}
