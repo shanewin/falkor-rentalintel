@@ -1,31 +1,21 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'applications/css/applications.css' %}">
-{% endblock %}
-
 {% block content %}
-<div class="page-header">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1>Create New Application - Step 1</h1>
-                <p>Select the property for this application</p>
-            </div>
-            <div class="col-md-4 text-end">
-                <a href="{% url 'applications_list' %}" class="btn btn-outline-primary">
-                    <i class="fas fa-arrow-left"></i> Back to Applications
-                </a>
-            </div>
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Create New Application - Step 1</h1>
+            <p class="text-muted mb-0">Select the property for this application</p>
         </div>
+        <a href="{% url 'applications_list' %}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Applications
+        </a>
     </div>
-</div>
 
-<div class="container">
     {% if messages %}
         {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
                 {{ message }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
@@ -33,34 +23,34 @@
     {% endif %}
 
     <!-- Progress Bar -->
-    <div class="card mb-4">
+    <div class="card shadow-sm mb-4">
         <div class="card-body">
-            <h6 class="mb-3">Application Creation Progress</h6>
-            <div class="progress mb-3 progress-bar-sm">
-                <div class="progress-bar bg-warning" style="width: 25%"></div>
+            <h6 class="mb-3 text-muted text-uppercase small fw-bold">Application Creation Progress</h6>
+            <div class="progress mb-4" style="height: 10px;">
+                <div class="progress-bar bg-warning" role="progressbar" style="width: 25%" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
             </div>
             <div class="row text-center">
                 <div class="col-3">
                     <div class="step text-warning">
-                        <div class="step-number bg-warning text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 step-number-circle">1</div>
+                        <div class="bg-warning text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 32px; height: 32px;">1</div>
                         <small class="fw-bold">Property</small>
                     </div>
                 </div>
                 <div class="col-3">
                     <div class="step text-muted">
-                        <div class="step-number bg-light text-muted rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 step-number-circle">2</div>
+                        <div class="bg-light text-muted rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 32px; height: 32px;">2</div>
                         <small>Applicant</small>
                     </div>
                 </div>
                 <div class="col-3">
                     <div class="step text-muted">
-                        <div class="step-number bg-light text-muted rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 step-number-circle">3</div>
+                        <div class="bg-light text-muted rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 32px; height: 32px;">3</div>
                         <small>Settings</small>
                     </div>
                 </div>
                 <div class="col-3">
                     <div class="step text-muted">
-                        <div class="step-number bg-light text-muted rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 step-number-circle">4</div>
+                        <div class="bg-light text-muted rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 32px; height: 32px;">4</div>
                         <small>Review</small>
                     </div>
                 </div>
@@ -69,10 +59,10 @@
     </div>
 
     <!-- Property Selection Form -->
-    <div class="card">
-        <div class="card-header">
+    <div class="card shadow-sm">
+        <div class="card-header bg-white">
             <h5 class="mb-0">
-                <i class="fas fa-building me-2"></i>Property Selection
+                <i class="fas fa-building me-2 text-primary"></i>Property Selection
             </h5>
         </div>
         <div class="card-body">
@@ -80,25 +70,27 @@
                 {% csrf_token %}
                 
                 <div class="mb-4">
-                    <label class="form-label fw-bold">How would you like to specify the property?</label>
-                    <div class="row">
+                    <label class="form-label fw-bold mb-3">How would you like to specify the property?</label>
+                    <div class="row g-3">
                         <div class="{% if user.is_superuser %}col-md-6{% else %}col-12{% endif %}">
-                            <div class="form-check">
+                            <div class="form-check card h-100 p-3 border hover-shadow">
                                 <input class="form-check-input" type="radio" name="property_type" id="existing_property" value="existing" 
                                        {% if session_data.property_type == 'existing' or not user.is_superuser %}checked{% endif %} required>
-                                <label class="form-check-label" for="existing_property">
-                                    <strong>Select Existing Property</strong><br>
+                                <label class="form-check-label w-100 stretched-link" for="existing_property">
+                                    <strong>Select Existing Property</strong>
+                                    <br>
                                     <small class="text-muted">Choose from properties already in the system</small>
                                 </label>
                             </div>
                         </div>
                         {% if user.is_superuser %}
                         <div class="col-md-6">
-                            <div class="form-check">
+                            <div class="form-check card h-100 p-3 border hover-shadow">
                                 <input class="form-check-input" type="radio" name="property_type" id="manual_property" value="manual"
                                        {% if session_data.property_type == 'manual' %}checked{% endif %} required>
-                                <label class="form-check-label" for="manual_property">
-                                    <strong>Enter Property Manually</strong><br>
+                                <label class="form-check-label w-100 stretched-link" for="manual_property">
+                                    <strong>Enter Property Manually</strong>
+                                    <br>
                                     <small class="text-muted">For properties not yet in the system</small>
                                 </label>
                             </div>
@@ -106,19 +98,21 @@
                         {% endif %}
                     </div>
                     {% if not user.is_superuser %}
-                    <div class="alert alert-info mt-3">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>Broker Note:</strong> You can only select from existing properties in the system. 
-                        If you need to add a new property, please contact the administrator.
+                    <div class="alert alert-info mt-3 d-flex align-items-center">
+                        <i class="fas fa-info-circle me-3 fa-lg"></i>
+                        <div>
+                            <strong>Broker Note:</strong> You can only select from existing properties in the system. 
+                            If you need to add a new property, please contact the administrator.
+                        </div>
                     </div>
                     {% endif %}
                 </div>
 
                 <!-- Existing Property Selection -->
-                <div id="existing_property_section" class="d-none">
+                <div id="existing_property_section" class="d-none bg-light p-4 rounded mb-4">
                     <div class="mb-3">
-                        <label for="apartment" class="form-label">Select Property</label>
-                        <select class="form-select" name="apartment" id="apartment">
+                        <label for="apartment" class="form-label fw-bold">Select Property</label>
+                        <select class="form-select form-select-lg" name="apartment" id="apartment">
                             <option value="">Choose a property...</option>
                             {% for apartment in apartments %}
                                 <option value="{{ apartment.id }}" 
@@ -134,32 +128,35 @@
                 </div>
 
                 <!-- Manual Property Entry -->
-                <div id="manual_property_section" class="d-none">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="manual_building_name" class="form-label">Building Name</label>
+                <div id="manual_property_section" class="d-none bg-light p-4 rounded mb-4">
+                    <h6 class="fw-bold mb-3">Property Details</h6>
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <div class="form-floating">
                                 <input type="text" class="form-control" name="manual_building_name" id="manual_building_name" 
                                        value="{{ session_data.manual_building_name|default:'' }}" placeholder="Enter building name">
+                                <label for="manual_building_name">Building Name</label>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="manual_unit_number" class="form-label">Unit Number</label>
+                        <div class="col-md-4">
+                            <div class="form-floating">
                                 <input type="text" class="form-control" name="manual_unit_number" id="manual_unit_number" 
                                        value="{{ session_data.manual_unit_number|default:'' }}" placeholder="e.g., 3A, 101">
+                                <label for="manual_unit_number">Unit Number</label>
                             </div>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="manual_building_address" class="form-label">Building Address</label>
-                        <input type="text" class="form-control" name="manual_building_address" id="manual_building_address" 
-                               value="{{ session_data.manual_building_address|default:'' }}" placeholder="Enter full address">
+                        <div class="col-12">
+                            <div class="form-floating">
+                                <input type="text" class="form-control" name="manual_building_address" id="manual_building_address" 
+                                       value="{{ session_data.manual_building_address|default:'' }}" placeholder="Enter full address">
+                                <label for="manual_building_address">Building Address</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="d-flex justify-content-end">
-                    <button type="submit" class="btn btn-warning">
+                    <button type="submit" class="btn btn-warning btn-lg px-4 shadow-sm">
                         Next: Select Applicant <i class="fas fa-arrow-right ms-2"></i>
                     </button>
                 </div>

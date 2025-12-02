@@ -1,34 +1,26 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'applications/css/applications.css' %}">
-{% endblock %}
-
 {% block content %}
-<div class="page-header">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1>Create New Application - Step 4</h1>
-                <p>Review all details and create the application</p>
-            </div>
-            <div class="col-md-4 text-end">
-                <a href="{% url 'broker_create_step3' %}" class="btn btn-outline-secondary me-2">
-                    <i class="fas fa-arrow-left"></i> Back
-                </a>
-                <a href="{% url 'applications_list' %}" class="btn btn-outline-primary">
-                    <i class="fas fa-times"></i> Cancel
-                </a>
-            </div>
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Create New Application - Step 4</h1>
+            <p class="text-muted mb-0">Review all details and create the application</p>
+        </div>
+        <div>
+            <a href="{% url 'broker_create_step3' %}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-arrow-left me-1"></i> Back
+            </a>
+            <a href="{% url 'applications_list' %}" class="btn btn-outline-danger">
+                <i class="fas fa-times me-1"></i> Cancel
+            </a>
         </div>
     </div>
-</div>
 
-<div class="container">
     {% if messages %}
         {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
                 {{ message }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
@@ -36,16 +28,16 @@
     {% endif %}
 
     <!-- Progress Bar -->
-    <div class="card mb-4">
+    <div class="card shadow-sm mb-4">
         <div class="card-body">
-            <h6 class="mb-3">Application Creation Progress</h6>
-            <div class="progress mb-3 progress-bar-sm">
-                <div class="progress-bar bg-warning" style="width: 100%"></div>
+            <h6 class="mb-3 text-muted text-uppercase small fw-bold">Application Creation Progress</h6>
+            <div class="progress mb-4" style="height: 10px;">
+                <div class="progress-bar bg-warning" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
             </div>
             <div class="row text-center">
                 <div class="col-3">
                     <div class="step text-success">
-                        <div class="step-number bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 step-number-circle">
+                        <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 32px; height: 32px;">
                             <i class="fas fa-check"></i>
                         </div>
                         <small class="text-success fw-bold">Property</small>
@@ -53,7 +45,7 @@
                 </div>
                 <div class="col-3">
                     <div class="step text-success">
-                        <div class="step-number bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 step-number-circle">
+                        <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 32px; height: 32px;">
                             <i class="fas fa-check"></i>
                         </div>
                         <small class="text-success fw-bold">Applicant</small>
@@ -61,7 +53,7 @@
                 </div>
                 <div class="col-3">
                     <div class="step text-success">
-                        <div class="step-number bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 step-number-circle">
+                        <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 32px; height: 32px;">
                             <i class="fas fa-check"></i>
                         </div>
                         <small class="text-success fw-bold">Settings</small>
@@ -69,7 +61,7 @@
                 </div>
                 <div class="col-3">
                     <div class="step text-warning">
-                        <div class="step-number bg-warning text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 step-number-circle">4</div>
+                        <div class="bg-warning text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 32px; height: 32px;">4</div>
                         <small class="fw-bold">Review</small>
                     </div>
                 </div>
@@ -81,10 +73,10 @@
     <div class="row">
         <div class="col-md-8">
             <!-- Property Details -->
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
-                        <i class="fas fa-building me-2"></i>Property Details
+                        <i class="fas fa-building me-2 text-primary"></i>Property Details
                     </h5>
                     <a href="{% url 'broker_create_step1' %}" class="btn btn-sm btn-outline-secondary">Edit</a>
                 </div>
@@ -92,7 +84,7 @@
                     {% if session_data.property_type == 'existing' and apartment %}
                         <div class="row">
                             <div class="col-md-8">
-                                <h6 class="mb-2">{{ apartment.building.name }}</h6>
+                                <h6 class="mb-2 fw-bold">{{ apartment.building.name }}</h6>
                                 <p class="text-muted mb-1">Unit {{ apartment.unit_number }}</p>
                                 {% if apartment.building.street_address_1 %}
                                     <p class="text-muted mb-1">{{ apartment.building.street_address_1 }}</p>
@@ -111,8 +103,8 @@
                             </div>
                         </div>
                     {% elif session_data.property_type == 'manual' %}
-                        <div class="alert alert-info">
-                            <h6 class="mb-2">Manual Property Entry</h6>
+                        <div class="alert alert-info mb-0">
+                            <h6 class="mb-2 fw-bold">Manual Property Entry</h6>
                             {% if session_data.manual_building_name %}
                                 <p class="mb-1"><strong>Building:</strong> {{ session_data.manual_building_name }}</p>
                             {% endif %}
@@ -128,10 +120,10 @@
             </div>
 
             <!-- Applicant Details -->
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
-                        <i class="fas fa-user me-2"></i>Applicant Details
+                        <i class="fas fa-user me-2 text-primary"></i>Applicant Details
                     </h5>
                     <a href="{% url 'broker_create_step2' %}" class="btn btn-sm btn-outline-secondary">Edit</a>
                 </div>
@@ -139,7 +131,7 @@
                     {% if session_data.applicant_type == 'existing' and applicant %}
                         <div class="row">
                             <div class="col-md-8">
-                                <h6 class="mb-2">{{ applicant.first_name }} {{ applicant.last_name }}</h6>
+                                <h6 class="mb-2 fw-bold">{{ applicant.first_name }} {{ applicant.last_name }}</h6>
                                 {% if applicant.email %}
                                     <p class="text-muted mb-1">
                                         <i class="fas fa-envelope me-2"></i>{{ applicant.email }}
@@ -152,14 +144,14 @@
                                 {% endif %}
                             </div>
                             <div class="col-md-4 text-end">
-                                <span class="badge bg-success">Existing Applicant</span>
+                                <span class="badge bg-success rounded-pill">Existing Applicant</span>
                             </div>
                         </div>
                     {% elif session_data.applicant_type == 'new' %}
-                        <div class="alert alert-info">
+                        <div class="alert alert-info mb-0">
                             <div class="row">
                                 <div class="col-md-8">
-                                    <h6 class="mb-2">New Applicant</h6>
+                                    <h6 class="mb-2 fw-bold">New Applicant</h6>
                                     {% if session_data.new_applicant_first_name or session_data.new_applicant_last_name %}
                                         <p class="mb-1">
                                             <strong>Name:</strong> {{ session_data.new_applicant_first_name }} {{ session_data.new_applicant_last_name }}
@@ -177,7 +169,7 @@
                                     {% endif %}
                                 </div>
                                 <div class="col-md-4 text-end">
-                                    <span class="badge bg-info">Will be Created</span>
+                                    <span class="badge bg-info rounded-pill">Will be Created</span>
                                 </div>
                             </div>
                         </div>
@@ -186,17 +178,17 @@
             </div>
 
             <!-- Application Settings -->
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
-                        <i class="fas fa-cogs me-2"></i>Application Settings
+                        <i class="fas fa-cogs me-2 text-primary"></i>Application Settings
                     </h5>
                     <a href="{% url 'broker_create_step3' %}" class="btn btn-sm btn-outline-secondary">Edit</a>
                 </div>
                 <div class="card-body">
-                    <div class="text-center">
-                        <h6 class="mb-2">Application Fee</h6>
-                        <div class="h4 text-success mb-0">
+                    <div class="text-center p-3 bg-light rounded">
+                        <h6 class="mb-2 text-muted">Application Fee</h6>
+                        <div class="h2 text-success mb-2">
                             ${{ session_data.application_fee|default:'50.00' }}
                         </div>
                         <small class="text-muted">Applicant will pay this fee when submitting their application</small>
@@ -207,8 +199,8 @@
 
         <!-- Sidebar -->
         <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
+            <div class="card shadow-sm border-success">
+                <div class="card-header bg-success text-white">
                     <h5 class="mb-0">
                         <i class="fas fa-rocket me-2"></i>Ready to Create
                     </h5>
@@ -221,13 +213,13 @@
                     
                     <form method="post">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-success btn-lg w-100 mb-3">
+                        <button type="submit" class="btn btn-success btn-lg w-100 mb-3 shadow-sm">
                             <i class="fas fa-plus-circle me-2"></i>
                             Create Application
                         </button>
                     </form>
                     
-                    <div class="text-muted small">
+                    <div class="text-muted small bg-light p-2 rounded">
                         <i class="fas fa-info-circle me-1"></i>
                         The applicant will receive an email with a link to complete their application.
                     </div>
@@ -235,33 +227,54 @@
             </div>
 
             <!-- What Happens Next -->
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h6 class="mb-0">What Happens Next?</h6>
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold">What Happens Next?</h6>
                 </div>
-                <div class="card-bod{% endblock %}
-                              <p class="small text-muted mb-0">Initial application record is set up</p>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item px-0">
+                            <div class="d-flex">
+                                <div class="me-3">
+                                    <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">1</div>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Application Created</h6>
+                                    <p class="small text-muted mb-0">Initial application record is set up</p>
+                                </div>
                             </div>
                         </div>
-                        <div class="timeline-item">
-                            <div class="timeline-marker bg-warning"></div>
-                            <div class="timeline-content">
-                                <h6>Applicant Notified</h6>
-                                <p class="small text-muted mb-0">Email sent with completion link</p>
+                        <div class="list-group-item px-0">
+                            <div class="d-flex">
+                                <div class="me-3">
+                                    <div class="bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">2</div>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Applicant Notified</h6>
+                                    <p class="small text-muted mb-0">Email sent with completion link</p>
+                                </div>
                             </div>
                         </div>
-                        <div class="timeline-item">
-                            <div class="timeline-marker bg-info"></div>
-                            <div class="timeline-content">
-                                <h6>Information Collected</h6>
-                                <p class="small text-muted mb-0">Applicant fills out all sections</p>
+                        <div class="list-group-item px-0">
+                            <div class="d-flex">
+                                <div class="me-3">
+                                    <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">3</div>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Information Collected</h6>
+                                    <p class="small text-muted mb-0">Applicant fills out all sections</p>
+                                </div>
                             </div>
                         </div>
-                        <div class="timeline-item">
-                            <div class="timeline-marker bg-primary"></div>
-                            <div class="timeline-content">
-                                <h6>Review & Decision</h6>
-                                <p class="small text-muted mb-0">You review and make a decision</p>
+                        <div class="list-group-item px-0">
+                            <div class="d-flex">
+                                <div class="me-3">
+                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">4</div>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Review & Decision</h6>
+                                    <p class="small text-muted mb-0">You review and make a decision</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -270,5 +283,4 @@
         </div>
     </div>
 </div>
-
 {% endblock %}

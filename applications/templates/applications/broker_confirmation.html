@@ -1,21 +1,17 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'applications/css/applications.css' %}">
-{% endblock %}
-
 {% block content %}
-<div class="page-header">
+<div class="bg-primary text-white py-4 mb-4">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-md-8">
-                <h1><i class="fas fa-check-circle text-white"></i> Application Created Successfully</h1>
-                <p>Your rental application has been created and notifications have been sent</p>
+                <h1 class="h2 mb-2"><i class="fas fa-check-circle me-2"></i>Application Created Successfully</h1>
+                <p class="mb-0 opacity-75">Your rental application has been created and notifications have been sent</p>
             </div>
-            <div class="col-md-4 text-end">
-                <a href="{% url 'applications_list' %}" class="btn btn-outline-primary">
-                    <i class="fas fa-arrow-left"></i> Back to Applications
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <a href="{% url 'applications_list' %}" class="btn btn-light text-primary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Applications
                 </a>
             </div>
         </div>
@@ -25,7 +21,7 @@
 <div class="container">
     {% if messages %}
         {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
                 {{ message }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
@@ -33,24 +29,24 @@
     {% endif %}
 
     <!-- Success Confirmation -->
-    <div class="card mb-4 border-left-success">
+    <div class="card mb-4 border-start border-success border-4 shadow-sm">
         <div class="card-body">
             <div class="row align-items-center">
                 <div class="col-md-8">
                     <h5 class="text-success mb-2">
-                        <i class="fas fa-check-circle"></i> Application Successfully Created
+                        <i class="fas fa-check-circle me-2"></i>Application Successfully Created
                     </h5>
-                    <p class="mb-0">
-                        Application ID: <strong>#{{ application.id }}</strong> | 
-                        Reference: <strong>{{ application.unique_link|slice:":8" }}...</strong>
+                    <p class="mb-0 text-muted">
+                        Application ID: <strong class="text-dark">#{{ application.id }}</strong> | 
+                        Reference: <strong class="text-dark">{{ application.unique_link|slice:":8" }}...</strong>
                         {% if last_activity %}
                             | Created: {{ last_activity.timestamp|date:"M d, Y g:i A" }}
                         {% endif %}
                     </p>
                 </div>
-                <div class="col-md-4 text-end">
-                    <span class="badge badge-yellow fs-6">
-                        <i class="fas fa-paper-plane"></i> 
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                    <span class="badge bg-warning text-dark fs-6 rounded-pill">
+                        <i class="fas fa-paper-plane me-1"></i> 
                         {% if email_address %}Email Sent{% else %}Ready to Send{% endif %}
                     </span>
                 </div>
@@ -61,97 +57,99 @@
     <div class="row">
         <!-- Application Details Summary -->
         <div class="col-lg-8">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-clipboard-list"></i> Application Details Summary</h5>
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-clipboard-list me-2 text-primary"></i>Application Details Summary</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="text-muted">PROPERTY INFORMATION</h6>
-                            <p class="mb-1">
-                                <strong><i class="fas fa-building"></i> Property:</strong><br>
-                                {{ property_name }}
+                        <div class="col-md-6 mb-4 mb-md-0">
+                            <h6 class="text-muted text-uppercase small fw-bold mb-3">Property Information</h6>
+                            <p class="mb-2">
+                                <strong><i class="fas fa-building me-2 text-muted"></i>Property:</strong><br>
+                                <span class="ms-4">{{ property_name }}</span>
                             </p>
-                            <p class="mb-1">
-                                <strong><i class="fas fa-map-marker-alt"></i> Address:</strong><br>
-                                {{ property_address }}
+                            <p class="mb-2">
+                                <strong><i class="fas fa-map-marker-alt me-2 text-muted"></i>Address:</strong><br>
+                                <span class="ms-4">{{ property_address }}</span>
                             </p>
                             {% if rent_amount %}
-                            <p class="mb-3">
-                                <strong><i class="fas fa-dollar-sign"></i> Rent:</strong>
-                                ${{ rent_amount|floatformat:2 }}/month
+                            <p class="mb-0">
+                                <strong><i class="fas fa-dollar-sign me-2 text-muted"></i>Rent:</strong>
+                                <span class="ms-1">${{ rent_amount|floatformat:2 }}/month</span>
                             </p>
                             {% endif %}
                         </div>
                         <div class="col-md-6">
-                            <h6 class="text-muted">APPLICANT INFORMATION</h6>
+                            <h6 class="text-muted text-uppercase small fw-bold mb-3">Applicant Information</h6>
                             {% if application.applicant %}
-                                <p class="mb-1">
-                                    <strong><i class="fas fa-user"></i> Name:</strong><br>
-                                    {{ application.applicant.first_name }} {{ application.applicant.last_name }}
+                                <p class="mb-2">
+                                    <strong><i class="fas fa-user me-2 text-muted"></i>Name:</strong><br>
+                                    <span class="ms-4">{{ application.applicant.first_name }} {{ application.applicant.last_name }}</span>
                                 </p>
-                                <p class="mb-1">
-                                    <strong><i class="fas fa-envelope"></i> Email:</strong><br>
-                                    <a href="mailto:{{ email_address }}">{{ email_address }}</a>
+                                <p class="mb-2">
+                                    <strong><i class="fas fa-envelope me-2 text-muted"></i>Email:</strong><br>
+                                    <a href="mailto:{{ email_address }}" class="ms-4 text-decoration-none">{{ email_address }}</a>
                                 </p>
                                 {% if phone_number %}
-                                <p class="mb-3">
-                                    <strong><i class="fas fa-phone"></i> Phone:</strong><br>
-                                    <a href="tel:{{ phone_number }}">{{ phone_number }}</a>
+                                <p class="mb-0">
+                                    <strong><i class="fas fa-phone me-2 text-muted"></i>Phone:</strong><br>
+                                    <a href="tel:{{ phone_number }}" class="ms-4 text-decoration-none">{{ phone_number }}</a>
                                 </p>
                                 {% endif %}
                             {% else %}
-                                <p class="text-muted">
-                                    <i class="fas fa-clock"></i> Applicant to be added later
+                                <p class="text-muted fst-italic">
+                                    <i class="fas fa-clock me-2"></i>Applicant to be added later
                                 </p>
                             {% endif %}
                         </div>
                     </div>
                     
-                    <hr>
+                    <hr class="my-4">
                     
                     <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="text-muted">APPLICATION SETTINGS</h6>
-                            <p class="mb-1">
-                                <strong><i class="fas fa-dollar-sign"></i> Application Fee:</strong>
-                                ${{ application.application_fee_amount|floatformat:2 }}
+                        <div class="col-md-6 mb-4 mb-md-0">
+                            <h6 class="text-muted text-uppercase small fw-bold mb-3">Application Settings</h6>
+                            <p class="mb-2">
+                                <strong><i class="fas fa-dollar-sign me-2 text-muted"></i>Application Fee:</strong>
+                                <span class="ms-1">${{ application.application_fee_amount|floatformat:2 }}</span>
                             </p>
-                            <p class="mb-1">
-                                <strong><i class="fas fa-file-alt"></i> Required Documents:</strong>
+                            <p class="mb-0">
+                                <strong><i class="fas fa-file-alt me-2 text-muted"></i>Required Documents:</strong>
+                                <span class="ms-1">
                                 {% if required_docs %}
                                     {{ required_docs|length }} document{{ required_docs|length|pluralize }}
                                 {% else %}
                                     None specified
                                 {% endif %}
+                                </span>
                             </p>
                         </div>
                         <div class="col-md-6">
-                            <h6 class="text-muted">STATUS</h6>
-                            <p class="mb-1">
-                                <strong><i class="fas fa-info-circle"></i> Current Status:</strong>
-                                <span class="badge badge-yellow">{{ application.get_status_display }}</span>
+                            <h6 class="text-muted text-uppercase small fw-bold mb-3">Status</h6>
+                            <p class="mb-2">
+                                <strong><i class="fas fa-info-circle me-2 text-muted"></i>Current Status:</strong>
+                                <span class="badge bg-warning text-dark ms-1">{{ application.get_status_display }}</span>
                             </p>
-                            <p class="mb-1">
-                                <strong><i class="fas fa-paper-plane"></i> Delivery Status:</strong>
+                            <p class="mb-0">
+                                <strong><i class="fas fa-paper-plane me-2 text-muted"></i>Delivery Status:</strong>
                                 {% if email_address %}
-                                    <span class="text-success">Email Sent</span>
+                                    <span class="text-success ms-1"><i class="fas fa-check me-1"></i>Email Sent</span>
                                 {% else %}
-                                    <span class="text-muted">No Email Address</span>
+                                    <span class="text-muted ms-1">No Email Address</span>
                                 {% endif %}
                             </p>
                         </div>
                     </div>
 
                     {% if required_docs %}
-                    <hr>
-                    <h6 class="text-muted">REQUIRED DOCUMENTS LIST</h6>
-                    <div class="row">
+                    <hr class="my-4">
+                    <h6 class="text-muted text-uppercase small fw-bold mb-3">Required Documents List</h6>
+                    <div class="row g-2">
                         {% for doc in required_docs %}
-                        <div class="col-md-6 mb-2">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-file text-primary me-2"></i>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-2 bg-light rounded border">
+                                <i class="fas fa-file text-primary me-3"></i>
                                 <span>{{ doc }}</span>
                             </div>
                         </div>
@@ -162,42 +160,42 @@
             </div>
 
             <!-- Unique Application Link -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-link"></i> Unique Application Link</h5>
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-link me-2 text-primary"></i>Unique Application Link</h5>
                 </div>
                 <div class="card-body">
-                    <div class="form-group-enhanced">
-                        <label class="form-label">Share this link with your applicant:</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control" id="application-link" value="{{ application_url }}" readonly>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Share this link with your applicant:</label>
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control bg-light" id="application-link" value="{{ application_url }}" readonly>
                             <button class="btn btn-outline-primary" type="button" onclick="copyToClipboard('application-link')">
-                                <i class="fas fa-copy"></i> Copy
+                                <i class="fas fa-copy me-1"></i>Copy
                             </button>
                         </div>
-                        <div class="field-hint">
-                            <i class="fas fa-info-circle"></i>
+                        <div class="form-text text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
                             This secure link allows the applicant to complete their application
                         </div>
                     </div>
 
                     <!-- Manual Send Options -->
                     {% if application.applicant %}
-                    <div class="row mt-3">
+                    <div class="row g-2 mt-2">
                         {% if email_address %}
                         <div class="col-md-6">
                             <form method="post" action="{% url 'send_application_link' application.id %}" class="d-grid">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-outline-primary">
-                                    <i class="fas fa-envelope"></i> Re-send Email
+                                    <i class="fas fa-envelope me-2"></i>Re-send Email
                                 </button>
                             </form>
                         </div>
                         {% endif %}
                         {% if phone_number %}
                         <div class="col-md-6">
-                            <button type="button" class="btn btn-outline-secondary" onclick="sendSMS()">
-                                <i class="fas fa-sms"></i> Send SMS
+                            <button type="button" class="btn btn-outline-secondary w-100" onclick="sendSMS()">
+                                <i class="fas fa-sms me-2"></i>Send SMS
                             </button>
                         </div>
                         {% endif %}
@@ -210,41 +208,53 @@
         <!-- Sidebar Actions -->
         <div class="col-lg-4">
             <!-- Application Status Tracking -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h6 class="mb-0"><i class="fas fa-tasks"></i> Application Status</h6>
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-tasks me-2 text-primary"></i>Application Status</h6>
                 </div>
-                <div class="card-body">
-                    <div class="timeline">
-                        <div class="timeline-item active">
-                            <div class="timeline-marker bg-success">
-                                <i class="fas fa-check"></i>
-                            </div>
-                            <div class="timeline-content">
-                                <h6>Application Created</h6>
-                                {% if last_activity %}
-                                <small class="text-muted">{{ last_activity.timestamp|date:"M d, Y g:i A" }}</small>
-                                {% endif %}
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item">
+                            <div class="d-flex">
+                                <div class="me-3">
+                                    <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Application Created</h6>
+                                    {% if last_activity %}
+                                    <small class="text-muted">{{ last_activity.timestamp|date:"M d, Y g:i A" }}</small>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                         {% if email_address %}
-                        <div class="timeline-item active">
-                            <div class="timeline-marker bg-success">
-                                <i class="fas fa-envelope"></i>
-                            </div>
-                            <div class="timeline-content">
-                                <h6>Email Sent</h6>
-                                <small class="text-muted">to {{ email_address }}</small>
+                        <div class="list-group-item">
+                            <div class="d-flex">
+                                <div class="me-3">
+                                    <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                        <i class="fas fa-envelope"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Email Sent</h6>
+                                    <small class="text-muted">to {{ email_address }}</small>
+                                </div>
                             </div>
                         </div>
                         {% endif %}
-                        <div class="timeline-item">
-                            <div class="timeline-marker">
-                                <i class="fas fa-clock"></i>
-                            </div>
-                            <div class="timeline-content">
-                                <h6>Awaiting Applicant</h6>
-                                <small class="text-muted">Not started yet</small>
+                        <div class="list-group-item">
+                            <div class="d-flex">
+                                <div class="me-3">
+                                    <div class="bg-light text-muted rounded-circle d-flex align-items-center justify-content-center border" style="width: 32px; height: 32px;">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1 text-muted">Awaiting Applicant</h6>
+                                    <small class="text-muted">Not started yet</small>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -252,23 +262,23 @@
             </div>
 
             <!-- Broker Actions -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h6 class="mb-0"><i class="fas fa-tools"></i> Broker Actions</h6>
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-tools me-2 text-primary"></i>Broker Actions</h6>
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
                         <a href="{% url 'applications_list' %}" class="btn btn-primary">
-                            <i class="fas fa-list"></i> Return to Applications List
+                            <i class="fas fa-list me-2"></i>Return to Applications List
                         </a>
                         <a href="{% url 'broker_create_application' %}" class="btn btn-outline-primary">
-                            <i class="fas fa-plus"></i> Create Another Application
+                            <i class="fas fa-plus me-2"></i>Create Another Application
                         </a>
                         <a href="{% url 'application_detail' application.id %}" class="btn btn-outline-secondary">
-                            <i class="fas fa-eye"></i> View Application Details
+                            <i class="fas fa-eye me-2"></i>View Application Details
                         </a>
                         <a href="{% url 'application_preview' application.id %}?preview=true" class="btn btn-outline-secondary" target="_blank">
-                            <i class="fas fa-external-link-alt"></i> Preview Application
+                            <i class="fas fa-external-link-alt me-2"></i>Preview Application
                         </a>
                     </div>
                 </div>
@@ -276,19 +286,21 @@
 
             <!-- Recent Activity -->
             {% if activities %}
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0"><i class="fas fa-history"></i> Recent Activity</h6>
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-history me-2 text-primary"></i>Recent Activity</h6>
                 </div>
-                <div class="card-body">
-                    {% for activity in activities %}
-                    <div class="activity-item mb-3">
-                        <div class="d-flex justify-content-between">
-                            <span class="small">{{ activity.description }}</span>
-                        </div>
-                        <small class="text-muted">{{ activity.timestamp|date:"M d, g:i A" }}</small>
-                    </div>
-                    {% endfor %}
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for activity in activities %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <span class="small mb-0">{{ activity.description }}</span>
+                                <small class="text-muted ms-2 text-nowrap">{{ activity.timestamp|date:"M d, g:i A" }}</small>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
                 </div>
             </div>
             {% endif %}
@@ -309,7 +321,7 @@ function copyToClipboard(elementId) {
         // Update button feedback
         const button = element.nextElementSibling;
         const originalText = button.innerHTML;
-        button.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        button.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
         button.classList.remove('btn-outline-primary');
         button.classList.add('btn-success');
         
@@ -328,7 +340,5 @@ function sendSMS() {
     alert('SMS functionality coming soon!');
 }
 </script>
-
 {% endblock %}
-
 {% endblock %}

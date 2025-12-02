@@ -22,7 +22,7 @@
         
         <!-- Property Hero Section -->
         {% if application.apartment %}
-        <div class="property-hero">
+        <div class="card shadow-sm mb-4 overflow-hidden">
             <!-- Image Carousel -->
             <div id="propertyCarousel" class="carousel slide" data-bs-ride="carousel">
                 <div class="carousel-inner">
@@ -31,17 +31,19 @@
                         {% comment %}Apartment images first{% endcomment %}
                         {% for image in application.apartment.images.all %}
                             <div class="carousel-item {% if forloop.first %}active{% endif %}">
-                                <div class="property-hero-image" style="background-image: url('{{ image.large_url }}');">
+                                <div style="height: 400px; background-image: url('{{ image.large_url }}'); background-size: cover; background-position: center;">
                                     {% if forloop.first %}
-                                        <div class="property-hero-overlay">
-                                            <h1 class="property-hero-title">{{ application.apartment.building.name }}</h1>
-                                            <p class="property-hero-subtitle">
-                                                <i class="fas fa-map-marker-alt me-2"></i>
-                                                {{ application.apartment.building.street_address_1 }}, {{ application.apartment.building.city }}
-                                                {% if application.apartment.building.neighborhood %}
-                                                    • {{ application.apartment.building.neighborhood.name }}
-                                                {% endif %}
-                                            </p>
+                                        <div class="d-flex align-items-end h-100 p-4" style="background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);">
+                                            <div class="text-white">
+                                                <h1 class="fw-bold mb-1">{{ application.apartment.building.name }}</h1>
+                                                <p class="mb-0">
+                                                    <i class="fas fa-map-marker-alt me-2"></i>
+                                                    {{ application.apartment.building.street_address_1 }}, {{ application.apartment.building.city }}
+                                                    {% if application.apartment.building.neighborhood %}
+                                                        • {{ application.apartment.building.neighborhood.name }}
+                                                    {% endif %}
+                                                </p>
+                                            </div>
                                         </div>
                                     {% endif %}
                                 </div>
@@ -51,17 +53,19 @@
                         {% comment %}Building images second{% endcomment %}
                         {% for image in application.apartment.building.images.all %}
                             <div class="carousel-item {% if not application.apartment.images.exists and forloop.first %}active{% endif %}">
-                                <div class="property-hero-image" style="background-image: url('{{ image.large_url }}');">
+                                <div style="height: 400px; background-image: url('{{ image.large_url }}'); background-size: cover; background-position: center;">
                                     {% if not application.apartment.images.exists and forloop.first %}
-                                        <div class="property-hero-overlay">
-                                            <h1 class="property-hero-title">{{ application.apartment.building.name }}</h1>
-                                            <p class="property-hero-subtitle">
-                                                <i class="fas fa-map-marker-alt me-2"></i>
-                                                {{ application.apartment.building.street_address_1 }}, {{ application.apartment.building.city }}
-                                                {% if application.apartment.building.neighborhood %}
-                                                    • {{ application.apartment.building.neighborhood.name }}
-                                                {% endif %}
-                                            </p>
+                                        <div class="d-flex align-items-end h-100 p-4" style="background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);">
+                                            <div class="text-white">
+                                                <h1 class="fw-bold mb-1">{{ application.apartment.building.name }}</h1>
+                                                <p class="mb-0">
+                                                    <i class="fas fa-map-marker-alt me-2"></i>
+                                                    {{ application.apartment.building.street_address_1 }}, {{ application.apartment.building.city }}
+                                                    {% if application.apartment.building.neighborhood %}
+                                                        • {{ application.apartment.building.neighborhood.name }}
+                                                    {% endif %}
+                                                </p>
+                                            </div>
                                         </div>
                                     {% endif %}
                                 </div>
@@ -69,16 +73,18 @@
                         {% endfor %}
                     {% else %}
                         <div class="carousel-item active">
-                            <div class="property-hero-image" style="background: linear-gradient(135deg, #000814 0%, #1a1a1a 100%);">
-                                <div class="property-hero-overlay">
-                                    <h1 class="property-hero-title">{{ application.apartment.building.name }}</h1>
-                                    <p class="property-hero-subtitle">
-                                        <i class="fas fa-map-marker-alt me-2"></i>
-                                        {{ application.apartment.building.street_address_1 }}, {{ application.apartment.building.city }}
-                                        {% if application.apartment.building.neighborhood %}
-                                            • {{ application.apartment.building.neighborhood.name }}
-                                        {% endif %}
-                                    </p>
+                            <div style="height: 400px; background: linear-gradient(135deg, #000814 0%, #1a1a1a 100%);">
+                                <div class="d-flex align-items-end h-100 p-4">
+                                    <div class="text-white">
+                                        <h1 class="fw-bold mb-1">{{ application.apartment.building.name }}</h1>
+                                        <p class="mb-0">
+                                            <i class="fas fa-map-marker-alt me-2"></i>
+                                            {{ application.apartment.building.street_address_1 }}, {{ application.apartment.building.city }}
+                                            {% if application.apartment.building.neighborhood %}
+                                                • {{ application.apartment.building.neighborhood.name }}
+                                            {% endif %}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -99,23 +105,23 @@
             </div>
             
             <!-- Property Quick Details -->
-            <div class="p-4">
+            <div class="card-body bg-light border-top">
                 <div class="row">
-                    <div class="col-md-4 text-center mb-3">
+                    <div class="col-md-4 text-center mb-3 mb-md-0">
                         <div class="d-flex flex-column align-items-center">
                             <i class="fas fa-dollar-sign fa-2x text-warning mb-2"></i>
                             <h5 class="mb-1">${{ application.apartment.rent_price|floatformat:0 }}</h5>
                             <small class="text-muted">Monthly Rent</small>
                         </div>
                     </div>
-                    <div class="col-md-4 text-center mb-3">
+                    <div class="col-md-4 text-center mb-3 mb-md-0">
                         <div class="d-flex flex-column align-items-center">
                             <i class="fas fa-bed fa-2x text-warning mb-2"></i>
                             <h5 class="mb-1">{{ application.apartment.bedrooms|default:"Studio" }}</h5>
                             <small class="text-muted">{% if application.apartment.bedrooms %}Bedroom{{ application.apartment.bedrooms|pluralize }}{% else %}Studio{% endif %}</small>
                         </div>
                     </div>
-                    <div class="col-md-4 text-center mb-3">
+                    <div class="col-md-4 text-center">
                         <div class="d-flex flex-column align-items-center">
                             <i class="fas fa-bath fa-2x text-warning mb-2"></i>
                             <h5 class="mb-1">{{ application.apartment.bathrooms|default:"1" }}</h5>
@@ -127,171 +133,164 @@
         </div>
         {% else %}
         <!-- Manual Property Info -->
-        <div class="property-hero">
-            <div class="property-hero-image" style="background: linear-gradient(135deg, #000814 0%, #1a1a1a 100%);">
-                <div class="property-hero-overlay">
-                    <h1 class="property-hero-title">{{ application.get_building_display }}</h1>
-                    <p class="property-hero-subtitle">
-                        <i class="fas fa-map-marker-alt me-2"></i>
-                        {{ application.get_address_display }}
-                    </p>
+        <div class="card shadow-sm mb-4 overflow-hidden">
+            <div style="height: 300px; background: linear-gradient(135deg, #000814 0%, #1a1a1a 100%);">
+                <div class="d-flex align-items-end h-100 p-4">
+                    <div class="text-white">
+                        <h1 class="fw-bold mb-1">{{ application.get_building_display }}</h1>
+                        <p class="mb-0">
+                            <i class="fas fa-map-marker-alt me-2"></i>
+                            {{ application.get_address_display }}
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
         {% endif %}
 
         <!-- Application Progress -->
-        <div class="application-progress">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Application Progress</h4>
-                <span class="badge" style="background-color: var(--brand-yellow); color: var(--brand-black); font-size: 1rem;">
-                    {{ progress_percent|floatformat:0 }}% Complete
-                </span>
-            </div>
-            
-            <!-- Progress Bar -->
-            <div class="progress mb-3" style="height: 12px; border-radius: 6px; background-color: #e9ecef;">
-                <div class="progress-bar" style="width: {{ progress_percent }}%"></div>
-            </div>
-            
-            <!-- Section Navigation -->
-            <div class="section-nav">
-                {% for section in sections %}
-                    {% if not is_preview %}
-                        {% if section.section_number == 1 %}
-                            <a href="{% url 'section1_personal_info' application.id %}{% if token %}?token={{ token }}{% endif %}" 
-                               class="section-badge {% if section.status == 'completed' %}active{% endif %}">
-                        {% elif section.section_number == 2 %}
-                            <a href="{% url 'section2_income' application.id %}{% if token %}?token={{ token }}{% endif %}" 
-                               class="section-badge {% if section.status == 'completed' %}active{% endif %}">
-                        {% elif section.section_number == 3 %}
-                            <a href="{% url 'section3_legal' application.id %}{% if token %}?token={{ token }}{% endif %}" 
-                               class="section-badge {% if section.status == 'completed' %}active{% endif %}">
-                        {% elif section.section_number == 4 %}
-                            <a href="{% url 'section4_review' application.id %}{% if token %}?token={{ token }}{% endif %}" 
-                               class="section-badge {% if section.status == 'completed' %}active{% endif %}">
-                        {% elif section.section_number == 5 %}
-                            <a href="{% url 'section5_payment' application.id %}{% if token %}?token={{ token }}{% endif %}" 
-                               class="section-badge {% if section.status == 'completed' %}active{% endif %}">
-                        {% endif %}
-                            <i class="fas 
-                                {% if section.section_number == 1 %}fa-user
-                                {% elif section.section_number == 2 %}fa-dollar-sign
-                                {% elif section.section_number == 3 %}fa-gavel
-                                {% elif section.section_number == 4 %}fa-eye
-                                {% elif section.section_number == 5 %}fa-credit-card
-                                {% endif %} me-2"></i>
-                            {% if section.section_number == 1 %}Personal Info
-                            {% elif section.section_number == 2 %}Income
-                            {% elif section.section_number == 3 %}Legal
-                            {% elif section.section_number == 4 %}Review
-                            {% elif section.section_number == 5 %}Payment
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Application Progress</h4>
+                    <span class="badge bg-warning text-dark fs-6">
+                        {{ progress_percent|floatformat:0 }}% Complete
+                    </span>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div class="progress mb-4" style="height: 12px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress_percent }}%" aria-valuenow="{{ progress_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                
+                <!-- Section Navigation -->
+                <div class="row g-2">
+                    {% for section in sections %}
+                        <div class="col-6 col-md">
+                            {% if not is_preview %}
+                                {% if section.section_number == 1 %}
+                                    <a href="{% url 'section1_personal_info' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3 {% if section.status == 'completed' %}btn-outline-success{% else %}btn-outline-secondary{% endif %}">
+                                {% elif section.section_number == 2 %}
+                                    <a href="{% url 'section2_income' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3 {% if section.status == 'completed' %}btn-outline-success{% else %}btn-outline-secondary{% endif %}">
+                                {% elif section.section_number == 3 %}
+                                    <a href="{% url 'section3_legal' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3 {% if section.status == 'completed' %}btn-outline-success{% else %}btn-outline-secondary{% endif %}">
+                                {% elif section.section_number == 4 %}
+                                    <a href="{% url 'section4_review' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3 {% if section.status == 'completed' %}btn-outline-success{% else %}btn-outline-secondary{% endif %}">
+                                {% elif section.section_number == 5 %}
+                                    <a href="{% url 'section5_payment' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3 {% if section.status == 'completed' %}btn-outline-success{% else %}btn-outline-secondary{% endif %}">
+                                {% endif %}
+                            {% else %}
+                                <div class="btn w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3 {% if section.status == 'completed' %}btn-outline-success{% else %}btn-outline-secondary{% endif %}">
                             {% endif %}
-                            {% if section.status == 'completed' %}
-                                <i class="fas fa-check ms-2"></i>
+                            
+                                <i class="fas fa-2x mb-2
+                                    {% if section.section_number == 1 %}fa-user
+                                    {% elif section.section_number == 2 %}fa-dollar-sign
+                                    {% elif section.section_number == 3 %}fa-gavel
+                                    {% elif section.section_number == 4 %}fa-eye
+                                    {% elif section.section_number == 5 %}fa-credit-card
+                                    {% endif %}"></i>
+                                <span class="small fw-bold">
+                                    {% if section.section_number == 1 %}Personal
+                                    {% elif section.section_number == 2 %}Income
+                                    {% elif section.section_number == 3 %}Legal
+                                    {% elif section.section_number == 4 %}Review
+                                    {% elif section.section_number == 5 %}Payment
+                                    {% endif %}
+                                </span>
+                                {% if section.status == 'completed' %}
+                                    <i class="fas fa-check-circle mt-1 text-success"></i>
+                                {% endif %}
+                                
+                            {% if not is_preview %}
+                                </a>
+                            {% else %}
+                                </div>
                             {% endif %}
-                        </a>
-                    {% else %}
-                        <span class="section-badge {% if section.status == 'completed' %}active{% endif %}">
-                            <i class="fas 
-                                {% if section.section_number == 1 %}fa-user
-                                {% elif section.section_number == 2 %}fa-dollar-sign
-                                {% elif section.section_number == 3 %}fa-gavel
-                                {% elif section.section_number == 4 %}fa-eye
-                                {% elif section.section_number == 5 %}fa-credit-card
-                                {% endif %} me-2"></i>
-                            {% if section.section_number == 1 %}Personal Info
-                            {% elif section.section_number == 2 %}Income
-                            {% elif section.section_number == 3 %}Legal
-                            {% elif section.section_number == 4 %}Review
-                            {% elif section.section_number == 5 %}Payment
-                            {% endif %}
-                            {% if section.status == 'completed' %}
-                                <i class="fas fa-check ms-2"></i>
-                            {% endif %}
-                        </span>
-                    {% endif %}
-                {% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
 
         <!-- Application Details -->
-        <div class="application-form">
-            <h3 class="form-section-title">
-                <i class="fas fa-file-alt me-2"></i>Application Information
-            </h3>
-            
-            {% if application.applicant %}
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <h6 class="text-muted mb-2">APPLICANT INFORMATION</h6>
-                    <p class="mb-1">
-                        <strong><i class="fas fa-user me-2"></i>Name:</strong><br>
-                        {{ application.applicant.first_name }} {{ application.applicant.last_name }}
-                    </p>
-                    <p class="mb-1">
-                        <strong><i class="fas fa-envelope me-2"></i>Email:</strong><br>
-                        {{ application.applicant.email }}
-                    </p>
-                    {% if application.applicant.phone_cell %}
-                    <p class="mb-0">
-                        <strong><i class="fas fa-phone me-2"></i>Phone:</strong><br>
-                        {{ application.applicant.phone_cell }}
-                    </p>
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Application Information</h5>
+            </div>
+            <div class="card-body">
+                {% if application.applicant %}
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted text-uppercase small fw-bold mb-3">Applicant Information</h6>
+                        <p class="mb-2">
+                            <strong><i class="fas fa-user me-2 text-muted"></i>Name:</strong><br>
+                            <span class="ms-4">{{ application.applicant.first_name }} {{ application.applicant.last_name }}</span>
+                        </p>
+                        <p class="mb-2">
+                            <strong><i class="fas fa-envelope me-2 text-muted"></i>Email:</strong><br>
+                            <span class="ms-4">{{ application.applicant.email }}</span>
+                        </p>
+                        {% if application.applicant.phone_cell %}
+                        <p class="mb-0">
+                            <strong><i class="fas fa-phone me-2 text-muted"></i>Phone:</strong><br>
+                            <span class="ms-4">{{ application.applicant.phone_cell }}</span>
+                        </p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted text-uppercase small fw-bold mb-3">Application Details</h6>
+                        <p class="mb-2">
+                            <strong><i class="fas fa-dollar-sign me-2 text-muted"></i>Application Fee:</strong>
+                            <span class="ms-1">${{ application.application_fee_amount|floatformat:2 }}</span>
+                        </p>
+                        <p class="mb-2">
+                            <strong><i class="fas fa-info-circle me-2 text-muted"></i>Status:</strong>
+                            <span class="badge bg-secondary ms-1">{{ application.get_status_display }}</span>
+                        </p>
+                        <p class="mb-0">
+                            <strong><i class="fas fa-calendar me-2 text-muted"></i>Created:</strong>
+                            <span class="ms-1">{{ application.created_at|date:"M d, Y" }}</span>
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Required Documents -->
+                {% if application.required_documents %}
+                <div class="mb-4">
+                    <h6 class="text-muted text-uppercase small fw-bold mb-3">Required Documents</h6>
+                    <div class="row g-2">
+                        {% for doc in application.required_documents %}
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-2 bg-light rounded border">
+                                <i class="fas fa-file text-primary me-2"></i>
+                                <span>{{ doc }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Next Steps -->
+                {% if not is_preview %}
+                <div class="text-center pt-3 border-top">
+                    {% if progress_percent < 100 %}
+                        <p class="text-muted mb-3">Complete your application by filling out all sections above.</p>
+                        <a href="{% url 'section1_personal_info' application.id %}{% if token %}?token={{ token }}{% endif %}" 
+                           class="btn btn-primary btn-lg">
+                            <i class="fas fa-play me-2"></i>Continue Application
+                        </a>
+                    {% else %}
+                        <div class="alert alert-success d-inline-block mb-0">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>Application Complete!</strong> Your application has been submitted successfully.
+                        </div>
                     {% endif %}
                 </div>
-                <div class="col-md-6">
-                    <h6 class="text-muted mb-2">APPLICATION DETAILS</h6>
-                    <p class="mb-1">
-                        <strong><i class="fas fa-dollar-sign me-2"></i>Application Fee:</strong>
-                        ${{ application.application_fee_amount|floatformat:2 }}
-                    </p>
-                    <p class="mb-1">
-                        <strong><i class="fas fa-info-circle me-2"></i>Status:</strong>
-                        <span class="badge bg-secondary">{{ application.get_status_display }}</span>
-                    </p>
-                    <p class="mb-0">
-                        <strong><i class="fas fa-calendar me-2"></i>Created:</strong>
-                        {{ application.created_at|date:"M d, Y" }}
-                    </p>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Required Documents -->
-            {% if application.required_documents %}
-            <div class="mb-4">
-                <h6 class="text-muted mb-3">REQUIRED DOCUMENTS</h6>
-                <div class="row">
-                    {% for doc in application.required_documents %}
-                    <div class="col-md-6 mb-2">
-                        <div class="d-flex align-items-center p-2 bg-light rounded">
-                            <i class="fas fa-file text-primary me-2"></i>
-                            <span>{{ doc }}</span>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Next Steps -->
-            {% if not is_preview %}
-            <div class="text-center pt-3">
-                {% if progress_percent < 100 %}
-                    <p class="text-muted mb-3">Complete your application by filling out all sections above.</p>
-                    <a href="{% url 'section1_personal_info' application.id %}{% if token %}?token={{ token }}{% endif %}" 
-                       class="btn btn-primary btn-lg">
-                        <i class="fas fa-play me-2"></i>Continue Application
-                    </a>
-                {% else %}
-                    <div class="alert alert-success">
-                        <i class="fas fa-check-circle me-2"></i>
-                        <strong>Application Complete!</strong> Your application has been submitted successfully.
-                    </div>
                 {% endif %}
             </div>
-            {% endif %}
         </div>
     </div>
 
@@ -299,235 +298,172 @@
     <div class="col-lg-4">
         {% if application.apartment %}
         <!-- Property Description -->
-        <div class="property-sidebar">
-            <h5><i class="fas fa-file-alt me-2"></i>Property Description</h5>
-            
-            {% if application.apartment.description %}
-            <div class="mb-3">
-                <div class="property-description-container">
-                    <div class="property-description-text" id="propertyDescription">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Property Description</h5>
+            </div>
+            <div class="card-body">
+                {% if application.apartment.description %}
+                <div class="mb-3">
+                    <div class="property-description-text" id="propertyDescription" style="max-height: 150px; overflow: hidden; position: relative;">
                         {{ application.apartment.description|safe }}
                     </div>
-                    <button class="btn btn-link btn-sm p-0 mt-2" id="showMoreBtn" onclick="toggleDescription()">
+                    <button class="btn btn-link btn-sm p-0 mt-2 text-decoration-none" id="showMoreBtn" onclick="toggleDescription()">
                         <i class="fas fa-chevron-down me-1"></i>Show More
                     </button>
                 </div>
-            </div>
-            {% endif %}
-            
-            <!-- Lease Terms info without heading -->
-            <div class="mb-3">
-                {% if application.apartment.lease_term %}
-                <p class="mb-1">
-                    <i class="fas fa-calendar-alt me-2"></i>
-                    {{ application.apartment.lease_term }} month lease
-                </p>
                 {% endif %}
-                {% if application.apartment.security_deposit %}
-                <p class="mb-1">
-                    <i class="fas fa-shield-alt me-2"></i>
-                    ${{ application.apartment.security_deposit|floatformat:0 }} security deposit
-                </p>
-                {% endif %}
-                {% if application.apartment.pet_fee %}
-                <p class="mb-0">
-                    <i class="fas fa-paw me-2"></i>
-                    ${{ application.apartment.pet_fee|floatformat:0 }} pet fee
-                </p>
-                {% endif %}
+                
+                <!-- Lease Terms -->
+                <ul class="list-group list-group-flush">
+                    {% if application.apartment.lease_term %}
+                    <li class="list-group-item px-0">
+                        <i class="fas fa-calendar-alt me-2 text-muted"></i>
+                        {{ application.apartment.lease_term }} month lease
+                    </li>
+                    {% endif %}
+                    {% if application.apartment.security_deposit %}
+                    <li class="list-group-item px-0">
+                        <i class="fas fa-shield-alt me-2 text-muted"></i>
+                        ${{ application.apartment.security_deposit|floatformat:0 }} security deposit
+                    </li>
+                    {% endif %}
+                    {% if application.apartment.pet_fee %}
+                    <li class="list-group-item px-0">
+                        <i class="fas fa-paw me-2 text-muted"></i>
+                        ${{ application.apartment.pet_fee|floatformat:0 }} pet fee
+                    </li>
+                    {% endif %}
+                </ul>
             </div>
         </div>
 
         <!-- Amenities -->
         {% if application.apartment.building.amenities.exists or application.apartment.amenities.exists %}
-        <div class="property-sidebar">
-            <h5><i class="fas fa-concierge-bell me-2"></i>Amenities</h5>
-            
-            {% comment %}Building amenities{% endcomment %}
-            {% for amenity in application.apartment.building.amenities.all %}
-            <div class="amenity-item">
-                <i class="fas {{ amenity.icon|default:'fa-check' }} amenity-icon"></i>
-                <span>{{ amenity.name }}</span>
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-concierge-bell me-2"></i>Amenities</h5>
             </div>
-            {% endfor %}
-            
-            {% comment %}Apartment/Unit amenities{% endcomment %}
-            {% for amenity in application.apartment.amenities.all %}
-            <div class="amenity-item">
-                <i class="fas {{ amenity.icon|default:'fa-check' }} amenity-icon"></i>
-                <span>{{ amenity.name }}</span>
+            <div class="card-body">
+                <div class="row g-2">
+                    {% comment %}Building amenities{% endcomment %}
+                    {% for amenity in application.apartment.building.amenities.all %}
+                    <div class="col-12">
+                        <div class="d-flex align-items-center p-2 rounded hover-bg-light">
+                            <i class="fas {{ amenity.icon|default:'fa-check' }} me-3 text-primary" style="width: 20px; text-align: center;"></i>
+                            <span>{{ amenity.name }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    {% comment %}Apartment/Unit amenities{% endcomment %}
+                    {% for amenity in application.apartment.amenities.all %}
+                    <div class="col-12">
+                        <div class="d-flex align-items-center p-2 rounded hover-bg-light">
+                            <i class="fas {{ amenity.icon|default:'fa-check' }} me-3 text-primary" style="width: 20px; text-align: center;"></i>
+                            <span>{{ amenity.name }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
-            {% endfor %}
         </div>
         {% endif %}
 
         <!-- Building Features -->
         {% if application.apartment.building.year_built or application.apartment.building.total_units or application.apartment.building.parking_available %}
-        <div class="property-sidebar">
-            <h5><i class="fas fa-building me-2"></i>Building Features</h5>
-            
-            {% if application.apartment.building.year_built %}
-            <div class="amenity-item">
-                <i class="fas fa-calendar amenity-icon"></i>
-                <span>Built in {{ application.apartment.building.year_built }}</span>
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-building me-2"></i>Building Features</h5>
             </div>
-            {% endif %}
-            
-            {% if application.apartment.building.total_units %}
-            <div class="amenity-item">
-                <i class="fas fa-door-open amenity-icon"></i>
-                <span>{{ application.apartment.building.total_units }} total units</span>
+            <div class="card-body">
+                <div class="row g-2">
+                    {% if application.apartment.building.year_built %}
+                    <div class="col-12">
+                        <div class="d-flex align-items-center p-2 rounded hover-bg-light">
+                            <i class="fas fa-calendar me-3 text-primary" style="width: 20px; text-align: center;"></i>
+                            <span>Built in {{ application.apartment.building.year_built }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if application.apartment.building.total_units %}
+                    <div class="col-12">
+                        <div class="d-flex align-items-center p-2 rounded hover-bg-light">
+                            <i class="fas fa-door-open me-3 text-primary" style="width: 20px; text-align: center;"></i>
+                            <span>{{ application.apartment.building.total_units }} total units</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if application.apartment.building.parking_available %}
+                    <div class="col-12">
+                        <div class="d-flex align-items-center p-2 rounded hover-bg-light">
+                            <i class="fas fa-car me-3 text-primary" style="width: 20px; text-align: center;"></i>
+                            <span>Parking available</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
-            {% endif %}
-            
-            {% if application.apartment.building.parking_available %}
-            <div class="amenity-item">
-                <i class="fas fa-car amenity-icon"></i>
-                <span>Parking available</span>
-            </div>
-            {% endif %}
         </div>
         {% endif %}
 
         <!-- Additional Photos -->
         {% if application.apartment.building.images.count > 1 %}
-        <div class="property-sidebar">
-            <h5><i class="fas fa-images me-2"></i>Property Gallery</h5>
-            <div class="row">
-                {% for image in application.apartment.building.images.all|slice:":4" %}
-                <div class="col-6 mb-2">
-                    <img src="{{ image.thumbnail_url }}" class="img-fluid rounded" alt="Property Image" 
-                         style="height: 80px; width: 100%; object-fit: cover;">
-                </div>
-                {% endfor %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-images me-2"></i>Property Gallery</h5>
             </div>
-            {% if application.apartment.building.images.count > 4 %}
-            <p class="text-center mb-0 mt-2">
-                <small class="text-muted">+{{ application.apartment.building.images.count|add:"-4" }} more photos</small>
-            </p>
-            {% endif %}
+            <div class="card-body">
+                <div class="row g-2">
+                    {% for image in application.apartment.building.images.all|slice:":4" %}
+                    <div class="col-6">
+                        <img src="{{ image.thumbnail_url }}" class="img-fluid rounded w-100" alt="Property Image" 
+                             style="height: 100px; object-fit: cover;">
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if application.apartment.building.images.count > 4 %}
+                <p class="text-center mb-0 mt-2">
+                    <small class="text-muted">+{{ application.apartment.building.images.count|add:"-4" }} more photos</small>
+                </p>
+                {% endif %}
+            </div>
         </div>
         {% endif %}
         {% endif %}
 
         <!-- Contact Information -->
         {% if not is_preview %}
-        <div class="property-sidebar">
-            <h5><i class="fas fa-question-circle me-2"></i>Need Help?</h5>
-            <p class="mb-2">If you have questions about this application:</p>
-            <ul class="list-unstyled">
-                {% if application.broker %}
-                <li class="mb-2">
-                    <i class="fas fa-user-tie me-2"></i>
-                    Contact your broker: 
-                    <a href="mailto:{{ application.broker.email }}">{{ application.broker.email }}</a>
-                </li>
-                {% endif %}
-                <li class="mb-2">
-                    <i class="fas fa-save me-2"></i>
-                    Save your progress and complete sections at your own pace
-                </li>
-                <li class="mb-0">
-                    <i class="fas fa-lock me-2"></i>
-                    All information is securely encrypted and protected
-                </li>
-            </ul>
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-question-circle me-2"></i>Need Help?</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3 text-muted small">If you have questions about this application:</p>
+                <ul class="list-unstyled mb-0">
+                    {% if application.broker %}
+                    <li class="mb-2">
+                        <i class="fas fa-user-tie me-2 text-primary"></i>
+                        Contact your broker: 
+                        <a href="mailto:{{ application.broker.email }}" class="text-decoration-none">{{ application.broker.email }}</a>
+                    </li>
+                    {% endif %}
+                    <li class="mb-2">
+                        <i class="fas fa-save me-2 text-primary"></i>
+                        Save your progress and complete sections at your own pace
+                    </li>
+                    <li class="mb-0">
+                        <i class="fas fa-lock me-2 text-primary"></i>
+                        All information is securely encrypted and protected
+                    </li>
+                </ul>
+            </div>
         </div>
         {% endif %}
     </div>
 </div>
-{% endblock %}
-
-{% block extra_css %}
-<style>
-    /* Additional property-specific styles */
-    .property-hero-image {
-        transition: transform 0.3s ease;
-    }
-    
-    .property-hero:hover .property-hero-image {
-        transform: scale(1.02);
-    }
-    
-    .amenity-item:hover {
-        background-color: #e9ecef !important;
-        transform: translateX(5px);
-        transition: all 0.3s ease;
-    }
-    
-    .section-badge {
-        transition: all 0.3s ease;
-    }
-    
-    .section-badge:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    
-    /* Property Description Show More/Less */
-    .property-description-text {
-        max-height: 150px;
-        overflow: hidden;
-        position: relative;
-        transition: max-height 0.3s ease;
-    }
-    
-    .property-description-text.expanded {
-        max-height: none;
-    }
-    
-    .property-description-text:not(.expanded)::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 50px;
-        background: linear-gradient(to bottom, transparent, white);
-    }
-    
-    #showMoreBtn {
-        color: var(--brand-yellow);
-        text-decoration: none;
-        font-weight: 500;
-    }
-    
-    #showMoreBtn:hover {
-        color: #ffb302;
-    }
-    
-    /* Carousel styling */
-    .carousel-control-prev,
-    .carousel-control-next {
-        width: 5%;
-        opacity: 0.8;
-    }
-    
-    .carousel-control-prev:hover,
-    .carousel-control-next:hover {
-        opacity: 1;
-    }
-    
-    .carousel-control-prev-icon,
-    .carousel-control-next-icon {
-        background-image: none;
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
-    }
-    
-    .carousel-control-prev-icon::after {
-        content: '‹';
-        font-size: 55px;
-        color: white;
-        font-weight: 100;
-    }
-    
-    .carousel-control-next-icon::after {
-        content: '›';
-        font-size: 55px;
-        color: white;
-        font-weight: 100;
-    }
-</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -536,18 +472,11 @@ function toggleDescription() {
     const description = document.getElementById('propertyDescription');
     const button = document.getElementById('showMoreBtn');
     
-    // Check if the description needs show more functionality
-    if (description.scrollHeight <= 150 && !description.classList.contains('expanded')) {
-        // Hide button if content is short enough
-        button.style.display = 'none';
-        return;
-    }
-    
-    if (description.classList.contains('expanded')) {
-        description.classList.remove('expanded');
+    if (description.style.maxHeight === 'none') {
+        description.style.maxHeight = '150px';
         button.innerHTML = '<i class="fas fa-chevron-down me-1"></i>Show More';
     } else {
-        description.classList.add('expanded');
+        description.style.maxHeight = 'none';
         button.innerHTML = '<i class="fas fa-chevron-up me-1"></i>Show Less';
     }
 }
