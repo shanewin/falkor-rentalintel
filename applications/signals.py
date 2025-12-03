@@ -27,3 +27,14 @@ def auto_analyze_document(sender, instance, created, **kwargs):
             # Save task ID
             instance.celery_task_id = task.id
             instance.save(update_fields=['celery_task_id'])
+
+
+@receiver(post_save, sender='applications.Application')
+def sync_applicant_broker(sender, instance, created, **kwargs):
+    """
+    Ensure the Applicant is assigned to the Broker when an Application is created or updated.
+    """
+    if instance.broker and instance.applicant:
+        if instance.applicant.assigned_broker != instance.broker:
+            instance.applicant.assigned_broker = instance.broker
+            instance.applicant.save(update_fields=['assigned_broker'])

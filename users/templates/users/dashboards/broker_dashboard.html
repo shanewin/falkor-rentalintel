@@ -13,8 +13,7 @@
                 <h1><i class="fas fa-briefcase"></i> Broker Dashboard</h1>
                 <p>
                     {% if broker_profile %}
-                    Welcome back, {{ broker_profile.first_name }} {{ broker_profile.last_name }} | {{
-                    broker_profile.business_name }}
+                    Welcome back, {{ broker_profile.first_name }} {{ broker_profile.last_name }} | {{ broker_profile.business_name }}
                     {% else %}
                     Welcome back, {{ user.email }} | Real Estate Professional
                     {% endif %}
@@ -117,8 +116,7 @@
                             <br>
                             {% for match in applicant.top_matches|slice:":2" %}
                             <small class="text-muted">
-                                • {{ match.apartment.building.street_address_1|truncatechars:20 }} #{{
-                                match.apartment.unit_number }}
+                                • {{ match.apartment.building.street_address_1|truncatechars:20 }} #{{ match.apartment.unit_number }}
                             </small><br>
                             {% endfor %}
                             {% else %}
@@ -180,14 +178,12 @@
                         <td>
                             <strong>{{ apartment.unit_number }}</strong>
                             <br>
-                            <small class="text-muted">{{ apartment.bedrooms|floatformat:0|default:"Studio" }}BR / {{
-                                apartment.bathrooms|floatformat:1 }}BA</small>
+                            <small class="text-muted">{{ apartment.bedrooms|floatformat:0|default:"Studio" }}BR / {{ apartment.bathrooms|floatformat:1 }}BA</small>
                         </td>
                         <td>
                             <strong>{{ apartment.building.street_address_1 }}</strong>
                             <br>
-                            <small class="text-muted">{{ apartment.building.city }}, {{ apartment.building.state
-                                }}</small>
+                            <small class="text-muted">{{ apartment.building.city }}, {{ apartment.building.state }}</small>
                         </td>
                         <td>
                             <span class="badge bg-primary">{{ apartment.smart_matches_count|default:0 }}</span>
