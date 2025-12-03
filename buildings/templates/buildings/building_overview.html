@@ -2,31 +2,29 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'buildings/css/buildings.css' %}">
+<!-- No custom CSS needed -->
 {% endblock %}
 
 {% block content %}
 <!-- Page Header -->
-<div class="page-header">
-    <div class="container">
-        <nav aria-label="breadcrumb" class="mb-3">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{% url 'buildings_list' %}">Buildings</a></li>
-                <li class="breadcrumb-item active">{{ building.name }}</li>
-            </ol>
-        </nav>
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <h1>{{ building.name }}</h1>
-                <p>{{ building.street_address_1 }}, {{ building.city }}, {{ building.state }} {{ building.zip_code }}</p>
-            </div>
-            <div>
-                {% if user.is_superuser or user.is_staff %}
-                    <a href="{% url 'building_detail' building.id %}" class="btn btn-primary">
-                        Edit Building
-                    </a>
-                {% endif %}
-            </div>
+<div class="container py-4 mb-4 bg-light rounded-3">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'buildings_list' %}">Buildings</a></li>
+            <li class="breadcrumb-item active">{{ building.name }}</li>
+        </ol>
+    </nav>
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1 class="display-5 fw-bold">{{ building.name }}</h1>
+            <p class="lead mb-0">{{ building.street_address_1 }}, {{ building.city }}, {{ building.state }} {{ building.zip_code }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if user.is_superuser or user.is_staff %}
+                <a href="{% url 'building_detail' building.id %}" class="btn btn-primary">
+                    <i class="fas fa-edit me-2"></i>Edit Building
+                </a>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -34,66 +32,82 @@
 <div class="container">
     <!-- Photo Carousel -->
     {% if building.images.exists %}
-        {% if building.images.count > 1 %}
-            <!-- Multiple Images Carousel -->
-            <div id="buildingCarousel" class="carousel slide carousel-container" data-bs-ride="carousel">
-                <div class="carousel-indicators">
-                    {% for image in building.images.all %}
-                        <button type="button" data-bs-target="#buildingCarousel" data-bs-slide-to="{{ forloop.counter0 }}" 
-                                {% if forloop.first %}class="active" aria-current="true"{% endif %} 
-                                aria-label="Slide {{ forloop.counter }}"></button>
-                    {% endfor %}
+        <div class="card shadow-sm mb-4 overflow-hidden">
+            {% if building.images.count > 1 %}
+                <!-- Multiple Images Carousel -->
+                <div id="buildingCarousel" class="carousel slide" data-bs-ride="carousel">
+                    <div class="carousel-indicators">
+                        {% for image in building.images.all %}
+                            <button type="button" data-bs-target="#buildingCarousel" data-bs-slide-to="{{ forloop.counter0 }}" 
+                                    {% if forloop.first %}class="active" aria-current="true"{% endif %} 
+                                    aria-label="Slide {{ forloop.counter }}"></button>
+                        {% endfor %}
+                    </div>
+                    <div class="carousel-inner">
+                        {% for image in building.images.all %}
+                            <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                                <img src="{{ image.large_url }}" class="d-block w-100" style="height: 500px; object-fit: cover;" alt="{{ building.name }} - Image {{ forloop.counter }}">
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button class="carousel-control-prev" type="button" data-bs-target="#buildingCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Previous</span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#buildingCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Next</span>
+                    </button>
                 </div>
-                <div class="carousel-inner">
-                    {% for image in building.images.all %}
-                        <div class="carousel-item {% if forloop.first %}active{% endif %}">
-                            <img src="{{ image.large_url }}" class="d-block w-100" alt="{{ building.name }} - Image {{ forloop.counter }}">
-                        </div>
-                    {% endfor %}
-                </div>
-                <button class="carousel-control-prev" type="button" data-bs-target="#buildingCarousel" data-bs-slide="prev">
-                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Previous</span>
-                </button>
-                <button class="carousel-control-next" type="button" data-bs-target="#buildingCarousel" data-bs-slide="next">
-                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Next</span>
-                </button>
-            </div>
-        {% else %}
-            <!-- Single Image -->
-            <div class="carousel-container">
-                <img src="{{ building.images.first.large_url }}" class="d-block w-100 building-hero-image" alt="{{ building.name }}">
-            </div>
-        {% endif %}
+            {% else %}
+                <!-- Single Image -->
+                <img src="{{ building.images.first.large_url }}" class="d-block w-100" style="height: 500px; object-fit: cover;" alt="{{ building.name }}">
+            {% endif %}
+        </div>
     {% else %}
         <!-- No Images Placeholder -->
-        <div class="no-image-placeholder">
-            <div class="text-center">
-                <i class="fas fa-image fa-3x mb-3"></i>
-                <p>No photos available for this building</p>
+        <div class="card shadow-sm mb-4 bg-light">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-image fa-3x mb-3 text-muted"></i>
+                <p class="text-muted mb-0">No photos available for this building</p>
             </div>
         </div>
     {% endif %}
 
     <!-- Stats Cards -->
     {% if total_apartments > 0 %}
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-number">{{ total_apartments }}</div>
-                <div class="stat-label">Total Units</div>
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3 mb-md-0">
+                <div class="card shadow-sm h-100 border-start border-4 border-warning">
+                    <div class="card-body text-center">
+                        <h2 class="display-6 fw-bold mb-0">{{ total_apartments }}</h2>
+                        <p class="text-muted text-uppercase small fw-bold mb-0">Total Units</p>
+                    </div>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ available_apartments }}</div>
-                <div class="stat-label">Available Units</div>
+            <div class="col-md-3 mb-3 mb-md-0">
+                <div class="card shadow-sm h-100 border-start border-4 border-warning">
+                    <div class="card-body text-center">
+                        <h2 class="display-6 fw-bold mb-0">{{ available_apartments }}</h2>
+                        <p class="text-muted text-uppercase small fw-bold mb-0">Available Units</p>
+                    </div>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ occupancy_rate }}%</div>
-                <div class="stat-label">Occupancy Rate</div>
+            <div class="col-md-3 mb-3 mb-md-0">
+                <div class="card shadow-sm h-100 border-start border-4 border-warning">
+                    <div class="card-body text-center">
+                        <h2 class="display-6 fw-bold mb-0">{{ occupancy_rate }}%</h2>
+                        <p class="text-muted text-uppercase small fw-bold mb-0">Occupancy Rate</p>
+                    </div>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">${{ avg_rent|floatformat:0 }}</div>
-                <div class="stat-label">Average Rent</div>
+            <div class="col-md-3">
+                <div class="card shadow-sm h-100 border-start border-4 border-warning">
+                    <div class="card-body text-center">
+                        <h2 class="display-6 fw-bold mb-0">${{ avg_rent|floatformat:0 }}</h2>
+                        <p class="text-muted text-uppercase small fw-bold mb-0">Average Rent</p>
+                    </div>
+                </div>
             </div>
         </div>
     {% endif %}
@@ -101,17 +115,19 @@
     <!-- Building Information -->
     <div class="row">
         <div class="col-lg-8 mb-4">
-            <div class="card">
-                <div class="card-header">Building Information</div>
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0">Building Information</h5>
+                </div>
                 <div class="card-body">
                     <!-- Neighborhood - Prominent Display -->
                     {% if building.neighborhood %}
-                        <div class="mb-4 p-3 bg-light rounded">
+                        <div class="mb-4 p-3 bg-light rounded border">
                             <div class="d-flex align-items-center">
-                                <i class="fas fa-city text-primary fa-lg me-3"></i>
+                                <i class="fas fa-city text-primary fa-2x me-3"></i>
                                 <div>
-                                    <h6 class="mb-1 text-primary">Neighborhood</h6>
-                                    <h5 class="mb-0">{{ building.get_neighborhood_display }}</h5>
+                                    <h6 class="mb-1 text-primary text-uppercase small fw-bold">Neighborhood</h6>
+                                    <h4 class="mb-0">{{ building.get_neighborhood_display }}</h4>
                                 </div>
                             </div>
                         </div>
@@ -121,8 +137,8 @@
                         {% for field, value in building.get_filled_fields.items %}
                             {% if field != "Description" and field != "Internal Notes" and field != "Neighborhood" %}
                                 <div class="col-md-6 mb-3">
-                                    <strong>{{ field }}:</strong><br>
-                                    {{ value|safe }}
+                                    <strong class="text-muted small text-uppercase">{{ field }}</strong><br>
+                                    <span class="fs-5">{{ value|safe }}</span>
                                 </div>
                             {% endif %}
                         {% endfor %}
@@ -131,17 +147,19 @@
             </div>
         </div>
 
-        <div class="col-lg-4">
+        <div class="col-lg-4 mb-4">
             <!-- Building Amenities -->
             {% if building.amenities.all %}
-                <div class="card">
-                    <div class="card-header">Building Amenities</div>
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="mb-0">Building Amenities</h5>
+                    </div>
                     <div class="card-body">
-                        <div class="amenities-grid">
+                        <div class="d-flex flex-wrap gap-2">
                             {% for amenity in building.amenities.all %}
-                                <div class="amenity-item">
-                                    {{ amenity.name }}
-                                </div>
+                                <span class="badge bg-light text-dark border p-2">
+                                    <i class="fas fa-check text-success me-1"></i> {{ amenity.name }}
+                                </span>
                             {% endfor %}
                         </div>
                     </div>
@@ -152,8 +170,10 @@
 
     <!-- Description -->
     {% if building.description %}
-        <div class="card mb-4">
-            <div class="card-header">Description</div>
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0">Description</h5>
+            </div>
             <div class="card-body">
                 {{ building.description|safe }}
             </div>
@@ -161,70 +181,72 @@
     {% endif %}
 
     <!-- Apartments Section -->
-    <div class="table-container">
-        <div class="table-header">
-            <div class="d-flex justify-content-between align-items-center">
-                <span>Available Units</span>
-                {% if user.is_superuser or user.is_staff %}
-                    <a href="{% url 'create_apartment_with_building' building.id %}" class="btn btn-primary btn-sm">
-                        Add Unit
-                    </a>
-                {% endif %}
-            </div>
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Available Units</h5>
+            {% if user.is_superuser or user.is_staff %}
+                <a href="{% url 'create_apartment_with_building' building.id %}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i>Add Unit
+                </a>
+            {% endif %}
         </div>
 
-        {% if building.apartments.exists %}
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Unit</th>
-                        <th>Layout</th>
-                        <th>Rent</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for apartment in building.apartments.all %}
+        <div class="table-responsive">
+            {% if building.apartments.exists %}
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
                         <tr>
-                            <td>
-                                <strong>{{ apartment.unit_number }}</strong>
-                            </td>
-                            <td>
-                                {{ apartment.bedrooms }}bd / {{ apartment.bathrooms }}ba
-                            </td>
-                            <td>
-                                <strong>${{ apartment.rent_price|floatformat:0 }}</strong>/month
-                            </td>
-                            <td>
-                                <span class="badge {% if apartment.status == 'available' %}badge-yellow{% elif apartment.status == 'occupied' %}badge-gray{% else %}badge-black{% endif %}">
-                                    {{ apartment.get_status_display }}
-                                </span>
-                            </td>
-                            <td>
-                                <a href="{% url 'apartment_overview' apartment.id %}" class="btn btn-outline-primary btn-sm">
-                                    View
-                                </a>
-                                {% if user.is_superuser or user.is_staff %}
-                                    <a href="{% url 'create_application' apartment.id %}" class="btn btn-primary btn-sm">
-                                        Apply
-                                    </a>
-                                {% endif %}
-                            </td>
+                            <th class="py-3">Unit</th>
+                            <th class="py-3">Layout</th>
+                            <th class="py-3">Rent</th>
+                            <th class="py-3">Status</th>
+                            <th class="py-3">Actions</th>
                         </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <div class="text-center py-5">
-                <h5 class="text-muted">No Units Added Yet</h5>
-                {% if user.is_superuser or user.is_staff %}
-                    <a href="{% url 'create_apartment_with_building' building.id %}" class="btn btn-primary">
-                        Add First Unit
-                    </a>
-                {% endif %}
-            </div>
-        {% endif %}
+                    </thead>
+                    <tbody>
+                        {% for apartment in building.apartments.all %}
+                            <tr>
+                                <td>
+                                    <strong>{{ apartment.unit_number }}</strong>
+                                </td>
+                                <td>
+                                    {{ apartment.bedrooms }}bd / {{ apartment.bathrooms }}ba
+                                </td>
+                                <td>
+                                    <strong>${{ apartment.rent_price|floatformat:0 }}</strong>/month
+                                </td>
+                                <td>
+                                    <span class="badge {% if apartment.status == 'available' %}bg-success{% elif apartment.status == 'occupied' %}bg-secondary{% else %}bg-dark{% endif %}">
+                                        {{ apartment.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{% url 'apartment_overview' apartment.id %}" class="btn btn-outline-primary btn-sm">
+                                            View
+                                        </a>
+                                        {% if user.is_superuser or user.is_staff %}
+                                            <a href="{% url 'create_application' apartment.id %}" class="btn btn-primary btn-sm">
+                                                Apply
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="text-center py-5">
+                    <h5 class="text-muted mb-3">No Units Added Yet</h5>
+                    {% if user.is_superuser or user.is_staff %}
+                        <a href="{% url 'create_apartment_with_building' building.id %}" class="btn btn-primary">
+                            Add First Unit
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}

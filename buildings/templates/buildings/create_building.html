@@ -3,29 +3,26 @@
 {% load crispy_forms_tags %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'buildings/css/buildings.css' %}">
 <link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1>
-                    {% if building %}
-                        Edit {{ building.name }}
-                    {% else %}
-                        Add New Building
-                    {% endif %}
-                </h1>
-                <p>Fill out and complete the form to start managing this property</p>
-            </div>
-            <div class="col-md-4 text-end">
-                <a href="{% url 'buildings_list' %}" class="btn btn-outline-primary">
-                    Back to Buildings
-                </a>
-            </div>
+<div class="container py-4 mb-4 bg-light rounded-3">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1 class="display-5 fw-bold">
+                {% if building %}
+                    Edit {{ building.name }}
+                {% else %}
+                    Add New Building
+                {% endif %}
+            </h1>
+            <p class="lead mb-0">Fill out and complete the form to start managing this property</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'buildings_list' %}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Buildings
+            </a>
         </div>
     </div>
 </div>
@@ -33,7 +30,7 @@
 <div class="container">
     {% if messages %}
         {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
                 {{ message }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
@@ -41,37 +38,37 @@
     {% endif %}
 
     <!-- Progress Bar -->
-    <div class="card mb-4">
+    <div class="card shadow-sm mb-4">
         <div class="card-body">
-            <h6 class="mb-3">Building Setup Progress</h6>
-            <div class="progress mb-3 progress-bar-sm">
-                <div class="progress-bar bg-yellow" style="width: {% if building %}100{% else %}25{% endif %}%"></div>
+            <h6 class="mb-3 text-uppercase small fw-bold text-muted">Building Setup Progress</h6>
+            <div class="progress mb-4" style="height: 10px;">
+                <div class="progress-bar bg-warning" role="progressbar" style="width: {% if building %}100{% else %}25{% endif %}%" aria-valuenow="{% if building %}100{% else %}25{% endif %}" aria-valuemin="0" aria-valuemax="100"></div>
             </div>
-            <div class="row text-center">
+            <div class="row text-center position-relative">
                 <div class="col-3">
-                    <div class="step {% if building %}text-success{% else %}text-brand{% endif %}">
-                        <div class="step-number {% if building %}bg-success text-white{% elif not building %}bg-yellow text-brand{% else %}bg-light text-muted{% endif %}">
+                    <div class="position-relative">
+                        <span class="d-inline-flex align-items-center justify-content-center rounded-circle {% if building %}bg-success text-white{% else %}bg-warning text-dark{% endif %}" style="width: 32px; height: 32px; font-weight: bold;">
                             {% if building %}<i class="fas fa-check"></i>{% else %}1{% endif %}
-                        </div>
-                        <small>Basic Info</small>
+                        </span>
+                        <p class="mt-2 mb-0 small fw-bold {% if building %}text-success{% else %}text-dark{% endif %}">Basic Info</p>
                     </div>
                 </div>
                 <div class="col-3">
-                    <div class="step {% if building %}text-brand{% else %}text-muted{% endif %}">
-                        <div class="step-number {% if building %}bg-yellow text-brand{% else %}bg-light text-muted{% endif %}">2</div>
-                        <small>Images</small>
+                    <div class="position-relative">
+                        <span class="d-inline-flex align-items-center justify-content-center rounded-circle {% if building %}bg-warning text-dark{% else %}bg-light text-muted border{% endif %}" style="width: 32px; height: 32px; font-weight: bold;">2</span>
+                        <p class="mt-2 mb-0 small fw-bold {% if building %}text-dark{% else %}text-muted{% endif %}">Images</p>
                     </div>
                 </div>
                 <div class="col-3">
-                    <div class="step {% if building %}text-brand{% else %}text-muted{% endif %}">
-                        <div class="step-number {% if building %}bg-yellow text-brand{% else %}bg-light text-muted{% endif %}">3</div>
-                        <small>Access</small>
+                    <div class="position-relative">
+                        <span class="d-inline-flex align-items-center justify-content-center rounded-circle {% if building %}bg-warning text-dark{% else %}bg-light text-muted border{% endif %}" style="width: 32px; height: 32px; font-weight: bold;">3</span>
+                        <p class="mt-2 mb-0 small fw-bold {% if building %}text-dark{% else %}text-muted{% endif %}">Access</p>
                     </div>
                 </div>
                 <div class="col-3">
-                    <div class="step {% if building %}text-brand{% else %}text-muted{% endif %}">
-                        <div class="step-number {% if building %}bg-yellow text-brand{% else %}bg-light text-muted{% endif %}">4</div>
-                        <small>Promotions</small>
+                    <div class="position-relative">
+                        <span class="d-inline-flex align-items-center justify-content-center rounded-circle {% if building %}bg-warning text-dark{% else %}bg-light text-muted border{% endif %}" style="width: 32px; height: 32px; font-weight: bold;">4</span>
+                        <p class="mt-2 mb-0 small fw-bold {% if building %}text-dark{% else %}text-muted{% endif %}">Promotions</p>
                     </div>
                 </div>
             </div>
@@ -81,8 +78,8 @@
     <div>
         {% if not building %}
             <!-- Step 1: Basic Building Information -->
-            <div class="card">
-                <div class="card-header">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white py-3">
                     <h5 class="mb-0">Step 1: Basic Building Information</h5>
                 </div>
                 <div class="card-body">
@@ -94,8 +91,8 @@
             </div>
         {% elif step == 2 %}
             <!-- Step 2: Building Images -->
-            <div class="card">
-                <div class="card-header">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white py-3">
                     <h5 class="mb-0">Step 2: Building Images</h5>
                 </div>
                 <div class="card-body">
@@ -105,15 +102,55 @@
                         {% crispy image_form image_form.helper %}
                     </form>
                             
-                            <!-- Display existing images -->
-                            {% if building.images.all %}
-                            <hr>
-                            <h6>Current Images:</h6>
-                            <div class="row">
-                                {% for image in building.images.all %}
-                                <div class="col-6 mb-2">
-                                    <img src="{{ image.image.url }}" class="img-fluid rounded" alt="Building image">
-                                    <small class="d-block text-muted">{{ image.description|default:"No description" }}</small>
+                    <!-- Display existing images -->
+                    {% if building.images.all %}
+                    <hr class="my-4">
+                    <h6 class="mb-3">Current Images</h6>
+                    <div class="row g-3">
+                        {% for image in building.images.all %}
+                        <div class="col-md-3 col-6">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <img src="{{ image.image.url }}" class="card-img-top rounded" alt="Building image" style="height: 150px; object-fit: cover;">
+                                <div class="card-body p-2">
+                                    <small class="text-muted d-block text-truncate">{{ image.description|default:"No description" }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% elif step == 3 %}
+            <!-- Step 3: Access Points -->
+            <div class="row">
+                <div class="col-lg-6 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-header bg-info text-white py-3">
+                            <h5 class="mb-0">Step 3: Access Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted mb-4">Add access codes, key information, or special instructions.</p>
+                            <form method="post" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                <input type="hidden" name="building_id" value="{{ building.id }}">
+                                {% crispy access_form %}
+                                <button type="submit" name="access_submit" class="btn btn-info text-white w-100 mt-3">
+                                    <i class="fas fa-key me-2"></i>Add Access Info
+                                </button>
+                            </form>
+                            
+                            <!-- Display existing access points -->
+                            {% if building.access_points.all %}
+                            <hr class="my-4">
+                            <h6 class="mb-3">Current Access Points</h6>
+                            <div class="list-group">
+                                {% for access in building.access_points.all %}
+                                <div class="list-group-item list-group-item-action flex-column align-items-start bg-light border-0 mb-2 rounded">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1 fw-bold">{{ access.name }}</h6>
+                                    </div>
+                                    <small class="text-muted">{{ access.description }}</small>
                                 </div>
                                 {% endfor %}
                             </div>
@@ -121,92 +158,70 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Step 3: Access Points -->
-                <div class="col-lg-6 mb-4">
-                    <div class="card h-100">
-                        <div class="card-header bg-info text-white">
-                            <h5 class="mb-0">Step 3: Access Information</h5>
-                        </div>
-                        <div class="card-body">
-                            <p class="text-muted">Add access codes, key information, or special instructions.</p>
-                            <form method="post" enctype="multipart/form-data">
-                                {% csrf_token %}
-                                <input type="hidden" name="building_id" value="{{ building.id }}">
-                                {% crispy access_form %}
-                                <button type="submit" name="access_submit" class="btn btn-info w-100">
-                                    <i class="fas fa-key"></i> Add Access Info
-                                </button>
-                            </form>
-                            
-                            <!-- Display existing access points -->
-                            {% if building.access_points.all %}
-                            <hr>
-                            <h6>Current Access Points:</h6>
-                            {% for access in building.access_points.all %}
-                            <div class="alert alert-light">
-                                <strong>{{ access.name }}</strong><br>
-                                <small class="text-muted">{{ access.description }}</small>
-                            </div>
-                            {% endfor %}
-                            {% endif %}
-                        </div>
+            </div>
+        {% elif step == 4 %}
+            <!-- Step 4: Special Offers -->
+            <div class="col-12 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-warning text-dark py-3">
+                        <h5 class="mb-0">Step 4: Promotions & Special Offers</h5>
                     </div>
-                </div>
-
-                <!-- Step 4: Special Offers -->
-                <div class="col-12 mb-4">
-                    <div class="card">
-                        <div class="card-header bg-warning text-dark">
-                            <h5 class="mb-0">Step 4: Promotions & Special Offers</h5>
-                        </div>
-                        <div class="card-body">
-                            <p class="text-muted">Add any special promotions, deals, or unique features to highlight.</p>
-                            <form method="post">
-                                {% csrf_token %}
-                                <input type="hidden" name="building_id" value="{{ building.id }}">
-                                {% crispy special_form %}
-                                <button type="submit" name="special_submit" class="btn btn-warning w-100">
-                                    <i class="fas fa-star"></i> Add Special Offer
-                                </button>
-                            </form>
-                            
-                            <!-- Display existing specials -->
-                            {% if building.special_offers.all %}
-                            <hr>
-                            <h6>Current Special Offers:</h6>
+                    <div class="card-body">
+                        <p class="text-muted mb-4">Add any special promotions, deals, or unique features to highlight.</p>
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="building_id" value="{{ building.id }}">
+                            {% crispy special_form %}
+                            <button type="submit" name="special_submit" class="btn btn-warning w-100 mt-3">
+                                <i class="fas fa-star me-2"></i>Add Special Offer
+                            </button>
+                        </form>
+                        
+                        <!-- Display existing specials -->
+                        {% if building.special_offers.all %}
+                        <hr class="my-4">
+                        <h6 class="mb-3">Current Special Offers</h6>
+                        <div class="row g-3">
                             {% for special in building.special_offers.all %}
-                            <div class="alert alert-warning">
-                                <strong>{{ special.title }}</strong><br>
-                                <small>{{ special.description }}</small><br>
-                                <small class="text-muted">
-                                    {% if special.start_date %}Valid from {{ special.start_date }}{% endif %}
-                                    {% if special.end_date %} until {{ special.end_date }}{% endif %}
-                                </small>
+                            <div class="col-md-6">
+                                <div class="alert alert-warning mb-0 border-warning">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-tag me-2"></i>
+                                        <strong class="h6 mb-0">{{ special.title }}</strong>
+                                    </div>
+                                    <p class="small mb-2">{{ special.description }}</p>
+                                    <small class="text-muted d-block border-top border-warning pt-2 mt-2">
+                                        {% if special.start_date %}Valid from {{ special.start_date }}{% endif %}
+                                        {% if special.end_date %} until {{ special.end_date }}{% endif %}
+                                    </small>
+                                </div>
                             </div>
                             {% endfor %}
-                            {% endif %}
                         </div>
+                        {% endif %}
                     </div>
                 </div>
+            </div>
 
-                <!-- Completion Actions -->
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <h5>Building Setup Complete!</h5>
-                            <p class="text-muted">Your building "{{ building.name }}" has been created successfully.</p>
-                            <div class="d-flex justify-content-center gap-3">
-                                <a href="{% url 'building_detail' building.id %}" class="btn btn-primary">
-                                    <i class="fas fa-eye"></i> View Building Details
-                                </a>
-                                <a href="{% url 'buildings_list' %}" class="btn btn-outline-primary">
-                                    <i class="fas fa-list"></i> Back to Buildings List
-                                </a>
-                                <a href="{% url 'create_building' %}" class="btn btn-outline-secondary">
-                                    <i class="fas fa-plus"></i> Create Another Building
-                                </a>
-                            </div>
+            <!-- Completion Actions -->
+            <div class="col-12 mt-4">
+                <div class="card shadow-sm border-success">
+                    <div class="card-body text-center py-5">
+                        <div class="mb-4 text-success">
+                            <i class="fas fa-check-circle fa-4x"></i>
+                        </div>
+                        <h3 class="mb-3">Building Setup Complete!</h3>
+                        <p class="text-muted mb-4">Your building "{{ building.name }}" has been created successfully.</p>
+                        <div class="d-flex justify-content-center gap-3">
+                            <a href="{% url 'building_detail' building.id %}" class="btn btn-primary px-4">
+                                <i class="fas fa-eye me-2"></i>View Building Details
+                            </a>
+                            <a href="{% url 'buildings_list' %}" class="btn btn-outline-primary px-4">
+                                <i class="fas fa-list me-2"></i>Back to Buildings List
+                            </a>
+                            <a href="{% url 'create_building' %}" class="btn btn-outline-secondary px-4">
+                                <i class="fas fa-plus me-2"></i>Create Another Building
+                            </a>
                         </div>
                     </div>
                 </div>

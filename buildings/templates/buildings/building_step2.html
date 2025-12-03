@@ -3,25 +3,22 @@
 {% load crispy_forms_tags %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'buildings/css/buildings.css' %}">
 <link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
 <!-- Cropper.js CSS -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1>{{ step_title }}</h1>
-                <p>Building: <strong>{{ building.name }}</strong></p>
-            </div>
-            <div class="col-md-4 text-end">
-                <a href="{% url 'buildings_list' %}" class="btn btn-outline-primary">
-                    Back to Buildings
-                </a>
-            </div>
+<div class="container py-4 mb-4 bg-light rounded-3">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1 class="display-5 fw-bold">{{ step_title }}</h1>
+            <p class="lead mb-0">Building: <strong>{{ building.name }}</strong></p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'buildings_list' %}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Buildings
+            </a>
         </div>
     </div>
 </div>
@@ -29,7 +26,7 @@
 <div class="container">
     {% if messages %}
         {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
                 {{ message }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
@@ -37,37 +34,37 @@
     {% endif %}
 
     <!-- Progress Bar -->
-    <div class="card mb-4">
+    <div class="card shadow-sm mb-4">
         <div class="card-body">
-            <h6 class="mb-3">Building Setup Progress</h6>
-            <div class="progress mb-3 progress-bar-sm">
-                <div class="progress-bar bg-yellow" style="width: 50%"></div>
+            <h6 class="mb-3 text-uppercase small fw-bold text-muted">Building Setup Progress</h6>
+            <div class="progress mb-4" style="height: 10px;">
+                <div class="progress-bar bg-warning" role="progressbar" style="width: 50%" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>
             </div>
-            <div class="row text-center">
+            <div class="row text-center position-relative">
                 <div class="col-3">
-                    <div class="step text-success">
-                        <div class="step-number bg-success text-white">
+                    <div class="position-relative">
+                        <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-success text-white" style="width: 32px; height: 32px; font-weight: bold;">
                             <i class="fas fa-check"></i>
-                        </div>
-                        <small>Basic Info</small>
+                        </span>
+                        <p class="mt-2 mb-0 small fw-bold text-success">Basic Info</p>
                     </div>
                 </div>
                 <div class="col-3">
-                    <div class="step text-brand">
-                        <div class="step-number bg-yellow text-brand">2</div>
-                        <small>Images</small>
+                    <div class="position-relative">
+                        <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-warning text-dark" style="width: 32px; height: 32px; font-weight: bold;">2</span>
+                        <p class="mt-2 mb-0 small fw-bold text-dark">Images</p>
                     </div>
                 </div>
                 <div class="col-3">
-                    <div class="step text-muted">
-                        <div class="step-number bg-light text-muted">3</div>
-                        <small>Access</small>
+                    <div class="position-relative">
+                        <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-light text-muted border" style="width: 32px; height: 32px; font-weight: bold;">3</span>
+                        <p class="mt-2 mb-0 small fw-bold text-muted">Access</p>
                     </div>
                 </div>
                 <div class="col-3">
-                    <div class="step text-muted">
-                        <div class="step-number bg-light text-muted">4</div>
-                        <small>Promotions</small>
+                    <div class="position-relative">
+                        <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-light text-muted border" style="width: 32px; height: 32px; font-weight: bold;">4</span>
+                        <p class="mt-2 mb-0 small fw-bold text-muted">Promotions</p>
                     </div>
                 </div>
             </div>
@@ -75,8 +72,8 @@
     </div>
 
     <!-- Step 2: Images -->
-    <div class="card">
-        <div class="card-header">
+    <div class="card shadow-sm">
+        <div class="card-header bg-white py-3">
             <h5 class="mb-0">Step 2: Building Images</h5>
         </div>
         <div class="card-body">
@@ -88,15 +85,15 @@
                     
             <!-- Current Images -->
             {% if building.images.all %}
-            <fieldset>
-                <legend>Current Images ({{ building.images.count }})</legend>
-                <div class="row">
+            <fieldset class="border p-3 rounded">
+                <legend class="float-none w-auto px-2 h6">Current Images ({{ building.images.count }})</legend>
+                <div class="row g-3">
                     {% for image in building.images.all %}
-                    <div class="col-md-4 mb-3">
-                        <div class="card">
-                            <img src="{{ image.image.url }}" class="card-img-top building-card-image" alt="Building image">
+                    <div class="col-md-4 col-sm-6">
+                        <div class="card h-100 shadow-sm">
+                            <img src="{{ image.image.url }}" class="card-img-top" alt="Building image" style="height: 200px; object-fit: cover;">
                             <div class="card-body p-2">
-                                <small class="text-muted">{{ image.description|default:"No description" }}</small>
+                                <small class="text-muted d-block text-truncate">{{ image.description|default:"No description" }}</small>
                             </div>
                         </div>
                     </div>
@@ -104,8 +101,8 @@
                 </div>
             </fieldset>
             {% else %}
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i> No images uploaded yet. Add some photos to showcase your building!
+            <div class="alert alert-info shadow-sm">
+                <i class="fas fa-info-circle me-2"></i> No images uploaded yet. Add some photos to showcase your building!
             </div>
             {% endif %}
         </div>

@@ -5,25 +5,22 @@
 {% load crispy_forms_tags %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'buildings/css/buildings.css' %}">
 <link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
 <!-- Cropper.js CSS -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1>Edit Building</h1>
-                <p>Building: <strong>{{ building.name }}</strong></p>
-            </div>
-            <div class="col-md-4 text-end">
-                <a href="{% url 'buildings_list' %}" class="btn btn-outline-primary">
-                    Back to Buildings
-                </a>
-            </div>
+<div class="container py-4 mb-4 bg-light rounded-3">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1 class="display-5 fw-bold">Edit Building</h1>
+            <p class="lead mb-0">Building: <strong>{{ building.name }}</strong></p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'buildings_list' %}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Buildings
+            </a>
         </div>
     </div>
 </div>
@@ -32,7 +29,7 @@
 
     {% if messages %}
         {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
             {{ message }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
@@ -41,7 +38,7 @@
 
 
     <!-- Tabs Navigation -->
-    <ul class="nav nav-tabs" id="buildingTabs" role="tablist">
+    <ul class="nav nav-tabs mb-4" id="buildingTabs" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab">Building Info</button>
         </li>
@@ -56,11 +53,11 @@
         </li>
     </ul>
 
-    <div class="tab-content mt-3" id="buildingTabsContent">
+    <div class="tab-content" id="buildingTabsContent">
         <!-- Building Info Tab -->
         <div class="tab-pane fade show active" id="info" role="tabpanel">
-            <div class="card">
-                <div class="card-header">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white py-3">
                     <h5 class="mb-0">Edit Building Information</h5>
                 </div>
                 <div class="card-body">
@@ -73,9 +70,9 @@
         </div>
 
         <!-- Images Tab -->
-        <div class="tab-pane fade show" id="images" role="tabpanel">
-            <div class="card">
-                <div class="card-header">
+        <div class="tab-pane fade" id="images" role="tabpanel">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
                     <h5 class="mb-0">Upload Building Images</h5>
                 </div>
                 <div class="card-body">
@@ -86,59 +83,83 @@
                 </div>
             </div>
 
-            <h5 class="mt-4">Uploaded Images:</h5>
-            <div class="d-flex flex-wrap">
+            <h5 class="mb-3">Uploaded Images</h5>
+            <div class="row g-3">
                 {% for img in building.images.all %}
-                    <div class="m-2">
-                        <img src="{{ img.thumbnail_url }}" alt="Building Image" class="img-thumbnail">
-
+                    <div class="col-md-3 col-sm-6">
+                        <div class="card h-100 shadow-sm">
+                            <img src="{{ img.thumbnail_url }}" alt="Building Image" class="card-img-top" style="height: 200px; object-fit: cover;">
+                        </div>
                     </div>
                 {% empty %}
-                    <p>No images uploaded yet.</p>
+                    <div class="col-12">
+                        <p class="text-muted fst-italic">No images uploaded yet.</p>
+                    </div>
                 {% endfor %}
             </div>
         </div>
 
         <!-- Access Points Tab -->
         <div class="tab-pane fade" id="access" role="tabpanel">
-            <h3 class="h6 fw-bold text-secondary py-2 mt-4 mb-3 border-bottom">Add Access Point</h3>
-            <form method="post" enctype="multipart/form-data">
-                {% csrf_token %}
-                {{ access_form|crispy }}
-                <button type="submit" class="btn btn-primary" name="access_submit">Add Access Point</button>
-            </form>
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0">Add Access Point</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {{ access_form|crispy }}
+                        <button type="submit" class="btn btn-primary mt-3" name="access_submit">Add Access Point</button>
+                    </form>
+                </div>
+            </div>
 
-            <h5 class="mt-4">Existing Access Points:</h5>
-            <ul>
+            <h5 class="mb-3">Existing Access Points</h5>
+            <div class="list-group shadow-sm">
                 {% for access in building.access_points.all %}
-                    <li>{{ access.location }} – {{ access.get_access_type_display }}
+                    <div class="list-group-item d-flex align-items-center">
                         {% if access.thumbnail_url %}
-                            <img src="{{ access.thumbnail_url }}" alt="Access Point Image" class="img-thumbnail" width="100" height="100">
+                            <img src="{{ access.thumbnail_url }}" alt="Access Point" class="rounded me-3" width="60" height="60" style="object-fit: cover;">
                         {% endif %}
-                    </li>
+                        <div>
+                            <h6 class="mb-1">{{ access.location }}</h6>
+                            <small class="text-muted">{{ access.get_access_type_display }}</small>
+                        </div>
+                    </div>
                 {% empty %}
-                    <p>No access points added yet.</p>
+                    <div class="list-group-item text-muted fst-italic">No access points added yet.</div>
                 {% endfor %}
-            </ul>
+            </div>
         </div>
 
         <!-- Specials Tab -->
         <div class="tab-pane fade" id="specials" role="tabpanel">
-            <h3 class="h6 fw-bold text-secondary py-2 mt-4 mb-3 border-bottom">Add Special</h3>
-            <form method="post">
-                {% csrf_token %}
-                {{ special_form|crispy }}
-                <button type="submit" class="btn btn-primary" name="special_submit">Add Special</button>
-            </form>
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0">Add Special</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ special_form|crispy }}
+                        <button type="submit" class="btn btn-primary mt-3" name="special_submit">Add Special</button>
+                    </form>
+                </div>
+            </div>
 
-            <h5 class="mt-4">Current Specials:</h5>
-            <ul>
+            <h5 class="mb-3">Current Specials</h5>
+            <div class="list-group shadow-sm">
                 {% for special in building.specials.all %}
-                    <li>{{ special.name }} – {{ special.get_special_type_display }}</li>
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ special.name }}</h6>
+                            <small class="text-muted">{{ special.get_special_type_display }}</small>
+                        </div>
+                    </div>
                 {% empty %}
-                    <p>No specials added yet.</p>
+                    <div class="list-group-item text-muted fst-italic">No specials added yet.</div>
                 {% endfor %}
-            </ul>
+            </div>
         </div>
     </div>
 </div>
