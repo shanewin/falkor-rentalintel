@@ -335,9 +335,6 @@ Rules: Complete = has account info, bank, balance, income verification. Not Comp
             'Content-Type': 'application/json',
             'x-api-key': api_key,
             'anthropic-version': '2023-06-01',
-            'anthropic-beta': 'max-tokens-3-5-sonnet-2024-07-15',
-            # Request zero retention
-            'anthropic-data-retention': 'none'
         }
         
         # Minimal message structure
@@ -347,7 +344,7 @@ Rules: Complete = has account info, bank, balance, income verification. Not Comp
         }]
         
         api_payload = {
-            "model": "claude-3-5-sonnet-20241022",  # Latest model
+            "model": "claude-3-haiku-20240307",  # Fast & Cost-effective (Confirmed working)
             "max_tokens": 500,  # Minimal response
             "messages": messages,
             "temperature": 0.1  # Consistent results
