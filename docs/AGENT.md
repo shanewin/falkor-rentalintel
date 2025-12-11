@@ -301,5 +301,5 @@ Services:
 5. **Export/Reporting** - Generate reports for owners and management
 
 ---
-*Last Updated: November 2024*
+*Last Updated: Nov 2025*
 *Version: 1.0*

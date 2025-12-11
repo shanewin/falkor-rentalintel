@@ -207,3 +207,43 @@ class ApartmentConcessionForm(forms.ModelForm):
     class Meta:
         model = ApartmentConcession
         fields = ['months_free', 'lease_terms', 'special_offer_id', 'name']
+
+
+class BrokerContactForm(forms.Form):
+    CONTACT_TYPE_CHOICES = [
+        ('request_tour', 'Schedule a Tour'),
+        ('ask_question', 'Ask a Question'),
+    ]
+    TOUR_TYPE_CHOICES = [
+        ('in_person', 'In Person'),
+        ('video_chat', 'Video Chat'),
+    ]
+
+    name = forms.CharField(max_length=100, required=True)
+    email = forms.EmailField(required=True)
+    phone = forms.CharField(max_length=20, required=True)
+    contact_type = forms.ChoiceField(choices=CONTACT_TYPE_CHOICES, required=True)
+    
+    # Tour fields
+    tour_type = forms.ChoiceField(choices=TOUR_TYPE_CHOICES, required=False)
+    preferred_datetime_1 = forms.DateTimeField(required=False, input_formats=['%Y-%m-%dT%H:%M'])
+    preferred_datetime_2 = forms.DateTimeField(required=False, input_formats=['%Y-%m-%dT%H:%M'])
+    preferred_datetime_3 = forms.DateTimeField(required=False, input_formats=['%Y-%m-%dT%H:%M'])
+    
+    # Question fields
+    question = forms.CharField(widget=forms.Textarea, required=False)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        contact_type = cleaned_data.get('contact_type')
+        
+        if contact_type == 'request_tour':
+            if not cleaned_data.get('tour_type'):
+                self.add_error('tour_type', 'This field is required for tours.')
+            # We enforce at least one time is picked ideally, but keeping it flexible
+        
+        elif contact_type == 'ask_question':
+            if not cleaned_data.get('question'):
+                self.add_error('question', 'Please enter your question.')
+                
+        return cleaned_data

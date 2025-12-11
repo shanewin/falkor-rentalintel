@@ -1,0 +1,52 @@
+{% load static %}
+
+{% if not user.is_authenticated %}
+<!-- State 1: Not Logged In -->
+<div class="cta-banner text-center alert alert-dismissible fade show" role="alert">
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <div style="position:relative;z-index:1;">
+        <div class="mb-3"><span class="badge" style="background:#ffcc00;color:#000;font-size:0.9rem;padding:8px 16px;border-radius:20px;font-weight:700;">AI-POWERED MATCHING</span></div>
+        <h3>Find Your Perfect NYC Apartment</h3>
+        <p>Create a free account and let our smart matching algorithm find apartments tailored to your budget, preferences, and lifestyle.</p>
+        <div class="d-flex gap-3 justify-content-center flex-wrap">
+            <a href="{% url 'register_applicant' %}" class="btn btn-lg rounded-pill px-5" style="background:#ffcc00;border:none;color:#000;font-weight:700;box-shadow:0 4px 12px rgba(255,204,0,0.3);">Get Started Free</a>
+            <a href="{% url 'login' %}" class="btn btn-outline-light btn-lg rounded-pill px-5" style="font-weight:600;">Sign In</a>
+        </div>
+    </div>
+</div>
+
+{% elif smart_matches %}
+<!-- State 2: Logged In & Has Matches -->
+<div class="smart-matches-section">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h4 class="fw-bold mb-1"><i class="fas fa-sparkles me-2" style="color:#ffcc00;"></i>Your Smart Matches</h4>
+            <p class="mb-0 text-muted">Personalized recommendations based on your profile</p>
+        </div>
+        <span class="badge bg-dark fs-6 px-3 py-2">Top {{ smart_matches|length }}</span>
+    </div>
+    <div class="row g-3">
+        {% for match in smart_matches|slice:":4" %}
+        <div class="col-md-6 col-lg-3">
+            {# Re-use the master smart match card component #}
+            {# We pass 'apartment' explicitly because the include expects it, but 'match' is also available in context #}
+            {% include 'includes/smart_match_card.html' with apartment=match.apartment match=match %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% else %}
+<!-- State 3: Logged In & No Matches (Encourage Profile Completion) -->
+<div class="cta-banner text-center alert alert-dismissible fade show" role="alert">
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <div style="position:relative;z-index:1;">
+        <div class="mb-3"><span class="badge bg-dark text-white" style="font-size:0.9rem;padding:8px 16px;border-radius:20px;font-weight:700;">COMPLETE YOUR PROFILE</span></div>
+        <h3 class="mb-3">Unlock Your Smart Matches</h3>
+        <p class="mb-4">Tell us what you're looking for! Set your budget, preferred neighborhoods, and amenities to get personalized AI recommendations.</p>
+        <div class="d-flex gap-3 justify-content-center flex-wrap">
+            <a href="{% url 'progressive_profile' %}" class="btn btn-lg rounded-pill px-5" style="background:#ffcc00;border:none;color:#000;font-weight:700;box-shadow:0 4px 12px rgba(255,204,0,0.3);">Set Preferences</a>
+        </div>
+    </div>
+</div>
+{% endif %}

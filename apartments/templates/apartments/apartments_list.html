@@ -3,11 +3,12 @@
 
 {% block extra_css %}
 <link href='https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.css' rel='stylesheet'>
+<link rel="stylesheet" href="{% static 'apartments/css/apartments.css' %}">
 <style>
     .sticky-map {
         position: sticky;
         top: 80px;
-        height: calc(100vh - 100px);
+        height: calc(100vh - 180px);
         border-radius: 12px;
         overflow: hidden;
     }
@@ -15,8 +16,19 @@
     .filter-sidebar {
         position: sticky;
         top: 80px;
-        height: calc(100vh - 100px);
+        height: calc(100vh - 180px);
         overflow-y: auto;
+    }
+    .scrollable-listings {
+        height: calc(100vh - 180px);
+        overflow-y: auto;
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        &::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
     }
 </style>
 {% endblock %}
@@ -145,24 +157,11 @@
 
         <!-- Main Content -->
         <div class="col-12 col-lg-6">
+            <div class="scrollable-listings pe-2">
             <!-- Smart Matches Header -->
-            {% if smart_matches %}
-            <div class="mb-4">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h5 class="fw-bold mb-0"><i class="fas fa-sparkles text-warning me-2"></i>Smart Matches</h5>
-                    <span class="badge bg-dark">Top {{ smart_matches|length }}</span>
-                </div>
-                <div class="row g-3">
-                    {% for match in smart_matches|slice:":2" %}
-                    <div class="col-md-6">
-                        {% with apartment=match.apartment match_score=match.score %}
-                            {% include 'apartments/smart_match_card.html' %}
-                        {% endwith %}
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
+            <!-- Smart Matches / CTA Section -->
+            {% include 'apartments/includes/smart_matches_cta.html' %}
+
 
             <!-- All Listings Header -->
             <div class="d-flex align-items-center justify-content-between mb-3">
@@ -183,7 +182,8 @@
                      data-price="{{ apartment.rent_price }}" 
                      data-lat="{{ apartment.building.latitude|default:40.7128 }}" 
                      data-lng="{{ apartment.building.longitude|default:-74.0060 }}">
-                    {% include 'apartments/smart_match_card.html' %}
+                    <!-- Shared Component: Re-using the same card template as the Smart Matches section above -->
+                    {% include 'includes/smart_match_card.html' %}
                 </div>
                 {% empty %}
                 <div class="col-12 text-center py-5">
@@ -193,6 +193,7 @@
                     <a href="{% url 'apartments_list' %}" class="btn btn-outline-dark">Clear All Filters</a>
                 </div>
                 {% endfor %}
+            </div>
             </div>
         </div>
 
@@ -236,6 +237,8 @@
 {% block extra_js %}
 <script src='https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.js'></script>
 <script>
+
+
     function updateSort(value) {
         const url = new URL(window.location.href);
         url.searchParams.set('sort', value);

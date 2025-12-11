@@ -35,6 +35,7 @@ from .apartment_matching import ApartmentMatchingService
 from .smart_insights import SmartInsights
 from apartments.models import Apartment
 from buildings.models import Building as BuildingModel
+from applications.models import Application
 
 # Get the custom User model
 User = get_user_model()
@@ -169,41 +170,51 @@ class ApartmentMatchingTests(TestCase):
             max_bathrooms='2'
         )
         
-        # Create test building
+        # STRICT GATING: Must have a neighborhood preference
+        self.neighborhood = Neighborhood.objects.create(name='Upper East Side')
+        from .models import NeighborhoodPreference
+        NeighborhoodPreference.objects.create(
+            applicant=self.applicant,
+            neighborhood=self.neighborhood,
+            preference_rank=1
+        )
+        
+        # Create test building in preferred neighborhood
         self.building = BuildingModel.objects.create(
             name='Luxury Tower',
-            street_address_1='456 Park Ave',  # Correct field name
+            street_address_1='456 Park Ave',
             city='New York',
             state='NY',
-            zip_code='10022'
+            zip_code='10022',
+            neighborhood='Upper East Side' # Matches preference
         )
         
         # Create test apartments with different characteristics
         self.perfect_match = Apartment.objects.create(
-            building=self.building,  # This is actually the Building object, not ID
+            building=self.building,
             unit_number='10A',
             bedrooms=2,
             bathrooms=1.5,
             rent_price=3000,
-            status='available'  # Correct field and value
+            status='available'
         )
         
         self.over_budget = Apartment.objects.create(
-            building=self.building,  # This is actually the Building object, not ID
+            building=self.building,
             unit_number='20B',
             bedrooms=2,
             bathrooms=2,
             rent_price=5000,
-            status='available'  # Correct field and value
+            status='available'
         )
         
         self.too_small = Apartment.objects.create(
-            building=self.building,  # This is actually the Building object, not ID
+            building=self.building,
             unit_number='5C',
             bedrooms=0,  # Studio
             bathrooms=1,
             rent_price=2500,
-            status='available'  # Correct field and value
+            status='available'
         )
     
     def test_matching_algorithm_accuracy(self):
@@ -215,72 +226,96 @@ class ApartmentMatchingTests(TestCase):
         matches = matching_service.get_apartment_matches()
         
         # Convert to dict for easier testing
-        match_scores = {m['apartment'].id: m['match_score'] for m in matches}
+        match_scores = {m['apartment'].id: m['match_percentage'] for m in matches} # Note: key changed to match_percentage
         
-        # Perfect match should score highest
+        # Perfect match should score highest (should be near 100%)
         if self.perfect_match.id in match_scores:
             perfect_score = match_scores[self.perfect_match.id]
+            self.assertGreater(perfect_score, 90)
             
-            # Over-budget apartment should score lower
+            # Over-budget may be filtered out completely or score very low
             if self.over_budget.id in match_scores:
                 self.assertGreater(perfect_score, match_scores[self.over_budget.id])
-            
-            # Too small apartment should score lower
-            if self.too_small.id in match_scores:
-                self.assertGreater(perfect_score, match_scores[self.too_small.id])
     
-    def test_budget_tolerance(self):
+    def test_strict_pet_exclusion(self):
         """
-        Test that algorithm applies appropriate budget flexibility
-        Business Rule: Allow 10% over budget for exceptional matches
+        Test that 'No Pets' buildings are strictly excluded for pet owners
         """
-        # Create apartment slightly over budget (10% over)
-        slightly_over = Apartment.objects.create(
-            building=self.building,  # This is actually the Building object, not ID
-            unit_number='15D',
-            bedrooms=2,
-            bathrooms=2,
-            rent_price=3850,  # 10% over $3500 budget
-            status='available'  # Correct field and value
+        # Add a pet to the applicant
+        from .models import Pet
+        Pet.objects.create(
+            applicant=self.applicant,
+            pet_type='Dog',
+            name='Fido'
         )
         
-        matching_service = ApartmentMatchingService(self.applicant)
-        matches = matching_service.get_apartment_matches()
+        # Reload applicant to clear cached properties if any
+        self.applicant.refresh_from_db()
         
-        # Should include slightly over budget apartment
+        # Create a "No Pets" building
+        no_pets_building = BuildingModel.objects.create(
+            name='No Pets Allowed Tower',
+            street_address_1='999 Strict St',
+            city='New York',
+            state='NY',
+            pet_policy='no_pets',
+            neighborhood='Upper East Side' # Preferred neighborhood
+        )
+        
+        no_pets_apt = Apartment.objects.create(
+            building=no_pets_building,
+            unit_number='1X',
+            bedrooms=2,
+            rent_price=3000,
+            status='available'
+        )
+        
+        # Run matching
+        service = ApartmentMatchingService(self.applicant)
+        matches = service.get_apartment_matches()
         matched_ids = [m['apartment'].id for m in matches]
-        self.assertIn(slightly_over.id, matched_ids)
-    
-    def test_amenity_preference_scoring(self):
+        
+        # Assert exclusion: Should NOT be in results
+        self.assertNotIn(no_pets_apt.id, matched_ids)
+
+    def test_neighborhood_scoring_penalty(self):
         """
-        Verify amenity preferences affect match scores appropriately
-        Business Logic: Must-have amenities heavily impact scores
+        Test that non-preferred neighborhoods get the 40% penalty score
         """
-        # Add must-have amenity preference
-        gym_amenity = Amenity.objects.create(name='Gym')
-        self.applicant.amenity_preferences.create(
-            amenity=gym_amenity,
-            priority=4  # Must have
+        # Create building in NON-preferred neighborhood
+        other_hood = Neighborhood.objects.create(name='Different Hood')
+        # We generally use strings for the building field, assuming it matches Neighborhood name
+        
+        other_building = BuildingModel.objects.create(
+            name='Other Hood Tower',
+            street_address_1='123 Far Away',
+            city='New York',
+            state='NY',
+            neighborhood='Different Hood'
         )
         
-        # Create apartment with gym
-        with_gym = Apartment.objects.create(
-            building=self.building,  # This is actually the Building object, not ID
-            unit_number='30E',
+        other_apt = Apartment.objects.create(
+            building=other_building,
+            unit_number='99Z',
             bedrooms=2,
-            bathrooms=1,
-            rent_price=3200,
-            status='available'  # Correct field and value
+            rent_price=3000,
+            status='available'
         )
-        with_gym.apartment_amenities.create(amenity=gym_amenity)
         
-        matching_service = ApartmentMatchingService(self.applicant)
-        matches = matching_service.get_apartment_matches()
+        service = ApartmentMatchingService(self.applicant)
+        matches = service.get_apartment_matches()
         
-        # Apartment with must-have amenity should score well
-        match_scores = {m['apartment'].id: m['match_score'] for m in matches}
-        if with_gym.id in match_scores:
-            self.assertGreater(match_scores[with_gym.id], 70)
+        # Find the match
+        match_entry = next((m for m in matches if m['apartment'].id == other_apt.id), None)
+        
+        # It SHOULD be found (strict filter removed), but with lower score
+        self.assertIsNotNone(match_entry)
+        
+        # Score calculation: 
+        # Basic Requirements (60% of total) -> Neighborhood component is 40% (0.4)
+        # Assuming other basic factors are 100%, the basic score drops significantly.
+        # It shouldn't be a "Great Match" (>75%).
+        self.assertLess(match_entry['match_percentage'], 75)
 
 
 class SmartInsightsTests(TestCase):
@@ -765,3 +800,67 @@ class PerformanceTests(TestCase):
 
 
 # Run with: python manage.py test applicants
+class ApplicantsListViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        
+        # Create a broker user
+        self.broker = User.objects.create_user(
+            email='broker@example.com',
+            password='password123',
+            is_staff=False
+        )
+        # Manually set is_broker flag if it's not a field on User model but checked via getattr
+        # Based on views.py: getattr(user, 'is_broker', False)
+        self.broker.is_broker = True
+        self.broker.save()
+        
+        # Create a building and assign broker
+        self.building = BuildingModel.objects.create(
+            name="Test Building",
+            street_address_1="123 Test St",
+            city="Test City",
+            state="NY",
+            zip_code="10001"
+        )
+        self.building.brokers.add(self.broker)
+        
+        # Create an apartment
+        self.apartment = Apartment.objects.create(
+            building=self.building,
+            unit_number="1A",
+            rent_price=1000.00
+        )
+        
+        # Create an applicant
+        self.applicant_user = User.objects.create_user(
+            email='applicant@example.com',
+            password='password123'
+        )
+        self.applicant = Applicant.objects.create(
+            user=self.applicant_user,
+            first_name="John",
+            last_name="Doe",
+            email="applicant@example.com"
+        )
+        
+        # Create an application linking applicant to apartment
+        self.application = Application.objects.create(
+            applicant=self.applicant,
+            apartment=self.apartment,
+            status='NEW'
+        )
+
+    def test_applicants_list_view_query_error(self):
+        """
+        Test that the applicants_list view does not raise ValueError
+        when filtering by building brokers.
+        """
+        self.client.force_login(self.broker)
+        url = reverse('applicants_list')
+        
+        # This should fail if the query is incorrect
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "John")

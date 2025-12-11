@@ -89,7 +89,7 @@ body {
 .navbar-doorway .navbar-brand,
 .navbar-doorway .navbar-nav .nav-link {
     color: var(--brand-black);
-    font-weight: 600;
+    font-weight: 500;
     transition: var(--transition);
 }
 
@@ -362,6 +362,14 @@ body {
     margin-top: 3rem;
 }
 
+.site-footer {
+    background-color: var(--brand-black);
+    color: white;
+    text-align: center;
+    padding: 2rem 0;
+    margin-top: auto;
+}
+
 /* ================================================
    4. Form Elements & Controls (from doorway-forms.css)
    ================================================ */
@@ -601,4 +609,131 @@ body {
 .progress-custom {
     height: 25px;
     width: 150px;
+}
+
+/* Feature Pills for Cards */
+.feature-pill {
+    background-color: var(--brand-light-gray);
+    color: var(--brand-dark-gray);
+    border: 1px solid var(--border-color);
+    border-radius: 50rem; /* Pill shape */
+    padding: 0.35rem 0.8rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: var(--transition);
+    margin-top: 5px;
+}
+
+.feature-pill:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.feature-pill i {
+    color: var(--brand-black);
+    font-size: 0.9rem;
+}
+
+/* Minimal Base Sidebar & Utilities */
+.sidebar {
+    height: 100vh;
+    width: 250px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    background-color: var(--brand-yellow); /* Using theme variable */
+    padding: 20px;
+    z-index: 1000;
+}
+.sidebar img {
+    max-width: 150px;
+    margin-bottom: 20px;
+}
+.sidebar a {
+    color: var(--brand-black); /* Using theme variable */
+    text-decoration: none;
+    display: block;
+    margin: 10px 0;
+    font-weight: bold;
+}
+.sidebar a:hover {
+    text-decoration: underline;
+}
+.content-wrapper { /* Renamed from .content to avoid conflict, or check usage */
+    margin-left: 250px;
+    padding: 20px;
+}
+
+span.asteriskField {
+    color: var(--danger);
+    margin-left: 4px;
+}
+label.requiredField {
+    font-weight: bold;
+}
+
+/* Custom Amenities Checkboxes */
+.custom-amenities-checkboxes .form-check {
+    display: inline-block;
+    margin-right: 15px;
+    font-size: 14px;
+}
+.custom-amenities-checkboxes .form-check-input {
+    width: 18px;
+    height: 18px;
+    margin-right: 5px;
+    cursor: pointer;
+}
+.custom-amenities-checkboxes label {
+    font-weight: 500;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+    }
+    .content-wrapper {
+        margin-left: 0;
+    }
+    .custom-amenities-checkboxes .form-check {
+        margin-bottom: 10px;
+    }
+}
+
+/* ================================================
+   5. Vendor Overrides
+   ================================================ */
+
+/* Select2 Bootstrap 5 Theme Overrides to match Custom Form Styles */
+.select2-container--bootstrap-5 .select2-selection {
+    border: 2px solid #e9ecef !important;
+    border-radius: 8px !important;
+    padding: 0.75rem !important;
+    min-height: calc(1.5em + 1.5rem + 4px) !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--single {
+    height: auto !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+    line-height: 1.5 !important;
+    padding: 0 !important;
+    color: var(--text-dark) !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
+    height: 100% !important;
+    top: 0 !important;
+    right: 0.75rem !important;
+}
+
+.select2-container--bootstrap-5 .select2-dropdown .select2-search .select2-search__field {
+    padding: 0.5rem 0.75rem !important;
 }

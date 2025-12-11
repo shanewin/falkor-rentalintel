@@ -127,7 +127,7 @@ def applicants_list(request):
         # Brokers see assigned applicants OR applicants who applied to their buildings
         applicants = base_qs.filter(
             Q(assigned_broker=request.user) |
-            Q(applications__building__brokers=request.user)
+            Q(applications__apartment__building__brokers=request.user)
         ).distinct()
     
     # Initialize CRM records for workflow

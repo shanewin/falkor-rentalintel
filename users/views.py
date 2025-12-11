@@ -174,7 +174,7 @@ def register_applicant(request):
             from django.utils import timezone
             
             applicant, created = Applicant.objects.get_or_create(
-                email=user.email,
+                _email=user.email,
                 defaults={
                     'first_name': form.cleaned_data.get('first_name', ''),
                     'last_name': form.cleaned_data.get('last_name', ''),

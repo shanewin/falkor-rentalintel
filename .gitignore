@@ -99,3 +99,13 @@ Desktop.ini
 
 # Railway
 railway.toml
+
+# Document Analysis & Uploads
+doc_analysis/
+*.pdf
+*.docx
+*.doc
+
+# Temp Output
+output.txt
+input/

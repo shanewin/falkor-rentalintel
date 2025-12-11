@@ -335,6 +335,13 @@ class ApplicantBasicInfoForm(forms.ModelForm):
         self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
         
+        # Manually populate fields that are properties (not db fields) on the model
+        if self.instance and self.instance.pk:
+            self.fields['first_name'].initial = self.instance.first_name
+            self.fields['last_name'].initial = self.instance.last_name
+            self.fields['email'].initial = self.instance.email
+            self.fields['phone_number'].initial = self.instance.phone_number
+        
         # Add security validators to text fields
         self.fields['first_name'].validators.append(sanitize_text_input)
         self.fields['last_name'].validators.append(sanitize_text_input)

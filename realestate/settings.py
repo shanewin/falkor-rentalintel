@@ -18,7 +18,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.sites',  # Required for Sites framework
+    'django.contrib.sites',
     'django.contrib.humanize',  # For number formatting in templates
     'applications',
     'buildings',
@@ -187,10 +187,9 @@ cloudinary.config(
 
 STATIC_URL = '/static/'
 
-STATIC_ROOT = BASE_DIR / 'static_root'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 STATICFILES_DIRS = [
-    BASE_DIR / 'staticfiles',  # ensure collected assets are served in dev
     BASE_DIR / 'static',       # Global static assets (css/doorway-theme.css)
     BASE_DIR / 'apartments/static/apartments',
     BASE_DIR / 'applicants/static/applicants',
@@ -201,7 +200,7 @@ STATICFILES_DIRS = [
 
 
 if DEBUG:
-    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage' 
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage' 
 else:
     STATICFILES_STORAGE = 'cloudinary_storage.storage.StaticHashedCloudinaryStorage'
 
@@ -215,6 +214,11 @@ DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 AUTH_USER_MODEL = 'users.User'
 
 # Authentication settings
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_REQUIRED = True
+
 LOGIN_URL = '/users/login/'
 LOGIN_REDIRECT_URL = '/'  # Will be handled by redirect_by_role function
 LOGOUT_REDIRECT_URL = '/users/login/'

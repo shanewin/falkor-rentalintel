@@ -160,6 +160,20 @@ class ApartmentMatchingService:
             Prefetch('building__amenities', queryset=None),
             Prefetch('amenities', queryset=None)
         )
+
+        # STRICT MATCHING GATING
+        # If the user hasn't provided the "Must Have" fields, we return 0 matches.
+        # This prevents the "100% Match" on empty profile bug.
+        
+        has_neighborhoods = bool(self._neighborhood_prefs)
+        has_budget = self.applicant.max_rent_budget is not None and self.applicant.max_rent_budget > 0
+        has_bedrooms = self.applicant.min_bedrooms is not None
+
+        if not (has_neighborhoods and has_budget and has_bedrooms):
+            self.logger.info(f"Applicant {self.applicant.id} missing core preferences (N:{has_neighborhoods}, $: {has_budget}, B:{has_bedrooms}). Returning 0 matches.")
+            return []
+        
+        # End Strict Gating
         
         apartments = self._apply_basic_filters(apartments)
         
@@ -182,15 +196,20 @@ class ApartmentMatchingService:
             
         return matches[:limit]
     
+        return queryset
+
     def _apply_basic_filters(self, queryset):
         """Apply basic filters to reduce the apartment pool before detailed scoring"""
         
         # Neighborhood filter - only show apartments in preferred neighborhoods
         # Use cached preferences to avoid database queries
         if self._neighborhood_prefs:
+            # User Feedback: "I might be inclined to live in a different neighborhood"
+            # We relax the strict filter and rely on scoring to penalize non-matching neighborhoods
+            pass
             # Get list of preferred neighborhood names from cache
-            preferred_neighborhoods = [pref.neighborhood.name for pref in self._neighborhood_prefs]
-            queryset = queryset.filter(building__neighborhood__in=preferred_neighborhoods)
+            # preferred_neighborhoods = [pref.neighborhood.name for pref in self._neighborhood_prefs]
+            # queryset = queryset.filter(building__neighborhood__in=preferred_neighborhoods)
         
         # Bedroom filter - allow some flexibility 
         if self.applicant.min_bedrooms or self.applicant.max_bedrooms:
@@ -231,6 +250,32 @@ class ApartmentMatchingService:
             except (InvalidOperation, ValueError):
                 logger.warning(f"Invalid max_rent_budget for applicant {self.applicant.id}: {self.applicant.max_rent_budget}")
                 # Skip rent filter if budget is invalid
+
+        # STRICT PET FILTERING
+        # "If you have a dog, and the building does not allow dogs, then the user cannot and will not live there."
+        if self._pets:
+            # 1. If user has ANY pets, exclude buildings that strictly forbid them
+            queryset = queryset.exclude(building__pet_policy='no_pets')
+            
+            # 2. If user has a DOG (or other non-cat), exclude "Cats Only" buildings
+            # We check the cached pets list for any non-cat type
+            has_non_cats = any(
+                'cat' not in str(pet.pet_type).lower() 
+                for pet in self._pets
+            )
+            
+            if has_non_cats:
+                queryset = queryset.exclude(building__pet_policy='cats_only')
+        
+        # STRICT MOVE-IN DATE FILTERING
+        # Exclude apartments that are not available by the desired move-in date
+        if self.applicant.desired_move_in_date:
+            # We filter out any apartment that has an availability date AFTER the desired move-in date.
+            # This implies the unit is not ready when the user needs it.
+            # Apartments with NO availability record are assumed Available Now (so they rely on status='available')
+            queryset = queryset.exclude(
+                availability_calendar__available_date__gt=self.applicant.desired_move_in_date
+            )
         
         return queryset
     
@@ -437,8 +482,9 @@ class ApartmentMatchingService:
                 else:
                     return max(50.0, 100.0 - (rank * 10))
         
+        
         # Neighborhood not in preferences - should be filtered out, but just in case
-        return 30.0
+        return 40.0  # User Feedback: Non-match target ~63% total (40 * 0.6 + 40 amenity pts = 64)
     
     def _calculate_building_amenities_score(self, apartment) -> float:
         """Calculate score based on building amenity preferences"""
@@ -562,9 +608,9 @@ class ApartmentMatchingService:
             )
             return 95.0 if all_cats else 30.0
         elif pet_policy == 'case_by_case':
-            return 70.0  # Moderate score - not guaranteed but possible
+            return 80.0  # User Feedback: Definitely consider, but not a guaranteed match
         elif pet_policy == 'pet_fee':
-            return 85.0  # Good score - allowed with fee
+            return 95.0  # User Feedback: Minor penalty only
         elif pet_policy == 'no_pets':
             return 20.0  # Very low score - pets not allowed
         else:
@@ -688,16 +734,19 @@ class ApartmentMatchingService:
                     break
         
         # Check pet policy issues
-        has_pets = self.applicant.pets.exists()
+        # CRITICAL FIX #5: Use cached pets to avoid N+1 queries
+        # self._pets is already populated in __init__
+        has_pets = bool(self._pets)
+        
         if has_pets:
             pet_policy = apartment.building.pet_policy
             if pet_policy == 'no_pets':
                 reasons.append("Building doesn't allow pets")
             elif pet_policy == 'cats_only':
-                pets = self.applicant.pets.all()
+                # Check if we have any non-cats
                 has_non_cats = any(
-                    not (hasattr(pet, 'pet_type') and 'cat' in pet.pet_type.lower())
-                    for pet in pets
+                    not (hasattr(pet, 'pet_type') and 'cat' in str(pet.pet_type).lower())
+                    for pet in self._pets
                 )
                 if has_non_cats:
                     reasons.append("Building only allows cats")
@@ -831,6 +880,18 @@ class ApartmentMatchingService:
                 positives.append("✓ Pets allowed (with fee)")
         elif not has_pets and apartment.building.pet_policy == 'no_pets':
             positives.append("✓ No pet restrictions apply to you")
+            
+        # Check move-in date match
+        if self.applicant.desired_move_in_date:
+            # Since we strict filter, all shown apartments are available by date.
+            # We can try to be specific if we have the date.
+            availability = apartment.get_current_availability()
+            if availability and availability.available_date:
+                if availability.available_date <= self.applicant.desired_move_in_date:
+                    positives.append(f"✓ Available by {self.applicant.desired_move_in_date.strftime('%b %d')}")
+            else:
+                # No specific date usually means available now
+                positives.append("✓ Available for immediate move-in")
         
         return positives
     

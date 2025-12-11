@@ -74,8 +74,8 @@ def activity_dashboard(request):
     # Get most active applicants
     active_applicants = activities.values(
         'applicant__id', 
-        'applicant__first_name', 
-        'applicant__last_name'
+        'applicant__user__first_name', 
+        'applicant__user__last_name'
     ).annotate(
         activity_count=Count('id')
     ).order_by('-activity_count')[:10]

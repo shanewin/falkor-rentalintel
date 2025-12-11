@@ -343,7 +343,7 @@
                         <li>
                             <a href="{% url 'activity_timeline' applicant.applicant__id %}" 
                                class="text-decoration-none">
-                                {{ applicant.applicant__first_name }} {{ applicant.applicant__last_name }}
+                                {{ applicant.applicant__user__first_name }} {{ applicant.applicant__user__last_name }}
                             </a>
                             <span class="badge-count">{{ applicant.activity_count }}</span>
                         </li>

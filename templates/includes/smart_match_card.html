@@ -1,257 +1,146 @@
 {% load static %}
-<link rel="stylesheet" href="{% static 'css/components/smart-match.css' %}">
-
-<div class="smart-match-card h-100">
-    {% if show_image %}
-        {# Combine apartment and building images - apartment first #}
-        {% with apartment_images=match.apartment.images.all building_images=match.apartment.building.images.all %}
-        {% if apartment_images or building_images %}
-            <div id="smart-carousel-{{ match.apartment.id }}" class="carousel slide apartment-carousel" data-bs-ride="false">
-                <div class="carousel-inner">
-                    {# Show apartment images first #}
-                    {% for image in apartment_images %}
-                    <div class="carousel-item {% if forloop.first %}active{% endif %}">
+{% load apartment_extras %}
+<div class="card h-100 shadow-sm border-0 hover-lift">
+    <div class="position-relative" style="height: 200px; overflow: hidden;">
+        {# IMAGE LOGIC: 1. Real Apt Image -> 2. Real Building Image -> 3. Generator Fallback #}
+        {# CAROUSEL LOGIC: Iterate all images (Apt + Building) #}
+        {% with all_images=apartment.all_images fallback_img=apartment.id|get_fallback_image %}
+        
+        {% if all_images %}
+            <div id="carousel-{{ apartment.id }}" class="carousel slide h-100" data-bs-interval="false">
+                <div class="carousel-inner h-100">
+                    {% for image in all_images %}
+                    <div class="carousel-item h-100 {% if forloop.first %}active{% endif %}">
                         <img src="{{ image.thumbnail_url }}" 
-                             class="d-block w-100 carousel-image" 
-                             alt="Apartment - {{ match.apartment.building.name }} Unit {{ match.apartment.unit_number }}">
-                    </div>
-                    {% endfor %}
-                    
-                    {# Then show building images #}
-                    {% for image in building_images %}
-                    <div class="carousel-item {% if not apartment_images and forloop.first %}active{% endif %}">
-                        <img src="{{ image.thumbnail_url }}" 
-                             class="d-block w-100 carousel-image" 
-                             alt="Building - {{ match.apartment.building.name }}">
+                             class="d-block w-100 h-100 object-fit-cover" 
+                             alt="{{ apartment.building.name }} - Image {{ forloop.counter }}"
+                             onerror="this.src='{{ fallback_img }}';this.onerror=null;">
                     </div>
                     {% endfor %}
                 </div>
                 
-                {# Navigation arrows (only show if more than 1 image total) #}
-                {% with total_images=apartment_images.count|add:building_images.count %}
-                {% if total_images > 1 %}
-                <button class="carousel-control-prev" type="button" data-bs-target="#smart-carousel-{{ match.apartment.id }}" data-bs-slide="prev">
-                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Previous</span>
-                </button>
-                <button class="carousel-control-next" type="button" data-bs-target="#smart-carousel-{{ match.apartment.id }}" data-bs-slide="next">
-                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Next</span>
-                </button>
-                
-                <!-- Image count badge -->
-                <div class="image-count-badge">
-                    <i class="fas fa-images"></i> {{ total_images }}
-                </div>
+                {# Controls: Only show if > 1 image #}
+                {% if all_images|length > 1 %}
+                    <button class="carousel-control-prev" type="button" data-bs-target="#carousel-{{ apartment.id }}" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true" style="filter: drop-shadow(0px 0px 2px rgba(0,0,0,0.5));"></span>
+                        <span class="visually-hidden">Previous</span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#carousel-{{ apartment.id }}" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true" style="filter: drop-shadow(0px 0px 2px rgba(0,0,0,0.5));"></span>
+                        <span class="visually-hidden">Next</span>
+                    </button>
                 {% endif %}
-                {% endwith %}
+            </div>
+        {% else %}
+            {# NO IMAGES: Fallback generator #}
+            <img src="{{ fallback_img }}" 
+                 class="d-block w-100 h-100 object-fit-cover" 
+                 alt="Image Coming Soon"
+                 onerror="this.src='https://placehold.co/600x400/e9ecef/495057?text=Image+Coming+Soon';this.onerror=null;">
+        {% endif %}
+        
+        {% endwith %}
+        
+        {# New Listing Badge Overlay (Top Left) #}
+        {% if apartment.is_new %}
+            <div class="position-absolute top-0 start-0 m-2">
+                 <span class="badge bg-success shadow-sm">New Listing</span>
             </div>
         {% endif %}
-        {% endwith %}
-    {% endif %}
-    
-    <!-- Match Score Header -->
-    <div class="smart-match-header">
-        <div class="d-flex justify-content-between align-items-start">
-            <div class="d-flex align-items-center">
-                <div class="match-score me-3">
-                    <div class="circular-progress" style="background: conic-gradient(#ffcc00 0deg {{ match.match_percentage|floatformat:0 }}%, #e9ecef {{ match.match_percentage|floatformat:0 }}% 100%);">
-                        <div class="circular-progress-inner">
-                            {{ match.match_percentage|floatformat:0 }}%
-                        </div>
-                    </div>
-                </div>
-                <div>
-                    <h5 class="mb-1 fw-bold text-dark">{{ match.apartment.building.name }}</h5>
-                    <p class="text-muted mb-0">Unit {{ match.apartment.unit_number }}</p>
-                </div>
+
+        {# Safely display match score if available #}
+        {% if match_score %}
+            {# Simple score display fallback #}
+            <div class="position-absolute top-0 end-0 m-2">
+                <span class="badge bg-success shadow-sm">{{ match_score|floatformat:0 }}% Match</span>
             </div>
-            <span class="badge match-badge
-                {% if match.match_percentage >= 80 %}bg-success
-                {% elif match.match_percentage >= 60 %}bg-warning text-dark
-                {% else %}bg-secondary{% endif %}">
-                {% if match.match_percentage >= 80 %}Excellent Match
-                {% elif match.match_percentage >= 60 %}Good Match
-                {% else %}Fair Match{% endif %}
+        {% elif match and match.match_percentage %}
+            {# Detailed Smart Match Badge with dynamic color and tooltip #}
+            <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
+                <span class="badge bg-{{ match.match_details.match_color|default:'primary' }} shadow-sm" 
+                      data-bs-toggle="tooltip" 
+                      data-bs-html="true" 
+                      title="<div class='text-start'>
+                        {% for pos in match.match_details.basic_positives|slice:':2' %}
+                            <div class='mb-1 text-success small'>{{ pos }}</div>
+                        {% endfor %}
+                        {% for neg in match.match_details.basic_reasons|slice:':2' %}
+                            <div class='mb-1 text-danger small'>⚠️ {{ neg }}</div>
+                        {% endfor %}
+                         {% for pos in match.match_details.building_positives|slice:':1' %}
+                            <div class='mb-1 text-success small'>{{ pos }}</div>
+                        {% endfor %}
+                      </div>">
+                    {{ match.match_percentage|floatformat:0 }}% Match
+                </span>
+            </div>
+        {% endif %}
+        
+        <div class="position-absolute bottom-0 start-0 m-2">
+            <span class="badge bg-dark bg-opacity-75 shadow-sm">${{ apartment.rent_price|floatformat:0 }}</span>
+        </div>
+        
+        {% if apartment.total_image_count > 1 %}
+            <div class="position-absolute bottom-0 end-0 m-2">
+                <span class="badge bg-dark bg-opacity-75 shadow-sm">
+                    <i class="fas fa-camera me-1"></i>{{ apartment.total_image_count }}
+                </span>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="card-body">
+        <h5 class="card-title h6 fw-bold text-truncate mb-1">{{ apartment.building.name }} - Unit {{ apartment.unit_number }}</h5>
+        <p class="card-text small text-muted mb-2">
+            {{ apartment.building.street_address_1 }}
+            {% if apartment.building.neighborhood %}
+                <div class="d-flex align-items-center mt-2 text-dark">
+                    <i class="fas fa-map-marker-alt me-2 text-danger"></i>
+                    <span class="fw-bold text-uppercase small" style="letter-spacing: 0.5px;">{{ apartment.building.neighborhood }}</span>
+                </div>
+            {% endif %}
+        </p>
+        
+        <div class="d-flex gap-1 mb-2">
+
+            {% if apartment.has_special %}
+                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Special</span>
+            {% endif %}
+        </div>
+        
+        <div class="d-flex gap-2 mb-3 flex-wrap small">
+            <span class="feature-pill">
+                <i class="fas fa-bed"></i>
+                {% if apartment.bedrooms == 0 %}Studio{% else %}{{ apartment.bedrooms|floatformat:0 }} bed{% endif %}
             </span>
+            <span class="feature-pill">
+                <i class="fas fa-bath"></i>
+                {{ apartment.bathrooms|floatformat:0 }} bath
+            </span>
+            {% if apartment.square_feet %}
+                <span class="feature-pill">
+                    <i class="fas fa-ruler-combined"></i>
+                    {{ apartment.square_feet }} ft²
+                </span>
+            {% endif %}
         </div>
     </div>
     
-    <div class="smart-match-body">
-        <!-- Location -->
-        <p class="text-muted small mb-3">
-            <i class="fas fa-map-marker-alt me-2"></i>
-            {{ match.apartment.building.neighborhood|default:"Location not specified" }}
-        </p>
-        
-        <!-- Apartment Details Grid -->
-        <div class="row mb-4">
-            <div class="col-6">
-                <div class="detail-item">
-                    <small class="text-muted d-block">Bedrooms</small>
-                    <div class="fw-semibold h6 mb-0">{{ match.apartment.bedrooms|default:"Studio" }}</div>
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="detail-item">
-                    <small class="text-muted d-block">Rent</small>
-                    <div class="fw-semibold h6 mb-0 text-success">${{ match.apartment.rent_price|floatformat:0 }}/mo</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="row mb-4">
-            <div class="col-6">
-                <div class="detail-item">
-                    <small class="text-muted d-block">Bathrooms</small>
-                    <div class="fw-semibold h6 mb-0">{{ match.apartment.bathrooms }}</div>
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="detail-item">
-                    <small class="text-muted d-block">Available</small>
-                    <div class="fw-semibold h6 mb-0">
-                        {% if match.apartment.status == 'available' %}
-                            <span class="text-success">Now</span>
-                        {% else %}
-                            <span class="text-warning">{{ match.apartment.get_status_display }}</span>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Match Breakdown -->
-        <div class="match-details">
-            <h6 class="text-muted mb-2">
-                <i class="fas fa-chart-line me-2"></i>Why This Match?
-            </h6>
-            <button class="btn btn-outline-secondary btn-sm mb-3 match-toggle-btn" 
-                    type="button" 
-                    data-bs-toggle="collapse" 
-                    data-bs-target="#match-details-{{ match.apartment.id }}" 
-                    aria-expanded="false" 
-                    aria-controls="match-details-{{ match.apartment.id }}">
-                <span class="toggle-text">See More</span>
-                <i class="fas fa-chevron-down ms-2 toggle-icon"></i>
-            </button>
-            <div class="collapse" id="match-details-{{ match.apartment.id }}">
-            <div class="progress-stack">
-                <!-- Basic Fit -->
-                <div class="match-category mb-3">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <small class="fw-bold">Basic Fit</small>
-                        <small class="{% if match.match_details.basic_score >= 90 %}text-success{% elif match.match_details.basic_score >= 70 %}text-warning{% else %}text-danger{% endif %} fw-bold">
-                            {{ match.match_details.basic_score|floatformat:0 }}%
-                        </small>
-                    </div>
-                    <small class="text-muted d-block mb-2 category-description">Size, price, location & policies</small>
-                    {% if match.match_details.basic_positives %}
-                    <div class="reasons-list mb-2">
-                        {% for positive in match.match_details.basic_positives %}
-                        <div class="reason-item">
-                            <small class="text-success">{{ positive }}</small>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                    {% if match.match_details.basic_reasons %}
-                    <div class="reasons-list">
-                        {% for reason in match.match_details.basic_reasons %}
-                        <div class="reason-item">
-                            <i class="fas fa-times text-danger me-1 reason-item-icon"></i>
-                            <small class="text-muted">{{ reason }}</small>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                </div>
-                
-                <!-- Features & Amenities (Combined) -->
-                {% if match.match_details.combined_amenities_positives or match.match_details.combined_amenities_reasons %}
-                <div class="match-category">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <small class="fw-bold">Features & Amenities</small>
-                        <small class="{% if match.match_details.combined_amenities_score >= 90 %}text-success{% elif match.match_details.combined_amenities_score >= 70 %}text-info{% else %}text-warning{% endif %} fw-bold">
-                            {{ match.match_details.combined_amenities_score|floatformat:0 }}%
-                        </small>
-                    </div>
-                    <small class="text-muted d-block mb-2 category-description">Building & apartment features you wanted</small>
-                    {% if match.match_details.combined_amenities_positives %}
-                    <div class="reasons-list mb-2">
-                        {% for positive in match.match_details.combined_amenities_positives %}
-                        <div class="reason-item">
-                            <small class="text-success">{{ positive }}</small>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                    {% if match.match_details.combined_amenities_reasons %}
-                    <div class="reasons-list">
-                        {% for reason in match.match_details.combined_amenities_reasons %}
-                        <div class="reason-item">
-                            <i class="fas fa-times text-danger me-1 reason-item-icon"></i>
-                            <small class="text-muted">{{ reason }}</small>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                    {% if not match.match_details.combined_amenities_positives and not match.match_details.combined_amenities_reasons %}
-                    <div class="reasons-list">
-                        <div class="reason-item">
-                            <i class="fas fa-check text-success me-1 reason-item-icon-check"></i>
-                            <small class="text-muted">No specific amenity preferences set</small>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-                {% endif %}
-            </div>
-                
-                <!-- Action Buttons (inside collapsible section) -->
-                <div class="mt-4 pt-3 action-section">
-                    <div class="d-grid gap-2 d-md-flex">
-                        <a href="{% url 'apartment_overview' match.apartment.id %}" 
-                           class="btn btn-outline-primary btn-sm flex-fill">
-                            <i class="fas fa-eye me-1"></i> View Details
-                        </a>
-                        {% if show_recommend_button %}
-                        <button class="btn btn-primary btn-sm flex-fill" 
-                                onclick="recommendApartment({{ match.apartment.id }}, {{ applicant.id }})">
-                            <i class="fas fa-paper-plane me-1"></i> Recommend
-                        </button>
-                        {% else %}
-                        <a href="{% url 'apartment_overview' match.apartment.id %}#broker-contact" 
-                           class="btn btn-primary btn-sm flex-fill">
-                            <i class="fas fa-user-tie me-1"></i> Contact Broker
-                        </a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
+    <div class="card-footer bg-white border-top-0 pt-0 pb-3">
+        <div class="d-grid gap-2 d-flex">
+            <a href="{% url 'apartment_overview' apartment.id %}" class="btn btn-outline-dark btn-sm flex-fill rounded-pill">
+                View
+            </a>
+            {% if show_recommend_button %}
+                 <button class="btn btn-primary btn-sm flex-fill rounded-pill fw-bold" 
+                        onclick="recommendApartment({{ apartment.id }}, {{ applicant.id }})">
+                    Recommend
+                </button>
+            {% else %}
+                <a href="{% url 'apartment_overview' apartment.id %}#broker-contact" class="btn btn-warning btn-sm flex-fill rounded-pill fw-bold text-dark">
+                    Contact
+                </a>
+            {% endif %}
         </div>
     </div>
 </div>
-
-<script>
-// Handle smart match card collapse toggle
-document.addEventListener('DOMContentLoaded', function() {
-    const toggleBtns = document.querySelectorAll('.match-toggle-btn');
-    
-    toggleBtns.forEach(function(btn) {
-        const targetId = btn.getAttribute('data-bs-target');
-        const targetElement = document.querySelector(targetId);
-        const toggleText = btn.querySelector('.toggle-text');
-        
-        if (targetElement) {
-            targetElement.addEventListener('shown.bs.collapse', function() {
-                toggleText.textContent = 'See Less';
-            });
-            
-            targetElement.addEventListener('hidden.bs.collapse', function() {
-                toggleText.textContent = 'See More';
-            });
-        }
-    });
-});
-</script>

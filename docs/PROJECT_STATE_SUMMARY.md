@@ -85,6 +85,7 @@ The **Nudge Service** (`applications/nudge_service.py`) uses specific missing da
 1.  **Data Flow Stabilization:** Fixed integrity issues between `Application`, `Applicant`, and `Apartment` models.
 2.  **Nudge Service Structure:** Implemented `NudgeService` in `/applications` to handle email reminders for missing critical data.
 3.  **Algorithm Optimization:** `ApartmentMatchingService` now caches applicant preferences to prevent N+1 query performance issues.
+4.  **Apartments View Refactoring:** Cleaned up `apartments/views.py`, implementing a Service Layer (`apartments/services.py`) for logic separation and unifying Form handling.
 
 ### Pending Technical Debt (The "Fix List")
 These items represent known architectural flaws to be addressed in future refactoring missions:

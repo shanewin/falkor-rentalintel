@@ -118,7 +118,7 @@ class ApplicantRegistrationWithSMSForm(forms.ModelForm, PhoneVerificationMixin):
     
     class Meta:
         model = User
-        fields = ['email']
+        fields = ['email', 'first_name', 'last_name', 'phone_number']
         widgets = {
             'email': forms.EmailInput(attrs={
                 'class': 'form-control',

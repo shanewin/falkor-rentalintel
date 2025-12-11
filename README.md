@@ -1,139 +1,75 @@
-# DoorWay - Rental Application Management System
+![DoorWay Banner](screenshots/homepage.png)
 
-A comprehensive Django-based rental application management platform designed to streamline the apartment rental process for brokers, property managers, and applicants.
+# DoorWay - Intelligent Rental Management Platform
 
-## Features
+> **Build in Public Project**  
+> A production-grade rental application management system built with Django, Docker, and HTMX principles. It streamlines the complex NYC rental process for applicants, brokers, and property managers through intelligent automation and privacy-first algorithms.
 
-### For Applicants
-- 📝 Progressive profile creation system
-- 🏠 Smart apartment matching based on preferences
-- 📄 Multi-step application process
-- 📱 Mobile-responsive design
-- 🔐 Secure document upload
+## 🚀 Key Features
 
-### For Brokers & Admins
-- 👥 Complete CRM system with activity tracking
-- 🧠 AI-powered Smart Insights for applicant evaluation
-- 📊 Comprehensive applicant overview dashboards
-- 📧 Automated email/SMS communication
-- 🔍 Advanced apartment matching algorithms
-- 📈 Real-time activity monitoring
+### 🧠 Smart Matching Engine
+Unlike standard filters, DoorWay uses a weighted scoring algorithm to rank apartments based on nuanced applicant preferences. It considers "must-haves" vs "nice-to-haves," commute times, and lifestyle factors.
+*   **See the code:** [`applicants/apartment_matching.py`](applicants/apartment_matching.py) - *Check out the `_calculate_match_percentage` method for the weighted logic.*
 
-## Tech Stack
+### 🛡️ Smart Insights & Analysis
+An automated underwriting assistant that pre-screens applicants for affordability and risk factors **without** sending PII to external third-party APIs. It handles financial math safely (using `Decimal` for precision) and respects Fair Housing guidelines.
+*   **See the code:** [`applicants/smart_insights.py`](applicants/smart_insights.py) - *Privacy-first, rule-based inference engine.*
 
-- **Backend**: Django 4.2+
-- **Database**: PostgreSQL
-- **Storage**: Cloudinary
-- **Email**: SendGrid
-- **SMS**: Twilio
-- **Containerization**: Docker & Docker Compose
-- **Frontend**: Bootstrap 5, Font Awesome
+### 📄 Document Analysis System
+Integrated secure document pipeline that processes applicant uploads (paystubs, tax forms) for income verification, keeping sensitive data within the secure VPC boundary.
 
-## Key Components
+## 🛠️ Tech Stack
 
-### Applications System
-- Multi-section application flow
-- Document analysis capabilities
-- Broker pre-fill functionality
-- Application status tracking
+*   **Backend:** Python 3.9+, Django 4.2
+*   **Database:** PostgreSQL
+*   **Infrastructure:** Docker & Docker Compose
+*   **Frontend:** Bootstrap 5, Vanilla JS (HTMX-style interactions)
+*   **External Services:** Cloudinary (Media), SendGrid (Email), Twilio (SMS), Mapbox (Geo)
 
-### Applicants Management
-- Progressive profile building
-- Smart Insights (AI-powered analysis)
-- Activity tracking
-- CRM integration
+## 🏗️ Architecture Highlights
 
-### Apartment Matching
-- Preference-based matching
-- Amenity filtering
-- Location preferences
-- Budget optimization
+*   **Containerized Development:** Full dev environment spins up with a single `docker-compose up` command.
+*   **Caching Strategy:** Heavy use of `select_related` and `prefetch_related` to minimize N+1 queries in the high-traffic matching engine.
+*   **Security:** Environment variable management via `.env`, secure media handling, and role-based access control (RBAC) for Applicants vs Brokers.
 
-## Setup & Installation
+## 💻 Local Setup
 
 ### Prerequisites
-- Docker & Docker Compose
-- Cloudinary account
-- SendGrid account (for emails)
-- Twilio account (for SMS)
+*   Docker Desktop installed
+*   Git
 
-### Local Development
+### Steps
 
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/door-way.git
-cd door-way
-```
+1.  **Clone the repository**
+    ```bash
+    git clone https://github.com/yourusername/door-way.git
+    cd door-way
+    ```
 
-2. Create `.env` file with required environment variables:
-```bash
-SECRET_KEY=your-secret-key
-DATABASE_NAME=doorway_db
-DATABASE_USER=doorway_user
-DATABASE_PASSWORD=doorway_pass
-CLOUDINARY_CLOUD_NAME=your-cloudinary-name
-CLOUDINARY_API_KEY=your-cloudinary-key
-CLOUDINARY_API_SECRET=your-cloudinary-secret
-SENDGRID_API_KEY=your-sendgrid-key
-TWILIO_ACCOUNT_SID=your-twilio-sid
-TWILIO_AUTH_TOKEN=your-twilio-token
-TWILIO_FROM_PHONE=your-twilio-phone
-```
+2.  **Environment Setup**
+    Create a `.env` file in the root directory:
+    ```bash
+    cp .env.example .env
+    # Edit .env with your local credentials if needed
+    ```
 
-3. Build and run with Docker:
-```bash
-docker-compose build
-docker-compose up
-```
+3.  **Launch with Docker**
+    ```bash
+    docker-compose up --build
+    ```
+    The app will be available at `http://localhost:8847`.
 
-4. Run migrations:
-```bash
-docker-compose exec web python manage.py migrate
-```
+4.  **Initialize Data** (first run only)
+    ```bash
+    # Open a new terminal tab
+    docker-compose exec web python manage.py migrate
+    docker-compose exec web python manage.py createsuperuser
+    ```
 
-5. Create a superuser:
-```bash
-docker-compose exec web python manage.py createsuperuser
-```
+## 📸 Screenshots
 
-6. Access the application:
-- Main site: http://localhost:8847
-- Admin panel: http://localhost:8847/admin
-
-## Architecture
-
-### User Roles
-- **Applicants**: Create profiles, browse apartments, submit applications
-- **Brokers**: Manage applicants, create applications, track activities
-- **Super Admins**: Full system access, view all activities, manage settings
-
-### Security Features
-- Role-based access control
-- Secure document handling
-- Privacy-first Smart Insights (no PII sent to external services)
-- Encrypted sensitive data
-
-## Deployment
-
-The application is Docker-ready and can be deployed to:
-- Railway (recommended)
-- AWS ECS
-- Google Cloud Run
-- Heroku
-- Any Docker-compatible hosting service
-
-## Contributing
-
-This is a private project. Please contact the repository owner for contribution guidelines.
-
-## License
-
-Proprietary - All rights reserved
-
-## Support
-
-For support, please contact the development team.
+*(More screenshots to be added)*
 
 ---
 
-Built with ❤️ using Django and Docker
+*Built with ❤️ in NYC. This project is part of my public software engineering portfolio.*

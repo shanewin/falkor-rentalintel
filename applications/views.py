@@ -133,14 +133,6 @@ def application_detail(request, application_id):
     application = get_object_or_404(Application, id=application_id)
     uploaded_files = application.uploaded_files.all()
 
-    # ✅ Convert JSON string to dictionary
-    for file in uploaded_files:
-        if file.analysis_results:
-            try:
-                file.analysis_results = json.loads(file.analysis_results)
-            except json.JSONDecodeError:
-                file.analysis_results = None  # Handle invalid JSON gracefully
-
     return render(request, "applications/application_detail.html", {
         "application": application,
         "uploaded_files": uploaded_files,
@@ -1639,7 +1631,14 @@ def broker_application_management(request, application_id):
     progress_percent = (completed_sections / total_sections) * 100 if total_sections > 0 else 0
     
     # Get uploaded files with analysis results
-    uploaded_files = application.uploaded_files.all()
+    uploaded_files = list(application.uploaded_files.all())
+    for f in uploaded_files:
+        if f.analysis_results and isinstance(f.analysis_results, str):
+            try:
+                import json
+                f.analysis_results = json.loads(f.analysis_results)
+            except json.JSONDecodeError:
+                f.analysis_results = {}
     
     # Get application activity log
     activity_log = application.activity_log.all().order_by('-timestamp')[:10]
@@ -1647,6 +1646,56 @@ def broker_application_management(request, application_id):
     # Get personal info if available
     personal_info = getattr(application, 'personal_info', None)
     
+    # ✅ Income Verification Logic
+    income_verification = None
+    bank_statement = next((f for f in uploaded_files if f.document_type == 'bank_statement' and f.analysis_results), None)
+
+    if bank_statement and application.applicant and application.applicant.annual_income:
+        stated_income = application.applicant.annual_income
+        # Try to get extracted income from analysis results (handle various potential keys)
+        verified_income = bank_statement.analysis_results.get('extracted_income') or bank_statement.analysis_results.get('annual_income')
+        
+        if verified_income:
+            try:
+                # Clean string currency if needed (though it should be a number/decimal from JSON)
+                if isinstance(verified_income, str):
+                    import re
+                    # Remove currency symbols and commas
+                    clean_income = re.sub(r'[^\d.]', '', verified_income)
+                    verified_income = float(clean_income) if clean_income else 0
+                else:
+                    verified_income = float(verified_income)
+                
+                stated_income = float(stated_income)
+                
+                if stated_income > 0:
+                    variance = ((stated_income - verified_income) / stated_income) * 100
+                    
+                    if variance < 5:
+                        status = 'Verified'
+                        badge_color = 'success'
+                    elif 5 <= variance <= 15:
+                        status = 'Review'
+                        badge_color = 'warning'
+                    else:
+                        status = 'Discrepancy'
+                        badge_color = 'danger'
+                        
+                    # Check for fraud/modification
+                    if bank_statement.analysis_results.get('tampering_suspected'):
+                        status = 'Fraud Alert'
+                        badge_color = 'danger'
+                        
+                    income_verification = {
+                        'stated_income': stated_income,
+                        'verified_income': verified_income,
+                        'variance': round(variance, 1),
+                        'status': status,
+                        'badge_color': badge_color
+                    }
+            except (ValueError, TypeError):
+                pass  # Handle conversion errors gracefully
+
     context = {
         'application': application,
         'sections': sections,
@@ -1657,6 +1706,7 @@ def broker_application_management(request, application_id):
         'activity_log': activity_log,
         'personal_info': personal_info,
         'is_broker_access': True,
+        'income_verification': income_verification,
     }
     
     return render(request, 'applications/v2/broker_management.html', context)

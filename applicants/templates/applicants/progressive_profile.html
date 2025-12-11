@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
+<link rel="stylesheet" href="{% static 'applicants/css/applicants.css' %}">
+<style>
+    .step-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid rgba(0,0,0,0.125);
+    }
+    .step-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+        border-color: var(--bs-primary);
+    }
+    .step-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .completion-badge {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-dark text-white py-4 mb-4">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">My Applicant Profile</h1>
+                <p class="mb-0">Complete your profile to unlock Smart Matches and apply to apartments faster.</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'applicant_dashboard' %}" class="btn btn-outline-light">
+                    <i class="fas fa-arrow-left me-2"></i>Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mb-5">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Overall Progress -->
+    <div class="card shadow-sm mb-5 border-0">
+        <div class="card-body p-4 text-center">
+            <h3 class="mb-3">Overall Completion: {{ completion_percentage }}%</h3>
+            <div class="progress mb-3" style="height: 25px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated {% if completion_percentage == 100 %}bg-success{% else %}bg-primary{% endif %}" 
+                     role="progressbar" 
+                     style="width: {{ completion_percentage }}%;" 
+                     aria-valuenow="{{ completion_percentage }}" 
+                     aria-valuemin="0" 
+                     aria-valuemax="100">
+                     {{ completion_percentage }}%
+                </div>
+            </div>
+            {% if completion_percentage < 100 %}
+                <p class="text-muted">Tip: A complete profile helps you stand out to landlords and powers our Smart Match AI.</p>
+                {% if missing_fields %}
+                <div class="alert alert-warning d-inline-block text-start mt-2">
+                    <strong class="d-block mb-1"><i class="fas fa-exclamation-triangle me-2"></i>Missing items:</strong>
+                    <ul class="mb-0 ps-3">
+                        {% for section, fields in missing_fields.items %}
+                            <li><strong>{{ section }}:</strong> {{ fields|join:", " }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            {% else %}
+                <div class="alert alert-success d-inline-block mt-2">
+                    <i class="fas fa-check-circle me-2"></i>Your profile is 100% complete! You're ready to apply.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Steps Grid -->
+    <div class="row g-4 justify-content-center">
+        
+        <!-- Step 1 Card -->
+        <div class="col-md-4">
+            <a href="{% url 'profile_step1' %}" class="text-decoration-none text-dark">
+                <div class="card h-100 step-card shadow-sm">
+                    <div class="card-body text-center p-4">
+                        {% if completion_status.step1 %}
+                            <span class="badge bg-success rounded-pill completion-badge"><i class="fas fa-check me-1"></i>Done</span>
+                            <div class="step-icon bg-success text-white mx-auto shadow-sm">1</div>
+                        {% else %}
+                            <span class="badge bg-warning text-dark rounded-pill completion-badge"><i class="fas fa-clock me-1"></i>To Do</span>
+                            <div class="step-icon bg-secondary text-white mx-auto shadow-sm">1</div>
+                        {% endif %}
+                        
+                        <h4 class="card-title mt-3">Personal Info</h4>
+                        <p class="card-text text-muted mb-4">Contact details, address history, and identification.</p>
+                        
+                        <button class="btn {% if completion_status.step1 %}btn-outline-success{% else %}btn-primary{% endif %} w-100 rounded-pill">
+                            {% if completion_status.step1 %}Edit Details{% else %}Start Section{% endif %}
+                        </button>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Step 2 Card -->
+        <div class="col-md-4">
+            <a href="{% url 'profile_step2' %}" class="text-decoration-none text-dark">
+                <div class="card h-100 step-card shadow-sm border-primary">
+                    <div class="card-body text-center p-4">
+                        {% if completion_status.step2 %}
+                            <span class="badge bg-success rounded-pill completion-badge"><i class="fas fa-check me-1"></i>Done</span>
+                            <div class="step-icon bg-success text-white mx-auto shadow-sm">2</div>
+                        {% else %}
+                            <span class="badge bg-warning text-dark rounded-pill completion-badge"><i class="fas fa-star me-1"></i>Priority</span>
+                            <div class="step-icon bg-primary text-white mx-auto shadow-sm">2</div>
+                        {% endif %}
+                        
+                        <h4 class="card-title mt-3">Housing Needs</h4>
+                        <p class="card-text text-muted mb-4">Rent budget, neighborhoods, and amenities.</p>
+                        
+                        <button class="btn {% if completion_status.step2 %}btn-outline-success{% else %}btn-primary{% endif %} w-100 rounded-pill">
+                            {% if completion_status.step2 %}Edit Preferences{% else %}Set Preferences{% endif %}
+                        </button>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Step 3 Card -->
+        <div class="col-md-4">
+            <a href="{% url 'profile_step3' %}" class="text-decoration-none text-dark">
+                <div class="card h-100 step-card shadow-sm">
+                    <div class="card-body text-center p-4">
+                        {% if completion_status.step3 %}
+                            <span class="badge bg-success rounded-pill completion-badge"><i class="fas fa-check me-1"></i>Done</span>
+                            <div class="step-icon bg-success text-white mx-auto shadow-sm">3</div>
+                        {% else %}
+                            <span class="badge bg-warning text-dark rounded-pill completion-badge"><i class="fas fa-clock me-1"></i>To Do</span>
+                            <div class="step-icon bg-secondary text-white mx-auto shadow-sm">3</div>
+                        {% endif %}
+                        
+                        <h4 class="card-title mt-3">Employment</h4>
+                        <p class="card-text text-muted mb-4">Income, job history, and financial assets.</p>
+                        
+                        <button class="btn {% if completion_status.step3 %}btn-outline-success{% else %}btn-primary{% endif %} w-100 rounded-pill">
+                            {% if completion_status.step3 %}Edit Employment{% else %}Add Income{% endif %}
+                        </button>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
