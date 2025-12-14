@@ -42,7 +42,7 @@ Integrated secure document pipeline that processes applicant uploads (paystubs, 
 
 1.  **Clone the repository**
     ```bash
-    git clone https://github.com/yourusername/door-way.git
+    git clone https://github.com/shanewin/falkor-rentalintel.git
     cd door-way
     ```
 
