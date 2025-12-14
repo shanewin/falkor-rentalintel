@@ -65,11 +65,3 @@ Integrated secure document pipeline that processes applicant uploads (paystubs, 
     docker-compose exec web python manage.py migrate
     docker-compose exec web python manage.py createsuperuser
     ```
-
-## 📸 Screenshots
-
-*(More screenshots to be added)*
-
----
-
-*Built with ❤️ in NYC. This project is part of my public software engineering portfolio.*
