@@ -1,6 +1,6 @@
-![DoorWay Banner](screenshots/homepage.png)
+![Falkor Banner](screenshots/homepage.png)
 
-# DoorWay - Intelligent Rental Management Platform
+# Falkor - Intelligent Rental Management Platform
 
 > **Build in Public Project**  
 > A production-grade rental application management system built with Django, Docker, and HTMX principles. It streamlines the complex NYC rental process for applicants, brokers, and property managers through intelligent automation and privacy-first algorithms.
@@ -8,7 +8,7 @@
 ## 🚀 Key Features
 
 ### 🧠 Smart Matching Engine
-Unlike standard filters, DoorWay uses a weighted scoring algorithm to rank apartments based on nuanced applicant preferences. It considers "must-haves" vs "nice-to-haves," commute times, and lifestyle factors.
+Unlike standard filters, Falkor uses a weighted scoring algorithm to rank apartments based on nuanced applicant preferences. It considers "must-haves" vs "nice-to-haves," commute times, and lifestyle factors.
 *   **See the code:** [`applicants/apartment_matching.py`](applicants/apartment_matching.py) - *Check out the `_calculate_match_percentage` method for the weighted logic.*
 
 ### 🛡️ Smart Insights & Analysis
