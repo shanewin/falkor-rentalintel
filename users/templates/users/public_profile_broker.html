@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'apartments_list' %}">Apartments</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Broker Profile</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <!-- Profile Sidebar -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm sticky-top" style="top: 2rem; z-index: 100;">
+                <div class="card-body p-4 text-center">
+                    <!-- Profile Photo -->
+                    {% if profile.profile_picture %}
+                        <img src="{{ profile.profile_picture.url }}" alt="{{ broker.get_full_name }}" 
+                             class="rounded-circle mb-4 object-fit-cover shadow-sm" width="150" height="150">
+                    {% else %}
+                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto mb-4 shadow-sm" 
+                             style="width: 150px; height: 150px;">
+                            <span class="display-4 text-secondary">{{ broker.first_name|first }}{{ broker.last_name|first }}</span>
+                        </div>
+                    {% endif %}
+
+                    <h3 class="fw-bold mb-1">{{ broker.get_full_name }}</h3>
+                    <p class="text-muted mb-3">{{ profile.job_title|default:"Licensed Real Estate Broker" }}</p>
+
+                    {% if profile.business_name %}
+                    <div class="d-flex align-items-center justify-content-center mb-4 text-muted small">
+                        <i class="bi bi-building me-2"></i>{{ profile.business_name }}
+                    </div>
+                    {% endif %}
+
+                    <!-- Contact Buttons -->
+                    <div class="d-grid gap-2 mb-4">
+                        <a href="mailto:{{ broker.email }}" class="btn btn-primary">
+                            <i class="bi bi-envelope me-2"></i>Email Broker
+                        </a>
+                        <a href="tel:{{ broker.phone_number }}" class="btn btn-outline-primary">
+                            <i class="bi bi-telephone me-2"></i>{{ broker.phone_number }}
+                        </a>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Stats -->
+                    <div class="row g-2 text-center">
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded-3">
+                                <div class="h4 fw-bold mb-0 text-primary">{{ total_listings }}</div>
+                                <div class="small text-muted">Active Listings</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded-3">
+                                <div class="h4 fw-bold mb-0 text-success">{{ rented_count }}</div>
+                                <div class="small text-muted">Rented Deals</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Social / Web -->
+                    {% if profile.linkedin_url or profile.website_url %}
+                    <div class="mt-4 pt-2">
+                        {% if profile.website_url %}
+                            <a href="{{ profile.website_url }}" target="_blank" class="btn btn-light btn-sm rounded-circle mx-1" title="Website">
+                                <i class="bi bi-globe"></i>
+                            </a>
+                        {% endif %}
+                        {% if profile.linkedin_url %}
+                            <a href="{{ profile.linkedin_url }}" target="_blank" class="btn btn-light btn-sm rounded-circle mx-1" title="LinkedIn">
+                                <i class="bi bi-linkedin"></i>
+                            </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- About Section -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h4 class="fw-bold mb-4">About {{ broker.first_name }}</h4>
+                    
+                    {% if profile.bio %}
+                        <div class="text-muted mb-4">
+                            {{ profile.bio|linebreaks }}
+                        </div>
+                    {% else %}
+                        <p class="text-muted fst-italic">No biography available.</p>
+                    {% endif %}
+
+                    <div class="row g-4 mt-2">
+                        {% if profile.broker_license_number %}
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-dark mb-2">License Information</h6>
+                            <p class="text-muted mb-0">
+                                License #: {{ profile.broker_license_number }}<br>
+                                State: {{ profile.license_state }}
+                            </p>
+                        </div>
+                        {% endif %}
+
+                        {% if profile.specializations %}
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-dark mb-2">Specializations</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for spec in profile.specializations %}
+                                    <span class="badge bg-light text-dark border">{{ spec|title }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Listings -->
+            <h4 class="fw-bold mb-3">Active Listings ({{ total_listings }})</h4>
+            
+            {% if active_listings %}
+                <div class="row g-4">
+                    {% for apartment in active_listings %}
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm h-100">
+                            <!-- Image -->
+                            <div class="position-relative">
+                                {% if apartment.images.first %}
+                                    <img src="{{ apartment.images.first.image.url }}" class="card-img-top object-fit-cover" alt="Apartment" style="height: 200px;">
+                                {% else %}
+                                    <div class="bg-light text-center py-5" style="height: 200px;">
+                                        <i class="bi bi-house display-4 text-muted opacity-50"></i>
+                                    </div>
+                                {% endif %}
+                                <div class="position-absolute top-0 end-0 m-2">
+                                    <span class="badge bg-dark fw-normal">${{ apartment.rent_price|intcomma }}/mo</span>
+                                </div>
+                            </div>
+                            
+                            <div class="card-body">
+                                <h6 class="card-title fw-bold mb-1">
+                                    {{ apartment.building.street_address_1 }} #{{ apartment.unit_number }}
+                                </h6>
+                                <p class="text-muted small mb-3">
+                                    {{ apartment.building.neighborhood|default:apartment.building.city }}
+                                </p>
+                                
+                                <div class="d-flex align-items-center text-muted small mb-3">
+                                    <span class="me-3"><i class="bi bi-door-open me-1"></i>{{ apartment.bedrooms|floatformat:0 }} Bed</span>
+                                    <span><i class="bi bi-droplet me-1"></i>{{ apartment.bathrooms|floatformat:0 }} Bath</span>
+                                </div>
+                                
+                                <a href="{% url 'apartment_overview' apartment.id %}" class="btn btn-outline-primary btn-sm w-100 stretched-link">
+                                    View Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-light border text-center py-5">
+                    <i class="bi bi-house-door display-6 text-muted mb-3 d-block opacity-50"></i>
+                    <p class="mb-0 text-muted">No active listings at the moment.</p>
+                </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -54,33 +54,75 @@ def get_filtered_apartments(request, user):
                 elif days_until_move <= 60:
                     get_params['move_in_date'] = 'within_60'
             
-            # Apply neighborhood preferences  
+            # Apply neighborhood preferences (Hybrid: Legacy + Ranked)
+            neighborhood_values = set()
+            
+            # 1. Legacy Preference
             if applicant.neighborhood_preferences.exists():
-                neighborhood_values = []
                 for neighborhood in applicant.neighborhood_preferences.all():
                     # Map applicant neighborhood to building neighborhood choices
                     for choice_value, choice_name in Building.NEIGHBORHOOD_CHOICES:
                         if choice_name.lower() == neighborhood.name.lower() or choice_value.lower() == neighborhood.name.lower():
-                            neighborhood_values.append(choice_value)
+                            neighborhood_values.add(choice_value)
                             break
-                if neighborhood_values:
-                    get_params.setlist('neighborhoods', neighborhood_values)
             
-            # Apply amenity preferences
+            # 2. Ranked Preference (New)
+            if hasattr(applicant, 'ranked_neighborhood_preferences') and applicant.ranked_neighborhood_preferences.exists():
+                for neighborhood in applicant.ranked_neighborhood_preferences.all():
+                    for choice_value, choice_name in Building.NEIGHBORHOOD_CHOICES:
+                        if choice_name.lower() == neighborhood.name.lower() or choice_value.lower() == neighborhood.name.lower():
+                            neighborhood_values.add(choice_value)
+                            break
+
+            if neighborhood_values:
+                get_params.setlist('neighborhoods', list(neighborhood_values))
+            
+            # Apply amenity preferences (Hybrid: Legacy + Ranked)
+            amenity_ids = set()
+            
+            # 1. Legacy Preference
             if applicant.amenities.exists():
-                amenity_ids = []
                 for amenity in applicant.amenities.all():
-                    # Map applicant amenities to building amenities by name
                     try:
                         from buildings.models import Amenity as BuildingAmenity
                         building_amenity = BuildingAmenity.objects.filter(name__iexact=amenity.name).first()
                         if building_amenity:
-                            amenity_ids.append(str(building_amenity.id))
+                            amenity_ids.add(str(building_amenity.id))
                     except (ImportError, AttributeError):
                         continue
-                if amenity_ids:
-                    get_params.setlist('amenities', amenity_ids)
+
+            # 2. Ranked Preference (New) - Flattening logic: Any rank > 0 is "interested"
+            # Building Amenities
+            # Note: We query the preference model directly or through related manager if available
+            # Assuming 'building_amenity_preferences' related name or similar based on standard conventions
+            # If not explicitly defined, we use the _set manager
             
+            try:
+                # Building Amenity Preferences
+                if hasattr(applicant, 'building_amenity_preferences'):
+                    for pref in applicant.building_amenity_preferences.all():
+                         # Map to BuildingAmenity ID
+                         # The pref.amenity is likely a Building Amenity model instance already or similar
+                         # We need to match it to the Building Amenity used in filtering
+                         from buildings.models import Amenity as BuildingAmenity
+                         building_amenity = BuildingAmenity.objects.filter(name__iexact=pref.amenity.name).first()
+                         if building_amenity:
+                             amenity_ids.add(str(building_amenity.id))
+
+                # Apartment Amenity Preferences
+                if hasattr(applicant, 'apartment_amenity_preferences'):
+                    for pref in applicant.apartment_amenity_preferences.all():
+                        from buildings.models import Amenity as BuildingAmenity
+                        # Note: Apartment Amenities might not map 1:1 to Building Amenities in filter
+                        # but we try to match by name as best effort
+                        building_amenity = BuildingAmenity.objects.filter(name__iexact=pref.amenity.name).first()
+                        if building_amenity:
+                            amenity_ids.add(str(building_amenity.id))
+            except Exception as e:
+                logger.warning(f"Error flattening ranked amenity preferences: {e}")
+
+            if amenity_ids:
+                get_params.setlist('amenities', list(amenity_ids))            
             # Update request.GET with the preferences
             if get_params:
                 request.GET = get_params
@@ -98,91 +140,115 @@ def get_filtered_apartments(request, user):
     elif sort_by == 'newest':
         apartments = apartments.order_by('-created_at') if hasattr(Apartment, 'created_at') else apartments.order_by('-id')
 
-    filters = {}
+    active_filters = []
     
     # Price filter
     price_range = request.GET.get('price')
     if price_range:
         if price_range == 'under_2000':
             apartments = apartments.filter(rent_price__lt=2000)
-            filters['price'] = 'Under $2,000'
+            active_filters.append({'field': 'price', 'value': 'under_2000', 'label': 'Under $2,000'})
         elif price_range == '2000_3000':
             apartments = apartments.filter(rent_price__gte=2000, rent_price__lte=3000)
-            filters['price'] = '$2,000 - $3,000'
+            active_filters.append({'field': 'price', 'value': '2000_3000', 'label': '$2,000 - $3,000'})
         elif price_range == '3000_4000':
             apartments = apartments.filter(rent_price__gte=3000, rent_price__lte=4000)
-            filters['price'] = '$3,000 - $4,000'
+            active_filters.append({'field': 'price', 'value': '3000_4000', 'label': '$3,000 - $4,000'})
         elif price_range == 'over_4000':
             apartments = apartments.filter(rent_price__gt=4000)
-            filters['price'] = 'Over $4,000'
+            active_filters.append({'field': 'price', 'value': 'over_4000', 'label': 'Over $4,000'})
     
     # Custom price range
     min_price = request.GET.get('min_price')
     max_price = request.GET.get('max_price')
+    
+    if min_price and max_price:
+        try:
+            min_val = float(min_price.replace(',', ''))
+            max_val = float(max_price.replace(',', ''))
+            if min_val > max_val:
+                min_price, max_price = max_price, min_price
+        except (ValueError, TypeError):
+            pass
+
     if min_price:
-        apartments = apartments.filter(rent_price__gte=min_price)
-        filters['min_price'] = f'Min: ${min_price}'
+        apartments = apartments.filter(rent_price__gte=min_price.replace(',', ''))
+        active_filters.append({'field': 'min_price', 'value': min_price, 'label': f'Min: ${min_price}'})
     if max_price:
-        apartments = apartments.filter(rent_price__lte=max_price)
-        filters['max_price'] = f'Max: ${max_price}'
+        apartments = apartments.filter(rent_price__lte=max_price.replace(',', ''))
+        active_filters.append({'field': 'max_price', 'value': max_price, 'label': f'Max: ${max_price}'})
     
     # Bedroom filters  
     min_bedrooms = request.GET.get('min_bedrooms')
     max_bedrooms = request.GET.get('max_bedrooms')
+    exact_bedrooms = request.GET.get('exact_bedrooms') == 'on' or request.GET.get('exact_bedrooms') == 'true'
+
     if min_bedrooms:
-        if min_bedrooms == 'studio':
-            apartments = apartments.filter(bedrooms__lte=1)
+        if exact_bedrooms:
+            if min_bedrooms == 'studio' or min_bedrooms == '0':
+                apartments = apartments.filter(bedrooms=0)
+                active_filters.append({'field': 'min_bedrooms', 'value': min_bedrooms, 'label': 'Studio (Exact)'})
+            else:
+                apartments = apartments.filter(bedrooms=min_bedrooms)
+                active_filters.append({'field': 'min_bedrooms', 'value': min_bedrooms, 'label': f'{min_bedrooms} BR (Exact)'})
         else:
-            apartments = apartments.filter(bedrooms__gte=min_bedrooms)
-        filters['min_bedrooms'] = f'Min {min_bedrooms} bed{"" if min_bedrooms == "1" else "s"}'
-    if max_bedrooms:
+            if min_bedrooms == 'studio' or min_bedrooms == '0':
+                apartments = apartments.filter(bedrooms__gte=0)
+                active_filters.append({'field': 'min_bedrooms', 'value': min_bedrooms, 'label': 'Studio+'})
+            else:
+                apartments = apartments.filter(bedrooms__gte=min_bedrooms)
+                active_filters.append({'field': 'min_bedrooms', 'value': min_bedrooms, 'label': f'{min_bedrooms}+ BR'})
+    
+    if max_bedrooms and not exact_bedrooms:
         if max_bedrooms != '5+':
             apartments = apartments.filter(bedrooms__lte=max_bedrooms)
-        filters['max_bedrooms'] = f'Max {max_bedrooms} bed{"" if max_bedrooms == "1" else "s"}'
+        active_filters.append({'field': 'max_bedrooms', 'value': max_bedrooms, 'label': f'Max {max_bedrooms} BR'})
     
     # Bathroom filters
     min_bathrooms = request.GET.get('min_bathrooms')
     max_bathrooms = request.GET.get('max_bathrooms')
     if min_bathrooms:
         apartments = apartments.filter(bathrooms__gte=min_bathrooms)
-        filters['min_bathrooms'] = f'Min {min_bathrooms} bath{"" if min_bathrooms == "1" else "s"}'
+        active_filters.append({'field': 'min_bathrooms', 'value': min_bathrooms, 'label': f'{min_bathrooms}+ BA'})
     if max_bathrooms:
         if max_bathrooms != '5+':
             apartments = apartments.filter(bathrooms__lte=max_bathrooms)
-        filters['max_bathrooms'] = f'Max {max_bathrooms} bath{"" if max_bathrooms == "1" else "s"}'
+        active_filters.append({'field': 'max_bathrooms', 'value': max_bathrooms, 'label': f'Max {max_bathrooms} BA'})
     
     # Move-in date filter
     move_in_date = request.GET.get('move_in_date')
     if move_in_date:
         if move_in_date in ['available_now', 'within_30', 'within_60']:
             apartments = apartments.filter(status='available')
-            if move_in_date == 'available_now':
-                filters['move_in_date'] = 'Available Now'
-            elif move_in_date == 'within_30':
-                filters['move_in_date'] = 'Within 30 days'
-            elif move_in_date == 'within_60':
-                filters['move_in_date'] = 'Within 60 days'
+            label = 'Available Now'
+            if move_in_date == 'within_30': label = 'Within 30 days'
+            elif move_in_date == 'within_60': label = 'Within 60 days'
+            active_filters.append({'field': 'move_in_date', 'value': move_in_date, 'label': label})
     
     # Amenities filter
     amenity_ids = request.GET.getlist('amenities')
     if amenity_ids:
         apartments = apartments.filter(building__amenities__id__in=amenity_ids).distinct()
         selected_amenities = Amenity.objects.filter(id__in=amenity_ids)
-        filters['amenities'] = [amenity.name for amenity in selected_amenities]
+        for amenity in selected_amenities:
+            active_filters.append({'field': 'amenities', 'value': str(amenity.id), 'label': amenity.name})
     
     # Neighborhoods filter
     neighborhood_values = request.GET.getlist('neighborhoods')
     if neighborhood_values:
         apartments = apartments.filter(building__neighborhood__in=neighborhood_values).distinct()
-        filters['neighborhoods'] = neighborhood_values
+        # Find labels for selected choices
+        choices_dict = dict(Building.NEIGHBORHOOD_CHOICES)
+        for val in neighborhood_values:
+            active_filters.append({'field': 'neighborhoods', 'value': val, 'label': choices_dict.get(val, val)})
     
     # Pets filter
     pets_allowed = request.GET.get('pets_allowed')
     if pets_allowed == '1':
         apartments = apartments.filter(building__pet_policy__in=['case_by_case', 'pet_fee', 'all_pets', 'small_pets', 'cats_only'])
-        filters['pets_allowed'] = 'Pets Allowed'
+        active_filters.append({'field': 'pets_allowed', 'value': '1', 'label': 'Pets Allowed'})
         
-    return apartments, filters, auto_applied_preferences
+    return apartments, active_filters, auto_applied_preferences
 
 
 def serialize_apartments_for_map(apartments):
@@ -196,8 +262,8 @@ def serialize_apartments_for_map(apartments):
             title = f"Unit {apartment.unit_number}" if apartment.unit_number else f"{apartment.bedrooms or 0} BR / {apartment.bathrooms or 0} BA"
             
             # Collect all images (apartment first, then building)
-            apartment_images = [img.thumbnail_url() for img in apartment.images.all()] if apartment.images.exists() else []
-            building_images = [img.thumbnail_url() for img in apartment.building.images.all()] if apartment.building and apartment.building.images.exists() else []
+            apartment_images = [img.thumbnail_url for img in apartment.images.all()] if apartment.images.exists() else []
+            building_images = [img.thumbnail_url for img in apartment.building.images.all()] if apartment.building and apartment.building.images.exists() else []
             all_images = apartment_images + building_images
             
             apartment_data = {
@@ -211,11 +277,11 @@ def serialize_apartments_for_map(apartments):
                 'building_address': f"{apartment.building.street_address_1}, {apartment.building.city}, {apartment.building.state}" if apartment.building else '',
                 'neighborhood': apartment.building.get_neighborhood_display() if apartment.building and apartment.building.neighborhood else '',
                 'status': apartment.get_status_display(),
-                'thumbnail_url': apartment.images.first().thumbnail_url() if apartment.images.exists() else '',
+                'thumbnail_url': apartment.images.first().thumbnail_url if apartment.images.exists() else '',
                 'all_images': all_images,
                 'detail_url': f'/apartments/{apartment.id}/overview/',
-                'latitude': float(apartment.building.latitude) if apartment.building and apartment.building.latitude else None,
-                'longitude': float(apartment.building.longitude) if apartment.building and apartment.building.longitude else None,
+                'latitude': float(apartment.building.latitude) if apartment.building and apartment.building.latitude else 40.7128,
+                'longitude': float(apartment.building.longitude) if apartment.building and apartment.building.longitude else -74.0060,
                 'is_new': bool((getattr(apartment, 'created_at', None) or getattr(apartment, 'last_modified', None)) and timezone.now() and (timezone.now() - (apartment.created_at if getattr(apartment, 'created_at', None) else apartment.last_modified)).days <= 7),
                 'has_special': bool(getattr(apartment, 'rent_specials', None) or getattr(apartment, 'free_stuff', None) or (hasattr(apartment, 'concessions') and apartment.concessions.exists())),
                 'pet_policy': apartment.building.get_pet_policy_display() if apartment.building and apartment.building.pet_policy else '',
@@ -228,7 +294,7 @@ def serialize_apartments_for_map(apartments):
     return apartments_data
 
 
-def handle_broker_contact(apartment, form_data):
+def handle_broker_contact(apartment, form_data, user=None):
     """
     Handles the logic for emailing the broker and confirming with the user.
     """
@@ -237,6 +303,28 @@ def handle_broker_contact(apartment, form_data):
     phone = form_data.get('phone')
     contact_type = form_data.get('contact_type')
     
+    # Save Inquiry to Database
+    from .models import BrokerInquiry
+    try:
+        inquiry = BrokerInquiry.objects.create(
+            apartment=apartment,
+            applicant=user,
+            name=name,
+            email=email,
+            phone=phone,
+            inquiry_type=contact_type,
+            # We will fill message/preferred_times below based on type
+        )
+        
+        # Link to broker if exists
+        potential_broker = apartment.building.brokers.first()
+        if potential_broker:
+            inquiry.broker = potential_broker
+            
+    except Exception as e:
+        logger.error(f"Failed to save broker inquiry: {e}")
+        inquiry = None
+
     # Prepare email content based on contact type
     if contact_type == 'request_tour':
         tour_type = form_data.get('tour_type')
@@ -278,6 +366,11 @@ Preferred Times:
 Please contact the potential tenant to schedule the tour.
         """
         
+        if inquiry:
+            inquiry.preferred_times = preferred_times
+            inquiry.message = "Tour Request"
+            inquiry.save()
+            
     else:  # ask_question
         question = form_data.get('question')
         
@@ -299,6 +392,10 @@ Question:
 Please respond to the potential tenant's inquiry.
         """
     
+        if inquiry:
+            inquiry.message = question
+            inquiry.save()
+
     # Get broker emails
     broker_emails = []
     for broker in apartment.building.brokers.all():

@@ -1,10 +1,41 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load crispy_forms_tags %}
+{% load user_extras %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
 <link rel="stylesheet" href="{% static 'applicants/css/applicants.css' %}">
+<style>
+    /* Smart Match Badges */
+    .smart-match-critical label::after, .smart-match-critical.badge-target::after {
+        content: 'Smart Match Critical';
+        font-size: 0.65rem;
+        background-color: #ffd700;
+        color: #000;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 8px;
+        font-weight: bold;
+        text-transform: uppercase;
+        vertical-align: middle;
+        display: inline-block;
+    }
+
+    .strategic-match label::after, .strategic-match.badge-target::after {
+        content: 'Strategic Match';
+        font-size: 0.65rem;
+        background-color: #f0f0f0;
+        color: #666;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 8px;
+        font-weight: bold;
+        text-transform: uppercase;
+        vertical-align: middle;
+        display: inline-block;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -39,43 +70,58 @@
     <div class="card shadow-sm mb-4">
         <div class="card-body">
             <h6 class="mb-3">Profile Completion Progress ({{ completion_percentage }}% Complete)</h6>
-            <div class="progress mb-3" style="height: 8px;">
-                <div class="progress-bar bg-warning" role="progressbar" style="width: 100%;" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+            <div class="progress mb-3" style="height: 10px; border-radius: 5px;">
+                <div class="progress-bar bg-warning" role="progressbar" style="width: {{ completion_percentage }}%;" aria-valuenow="{{ completion_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
             </div>
+            
             <div class="row text-center">
+                {% for step_num, step_data in completion_status.steps.items %}
                 <div class="col-4">
-                    <a href="{% url 'profile_step1' %}" class="text-decoration-none">
+                    <a href="{% url 'profile_step'|add:step_num|default:'profile_step1' %}" class="text-decoration-none">
                         <div class="d-flex flex-column align-items-center">
-                            <div class="rounded-circle bg-light text-muted d-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
-                                <strong>1</strong>
+                            <div class="rounded-circle {% if current_step == step_num %}bg-dark text-white border border-secondary{% elif step_data.pct == 100 %}bg-success text-white{% else %}bg-light text-muted{% endif %} d-flex align-items-center justify-content-center mb-2 position-relative" style="width: 44px; height: 44px; transition: all 0.3s ease;">
+                                {% if step_data.pct == 100 %}
+                                    <i class="fas fa-check"></i>
+                                {% else %}
+                                    <strong>{{ step_num }}</strong>
+                                {% endif %}
+                                
+                                {% if step_data.pct < 100 and step_data.pct > 0 and current_step != step_num %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark border border-white" style="font-size: 0.6rem;">
+                                    {{ step_data.pct }}%
+                                </span>
+                                {% endif %}
                             </div>
-                            <small class="text-muted">Personal Info</small>
+                            <small class="{% if current_step == step_num %}text-dark fw-bold{% else %}text-muted{% endif %}">
+                                {% if step_num == 1 %}Personal Info{% elif step_num == 2 %}Housing Needs{% else %}Employment{% endif %}
+                            </small>
                         </div>
                     </a>
                 </div>
-                <div class="col-4">
-                    <a href="{% url 'profile_step2' %}" class="text-decoration-none">
-                        <div class="d-flex flex-column align-items-center">
-                            <div class="rounded-circle bg-light text-muted d-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
-                                <strong>2</strong>
-                            </div>
-                            <small class="text-muted">Housing Needs & Preferences</small>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-4">
-                    <a href="{% url 'profile_step3' %}" class="text-decoration-none">
-                        <div class="d-flex flex-column align-items-center">
-                            <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
-                                <strong>3</strong>
-                            </div>
-                            <small class="text-dark fw-bold">Income & Employment</small>
-                        </div>
-                    </a>
-                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
+
+    <!-- Alert for Missing Fields in Current Step -->
+    {% with current_step_data=completion_status.steps|get_item:current_step %}
+    {% if current_step_data.missing %}
+    <div class="alert alert-warning border-start border-4 border-warning shadow-sm mb-4">
+        <div class="d-flex align-items-center">
+            <div class="me-3">
+                <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+            </div>
+            <div>
+                <h6 class="alert-heading mb-1 fw-bold">Items missing in this step:</h6>
+                <p class="mb-0 small">
+                    Completing these will significantly improve your match score: 
+                    <span class="fw-bold">{{ current_step_data.missing|join:", " }}</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endwith %}
 
     <!-- Step 3: Income & Employment -->
     <div class="card shadow-sm">
@@ -93,6 +139,7 @@
 
 {% block extra_js %}
 <script src="{% static 'js/forms.js' %}"></script>
+<script src="{% static 'applicants/js/smart_insights.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     
@@ -102,7 +149,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Currency field formatting
-    setupCurrencyFields();
+    document.querySelectorAll('.currency-field').forEach(setupCurrencyInput);
     
     // Employment status field functionality
     setupEmploymentStatusFields();
@@ -124,21 +171,35 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Setup buttons for other section
     setupOtherButtons();
-});
 
-function setupCurrencyFields() {
-    const currencyFields = document.querySelectorAll('.currency-field');
-    currencyFields.forEach(field => {
-        field.addEventListener('blur', function() {
-            if (this.value) {
-                const value = parseFloat(this.value);
-                if (!isNaN(value)) {
-                    this.value = value.toFixed(2);
+    // Initial format for existing fields
+    document.querySelectorAll('.currency-input').forEach(setupCurrencyInput);
+
+    // Watch for dynamic additions
+    const mutationObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+                if (node.nodeType === 1) { // Element node
+                    const inputs = node.querySelectorAll('.currency-input');
+                    inputs.forEach(input => setupCurrencyInput(input));
                 }
-            }
+            });
         });
     });
-}
+
+    const config = { childList: true, subtree: true };
+    const containers = [
+        'jobs-list', 'income-list', 'assets-list',
+        'jobs-list-employed', 'income-list-employed', 'assets-list-employed',
+        'income-list-other', 'assets-list-other'
+    ];
+    
+    containers.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) mutationObserver.observe(el, config);
+    });
+});
+
 
 function setupEmploymentStatusFields() {
     const employedFields = document.getElementById('employed-fields');
@@ -259,7 +320,7 @@ function setupAddJobButton() {
                             <label class="form-label">Annual Income</label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
-                                <input type="number" class="form-control currency-field" name="job_income_${index}" step="0.01" placeholder="0.00">
+                                <input type="text" class="form-control currency-field currency-input" name="job_income_${index}" placeholder="0.00">
                             </div>
                         </div>
                         <div class="col-md-6 mb-3">
@@ -395,7 +456,7 @@ function setupAddIncomeButton() {
                             <label class="form-label">Average Annual Income</label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
-                                <input type="number" class="form-control currency-field" name="income_amount_${index}" step="0.01" placeholder="0.00">
+                                <input type="text" class="form-control currency-field currency-input" name="income_amount_${index}" placeholder="0.00">
                             </div>
                         </div>
                     </div>
@@ -485,7 +546,7 @@ function setupAddAssetButton() {
                             <label class="form-label">Account Balance</label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
-                                <input type="number" class="form-control currency-field" name="asset_balance_${index}" step="0.01" placeholder="0.00">
+                                <input type="text" class="form-control currency-field currency-input" name="asset_balance_${index}" placeholder="0.00">
                             </div>
                         </div>
                     </div>
@@ -595,7 +656,7 @@ function setupEmployedJobButton() {
                             <label class="form-label">Annual Income</label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
-                                <input type="number" class="form-control currency-field" name="employed_job_income_${index}" step="0.01" placeholder="0.00">
+                                <input type="text" class="form-control currency-field currency-input" name="employed_job_income_${index}" placeholder="0.00">
                             </div>
                         </div>
                         <div class="col-md-6 mb-3">
@@ -731,7 +792,7 @@ function setupEmployedIncomeButton() {
                             <label class="form-label">Average Annual Income</label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
-                                <input type="number" class="form-control currency-field" name="employed_income_amount_${index}" step="0.01" placeholder="0.00">
+                                <input type="text" class="form-control currency-field currency-input" name="employed_income_amount_${index}" placeholder="0.00">
                             </div>
                         </div>
                     </div>
@@ -821,7 +882,7 @@ function setupEmployedAssetButton() {
                             <label class="form-label">Account Balance</label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
-                                <input type="number" class="form-control currency-field" name="employed_asset_balance_${index}" step="0.01" placeholder="0.00">
+                                <input type="text" class="form-control currency-field currency-input" name="employed_asset_balance_${index}" placeholder="0.00">
                             </div>
                         </div>
                     </div>
@@ -919,7 +980,7 @@ function setupOtherIncomeButton() {
                             <label class="form-label">Average Annual Income</label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
-                                <input type="number" class="form-control currency-field" name="other_income_amount_${index}" step="0.01" placeholder="0.00">
+                                <input type="text" class="form-control currency-field currency-input" name="other_income_amount_${index}" placeholder="0.00">
                             </div>
                         </div>
                     </div>
@@ -1009,7 +1070,7 @@ function setupOtherAssetButton() {
                             <label class="form-label">Account Balance</label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
-                                <input type="number" class="form-control currency-field" name="other_asset_balance_${index}" step="0.01" placeholder="0.00">
+                                <input type="text" class="form-control currency-field currency-input" name="other_asset_balance_${index}" placeholder="0.00">
                             </div>
                         </div>
                     </div>

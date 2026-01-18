@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Applicant, ApplicantPhoto, PetPhoto, ApplicantCRM, ApplicationHistory, InteractionLog
+from .models import Applicant, ApplicantPhoto, PetPhoto, ApplicantCRM, ApplicationHistory, InteractionLog, SavedApartment
 from .forms import ApplicantForm, ApplicantPhotoForm, PetForm, PetPhotoForm
 from applications.models import Application
 from apartments.models import Apartment, ApartmentAmenity
@@ -372,6 +372,13 @@ def applicant_crm(request, applicant_id):
     # Get Quick Actions
     quick_actions = NudgeService.get_quick_actions(applicant)
 
+    # Get Inquiries & Outreach History
+    # Use select_related to optimize query
+    inquiries = []
+    if applicant.user:
+        from apartments.models import BrokerInquiry
+        inquiries = BrokerInquiry.objects.filter(applicant=applicant.user).select_related('apartment', 'apartment__building').order_by('-created_at')
+
     return render(request, 'applicants/applicant_crm.html', {
         'applicant': applicant,
         'crm': crm,
@@ -382,4 +389,80 @@ def applicant_crm(request, applicant_id):
         'activity_summary': activity_summary,
         'quick_actions': quick_actions,
         'engagement_score': engagement_score,
+        'inquiries': inquiries,
+    })
+
+from django.views.decorators.http import require_POST
+import json
+
+@login_required
+@require_POST
+def toggle_saved_apartment(request):
+    """
+    Toggle the saved status of an apartment for the logged-in applicant.
+    Expects JSON payload: {"apartment_id": <int>}
+    """
+    try:
+        data = json.loads(request.body)
+        apartment_id = data.get('apartment_id')
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    if not apartment_id:
+        return JsonResponse({'error': 'Apartment ID is required'}, status=400)
+
+    # Ensure user is an applicant
+    if not getattr(request.user, 'is_applicant', False):
+        return JsonResponse({'error': 'Only applicants can save apartments'}, status=403)
+
+    try:
+        # Try to get linked applicant profile
+        applicant = Applicant.objects.get(user=request.user)
+    except Applicant.DoesNotExist:
+        # Fallback for legacy users where link might be missing but email matches
+        try:
+            applicant = Applicant.objects.get(email=request.user.email)
+            # Auto-link if found
+            if not applicant.user:
+                applicant.user = request.user
+                applicant.save()
+        except Applicant.DoesNotExist:
+            return JsonResponse({'error': 'Applicant profile not found'}, status=404)
+
+    apartment = get_object_or_404(Apartment, id=apartment_id)
+
+    # Toggle Logic
+    saved_obj, created = SavedApartment.objects.get_or_create(applicant=applicant, apartment=apartment)
+
+    if not created:
+        # If it already existed, delete it (Unsave)
+        saved_obj.delete()
+        is_saved = False
+        message = "Apartment removed from saved list"
+        
+        # Log activity
+        from .models import ApplicantActivity
+        ApplicantActivity.objects.create(
+            applicant=applicant,
+            activity_type='apartment_unfavorited',
+            description=f"Unfavorited apartment {apartment.unit_number} at {apartment.building.name}"
+        )
+    else:
+        # If created, it's now saved
+        is_saved = True
+        message = "Apartment saved successfully"
+        
+        # Log activity
+        from .models import ApplicantActivity
+        ApplicantActivity.objects.create(
+            applicant=applicant,
+            activity_type='apartment_favorited',
+            description=f"Favorited apartment {apartment.unit_number} at {apartment.building.name}"
+        )
+
+    return JsonResponse({
+        'success': True,
+        'is_saved': is_saved,
+        'message': message,
+        'apartment_id': apartment.id
     })

@@ -7,20 +7,14 @@
 <style>
     .sticky-map {
         position: sticky;
-        top: 80px;
-        height: calc(100vh - 180px);
+        top: 155px; /* Adjusted for horizontal filter bar */
+        height: calc(100vh - 200px);
         border-radius: 12px;
         overflow: hidden;
     }
     #map { width: 100%; height: 100%; }
-    .filter-sidebar {
-        position: sticky;
-        top: 80px;
-        height: calc(100vh - 180px);
-        overflow-y: auto;
-    }
     .scrollable-listings {
-        height: calc(100vh - 180px);
+        height: calc(100vh - 200px);
         overflow-y: auto;
         /* Hide scrollbar for Chrome, Safari and Opera */
         &::-webkit-scrollbar {
@@ -29,6 +23,85 @@
         /* Hide scrollbar for IE, Edge and Firefox */
         -ms-overflow-style: none;  /* IE and Edge */
         scrollbar-width: none;  /* Firefox */
+    }
+    .btn-check:checked + .btn-outline-secondary {
+        background-color: #000;
+        color: #fff;
+        border-color: #000;
+    }
+    /* Input group uniform styling */
+    .filter-dropdown .input-group {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        overflow: hidden;
+    }
+    .filter-dropdown .input-group:focus-within {
+        border-color: #ffd60a; /* --brand-yellow */
+        box-shadow: 0 0 0 0.2rem rgba(255, 214, 10, 0.25);
+    }
+    .filter-dropdown .input-group.is-invalid {
+        border-color: #dc3545 !important;
+        box-shadow: none;
+    }
+    .filter-dropdown .input-group .input-group-text,
+    .filter-dropdown .input-group .form-control,
+    .filter-dropdown .input-group .btn-clear-price {
+        border: none !important;
+        box-shadow: none !important;
+        background-color: #fff !important;
+    }
+    .filter-dropdown .input-group .btn-clear-price {
+        padding: 0 15px;
+        color: #adb5bd;
+        transition: color 0.2s;
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+    }
+    .filter-dropdown .input-group .btn-clear-price:hover {
+        color: #dc3545;
+    }
+    .filter-dropdown .input-group .form-control:focus {
+        background-color: #fff;
+    }
+    
+    /* Filter Chips Styling */
+    .filter-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding-top: 12px;
+        margin-top: -10px; /* Adjust spacing below filter bar */
+        margin-bottom: 20px;
+    }
+    .filter-chip {
+        display: inline-flex;
+        align-items: center;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 50px;
+        padding: 4px 12px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #495057;
+        transition: all 0.2s;
+    }
+    .filter-chip:hover {
+        background-color: #e9ecef;
+        border-color: #ced4da;
+    }
+    .filter-chip .btn-close-chip {
+        margin-left: 8px;
+        cursor: pointer;
+        color: #adb5bd;
+        font-size: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .filter-chip .btn-close-chip:hover {
+        color: #dc3545;
     }
 </style>
 {% endblock %}
@@ -42,162 +115,163 @@
         </button>
     </div>
 
-    <div class="row g-3">
-        <!-- Filter Sidebar (Desktop) -->
-        <div class="col-lg-2 d-none d-lg-block">
-            <div class="filter-sidebar pe-2">
-                <form id="filterForm" method="get">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="fw-bold mb-0">Filters</h5>
-                        <a href="{% url 'apartments_list' %}" class="text-decoration-none small">Reset</a>
-                    </div>
+    <!-- Horizontal Filter Bar -->
+    <div class="filter-bar d-none d-lg-block">
+        <div class="container-fluid">
+            <form id="filterForm" method="get">
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <h5 class="fw-bold mb-0 me-3">Filters</h5>
                     
-                    <div class="accordion" id="filterAccordion">
-                        <!-- Price -->
-                        <div class="accordion-item border-0 mb-2 shadow-sm rounded">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePrice">
-                                    Price
-                                </button>
-                            </h2>
-                            <div id="collapsePrice" class="accordion-collapse collapse {% if request.GET.min_price or request.GET.max_price %}show{% endif %}" data-bs-parent="#filterAccordion">
-                                <div class="accordion-body">
-                                    <div class="input-group mb-2">
-                                        <span class="input-group-text">$</span>
-                                        <input type="number" class="form-control" name="min_price" placeholder="Min" value="{{ request.GET.min_price }}">
-                                    </div>
-                                    <div class="input-group">
-                                        <span class="input-group-text">$</span>
-                                        <input type="number" class="form-control" name="max_price" placeholder="Max" value="{{ request.GET.max_price }}">
-                                    </div>
+                    <!-- Price Dropdown -->
+                    <div class="dropdown filter-dropdown">
+                        <button class="dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+                            {% if request.GET.min_price or request.GET.max_price %}<span class="filter-active-indicator"></span>{% endif %}
+                            Price
+                        </button>
+                        <div class="dropdown-menu shadow-lg border-0">
+                            <h6 class="dropdown-header px-0 mb-3 fw-bold text-dark">Monthly Price Range</h6>
+                            <div class="d-flex flex-column gap-3">
+                                <div class="input-group">
+                                    <span class="input-group-text text-muted">$</span>
+                                    <input type="text" class="form-control ps-0 currency-input" name="min_price" placeholder="Min" value="{{ request.GET.min_price }}">
+                                    <button class="btn btn-clear-price" type="button" title="Clear"><i class="fas fa-times"></i></button>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- Bedrooms -->
-                        <div class="accordion-item border-0 mb-2 shadow-sm rounded">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBeds">
-                                    Bedrooms
-                                </button>
-                            </h2>
-                            <div id="collapseBeds" class="accordion-collapse collapse {% if request.GET.min_bedrooms %}show{% endif %}" data-bs-parent="#filterAccordion">
-                                <div class="accordion-body">
-                                    <div class="d-flex flex-wrap gap-2">
-                                        {% for i in "01234"|make_list %}
-                                        <input type="radio" class="btn-check" name="min_bedrooms" id="bed-{{ i }}" value="{{ i }}" {% if request.GET.min_bedrooms == i %}checked{% endif %}>
-                                        <label class="btn btn-outline-secondary btn-sm flex-fill" for="bed-{{ i }}">{% if i == "0" %}Studio{% else %}{{ i }}+{% endif %}</label>
-                                        {% endfor %}
-                                    </div>
+                                <div class="input-group">
+                                    <span class="input-group-text text-muted">$</span>
+                                    <input type="text" class="form-control ps-0 currency-input" name="max_price" placeholder="Max" value="{{ request.GET.max_price }}">
+                                    <button class="btn btn-clear-price" type="button" title="Clear"><i class="fas fa-times"></i></button>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- Bathrooms -->
-                        <div class="accordion-item border-0 mb-2 shadow-sm rounded">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBaths">
-                                    Bathrooms
-                                </button>
-                            </h2>
-                            <div id="collapseBaths" class="accordion-collapse collapse {% if request.GET.min_bathrooms %}show{% endif %}" data-bs-parent="#filterAccordion">
-                                <div class="accordion-body">
-                                    <div class="d-flex flex-wrap gap-2">
-                                        {% for i in "123"|make_list %}
-                                        <input type="radio" class="btn-check" name="min_bathrooms" id="bath-{{ i }}" value="{{ i }}" {% if request.GET.min_bathrooms == i %}checked{% endif %}>
-                                        <label class="btn btn-outline-secondary btn-sm flex-fill" for="bath-{{ i }}">{{ i }}+</label>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Neighborhoods -->
-                        <div class="accordion-item border-0 mb-2 shadow-sm rounded">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseNeigh">
-                                    Neighborhoods
-                                </button>
-                            </h2>
-                            <div id="collapseNeigh" class="accordion-collapse collapse {% if request.GET.neighborhoods %}show{% endif %}" data-bs-parent="#filterAccordion">
-                                <div class="accordion-body">
-                                    {% for value, label in neighborhood_choices %}
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="neighborhoods" value="{{ value }}" id="n-{{ value }}" {% if value in request.GET.neighborhoods %}checked{% endif %}>
-                                        <label class="form-check-label small" for="n-{{ value }}">{{ label }}</label>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Amenities -->
-                        <div class="accordion-item border-0 mb-2 shadow-sm rounded">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAmenities">
-                                    Amenities
-                                </button>
-                            </h2>
-                            <div id="collapseAmenities" class="accordion-collapse collapse {% if request.GET.amenities %}show{% endif %}" data-bs-parent="#filterAccordion">
-                                <div class="accordion-body">
-                                    {% for amenity in all_amenities %}
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="amenities" value="{{ amenity.id }}" id="a-{{ amenity.id }}" {% if amenity.id|stringformat:"i" in request.GET.amenities %}checked{% endif %}>
-                                        <label class="form-check-label small" for="a-{{ amenity.id }}">{{ amenity.name }}</label>
-                                    </div>
-                                    {% endfor %}
+                                <div id="priceRangeWarning" class="text-danger small d-none" style="font-size: 0.75rem;">
+                                    <i class="fas fa-exclamation-circle me-1"></i>Max price must be greater than min.
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-dark w-100 mt-3">Apply Filters</button>
-                </form>
+
+                    <!-- Beds & Baths Dropdown -->
+                    <div class="dropdown filter-dropdown">
+                        <button class="dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+                            {% if request.GET.min_bedrooms or request.GET.min_bathrooms %}<span class="filter-active-indicator"></span>{% endif %}
+                            <span id="bedsBathsLabel">Beds / Baths</span>
+                        </button>
+                        <div class="dropdown-menu shadow-lg border-0" style="min-width: 320px;">
+                            <h6 class="dropdown-header px-0 mb-2 fw-bold text-dark">Number of Bedrooms</h6>
+                            <div class="d-flex flex-wrap gap-1 mb-2">
+                                <input type="radio" class="btn-check" name="min_bedrooms" id="bed-any" value="" {% if not request.GET.min_bedrooms %}checked{% endif %}>
+                                <label class="btn btn-outline-secondary btn-sm px-3 rounded-pill" for="bed-any">Any</label>
+                                {% for i in "012345"|make_list %}
+                                <input type="radio" class="btn-check" name="min_bedrooms" id="bed-{{ i }}" value="{{ i }}" {% if request.GET.min_bedrooms == i %}checked{% endif %}>
+                                <label class="btn btn-outline-secondary btn-sm px-3 rounded-pill" for="bed-{{ i }}">{% if i == "0" %}Studio{% elif i == "5" %}5+{% else %}{{ i }}{% if not request.GET.exact_bedrooms == 'on' %}+{% endif %}{% endif %}</label>
+                                {% endfor %}
+                            </div>
+                            <div class="form-check mb-4">
+                                <input class="form-check-input" type="checkbox" name="exact_bedrooms" id="exactBedrooms" {% if request.GET.exact_bedrooms == 'on' %}checked{% endif %}>
+                                <label class="form-check-label small fw-bold text-muted" for="exactBedrooms">
+                                    Use exact match
+                                </label>
+                            </div>
+
+                            <h6 class="dropdown-header px-0 mb-2 fw-bold text-dark">Number of Bathrooms</h6>
+                            <div class="d-flex flex-wrap gap-1">
+                                <input type="radio" class="btn-check" name="min_bathrooms" id="bath-any" value="" {% if not request.GET.min_bathrooms %}checked{% endif %}>
+                                <label class="btn btn-outline-secondary btn-sm px-3 rounded-pill" for="bath-any">Any</label>
+                                {% for i in "123"|make_list %}
+                                <input type="radio" class="btn-check" name="min_bathrooms" id="bath-{{ i }}" value="{{ i }}" {% if request.GET.min_bathrooms == i %}checked{% endif %}>
+                                <label class="btn btn-outline-secondary btn-sm px-3 rounded-pill" for="bath-{{ i }}">{{ i }}+</label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Neighborhoods Dropdown -->
+                    <div class="dropdown filter-dropdown">
+                        <button class="dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+                            {% if selected_neighborhoods %}<span class="filter-active-indicator"></span>{% endif %}
+                            Neighborhoods
+                        </button>
+                        <div class="dropdown-menu" style="max-height: 400px; overflow-y: auto;">
+                            <h6 class="dropdown-header px-0 mb-2 fw-bold text-dark">Neighborhoods</h6>
+                            {% for value, label in neighborhood_choices %}
+                            <div class="form-check py-1">
+                                <input class="form-check-input" type="checkbox" name="neighborhoods" value="{{ value }}" id="n-{{ value }}" {% if value in selected_neighborhoods %}checked{% endif %}>
+                                <label class="form-check-label small" for="n-{{ value }}">{{ label }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Amenities Dropdown -->
+                    <div class="dropdown filter-dropdown">
+                        <button class="dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+                            {% if selected_amenities %}<span class="filter-active-indicator"></span>{% endif %}
+                            Amenities
+                        </button>
+                        <div class="dropdown-menu" style="max-height: 400px; overflow-y: auto;">
+                            <h6 class="dropdown-header px-0 mb-2 fw-bold text-dark">Amenities</h6>
+                            {% for amenity in all_amenities %}
+                            <div class="form-check py-1">
+                                <input class="form-check-input" type="checkbox" name="amenities" value="{{ amenity.id }}" id="a-{{ amenity.id }}" {% if amenity.id|stringformat:"i" in selected_amenities %}checked{% endif %}>
+                                <label class="form-check-label small" for="a-{{ amenity.id }}">{{ amenity.name }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="ms-auto flex-shrink-0">
+                        <a href="{% url 'apartments_list' %}" class="btn btn-link link-dark text-decoration-none small fw-bold">Reset</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Active Filter Chips -->
+    <div class="row px-lg-3">
+        <div class="col-12">
+            <div id="activeFilters" class="filter-chips">
+                {% if active_filters %}
+                    {% for filter in active_filters %}
+                    <div class="filter-chip shadow-sm" data-field="{{ filter.field }}" data-value="{{ filter.value }}">
+                        {{ filter.label }}
+                        <span class="btn-close-chip"><i class="fas fa-times"></i></span>
+                    </div>
+                    {% endfor %}
+                {% endif %}
             </div>
         </div>
+    </div>
 
+    <div class="row g-4 px-lg-3">
         <!-- Main Content -->
-        <div class="col-12 col-lg-6">
-            <div class="scrollable-listings pe-2">
-            <!-- Smart Matches Header -->
-            <!-- Smart Matches / CTA Section -->
-            {% include 'apartments/includes/smart_matches_cta.html' %}
+        <div class="col-12 col-lg-8">
+            <div class="scrollable-listings pe-lg-3">
+                <!-- Smart Matches Header -->
+                {% include 'apartments/includes/smart_matches_cta.html' %}
 
-
-            <!-- All Listings Header -->
-            <div class="d-flex align-items-center justify-content-between mb-3">
-                <h5 class="fw-bold mb-0">{{ total_results }} Apartments</h5>
-                <select class="form-select form-select-sm w-auto" onchange="updateSort(this.value)">
-                    <option value="relevant" {% if is_sort_relevant %}selected{% endif %}>Relevant</option>
-                    <option value="price_asc" {% if is_sort_price_asc %}selected{% endif %}>Price: Low to High</option>
-                    <option value="price_desc" {% if is_sort_price_desc %}selected{% endif %}>Price: High to Low</option>
-                    <option value="newest" {% if is_sort_newest %}selected{% endif %}>Newest</option>
-                </select>
-            </div>
-
-            <!-- Listings Grid -->
-            <div class="row g-3" id="apartmentsGrid">
-                {% for apartment in apartments %}
-                <div class="col-12 col-md-6 apartment-card" 
-                     data-apartment-id="{{ apartment.id }}" 
-                     data-price="{{ apartment.rent_price }}" 
-                     data-lat="{{ apartment.building.latitude|default:40.7128 }}" 
-                     data-lng="{{ apartment.building.longitude|default:-74.0060 }}">
-                    <!-- Shared Component: Re-using the same card template as the Smart Matches section above -->
-                    {% include 'includes/smart_match_card.html' %}
+                <!-- All Listings Header -->
+                <div class="d-flex align-items-center justify-content-between mb-3 mt-4">
+                    <h5 class="fw-bold mb-0 text-dark"><span id="totalResultsCount">{{ total_results }}</span> Apartments Found</h5>
+                    <div class="d-flex align-items-center gap-2">
+                        <div id="filterLoading" class="spinner-border spinner-border-sm text-dark d-none" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <select class="form-select form-select-sm border-0 bg-light rounded-3 px-3 py-2 w-auto fw-semibold" id="sortSelect">
+                            <option value="relevant" {% if is_sort_relevant %}selected{% endif %}>Relevant</option>
+                            <option value="price_asc" {% if is_sort_price_asc %}selected{% endif %}>Price: Low to High</option>
+                            <option value="price_desc" {% if is_sort_price_desc %}selected{% endif %}>Price: High to Low</option>
+                            <option value="newest" {% if is_sort_newest %}selected{% endif %}>Newest</option>
+                        </select>
+                    </div>
                 </div>
-                {% empty %}
-                <div class="col-12 text-center py-5">
-                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
-                    <h4>No apartments found</h4>
-                    <p class="text-muted">Try adjusting your filters</p>
-                    <a href="{% url 'apartments_list' %}" class="btn btn-outline-dark">Clear All Filters</a>
+
+                <!-- Listings Grid -->
+                <div class="row g-3" id="apartmentsGrid">
+                    {% include 'apartments/includes/apartment_grid_items.html' %}
                 </div>
-                {% endfor %}
-            </div>
             </div>
         </div>
 
-        <!-- Map -->
+        <!-- Map container -->
         <div class="col-lg-4 d-none d-lg-block">
             <div class="sticky-map shadow-sm">
                 <div id="map"></div>
@@ -213,22 +287,10 @@
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
     </div>
     <div class="offcanvas-body">
-        <!-- Clone of desktop form will be injected here via JS or just duplicate markup -->
-        <p class="text-muted small">Use the desktop view for full filtering experience or implement mobile form clone here.</p>
-        <!-- For simplicity in this refactor, I'll just suggest using the desktop view or duplicating the form. 
-             Ideally we'd use htmx or just one form outside the grid. 
-             Let's just duplicate the form content for now to ensure it works. -->
-        <form method="get">
-            <!-- Simplified mobile filters -->
-            <div class="mb-3">
-                <label class="form-label fw-bold">Price Range</label>
-                <div class="d-flex gap-2">
-                    <input type="number" class="form-control" name="min_price" placeholder="Min" value="{{ request.GET.min_price }}">
-                    <input type="number" class="form-control" name="max_price" placeholder="Max" value="{{ request.GET.max_price }}">
-                </div>
-            </div>
-            <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
-        </form>
+        <div id="mobileFilterContainer">
+            <!-- Form will be cloned here for mobile if needed, but for now let's just make the desktop form work for all -->
+        </div>
+        <p class="text-muted small">Filters will update results automatically.</p>
     </div>
 </div>
 
@@ -237,62 +299,401 @@
 {% block extra_js %}
 <script src='https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.js'></script>
 <script>
-
-
-    function updateSort(value) {
-        const url = new URL(window.location.href);
-        url.searchParams.set('sort', value);
-        window.location.href = url.toString();
+    let map;
+    let markers = [];
+    const mapboxToken = '{{ mapbox_token }}';
+    const filterForm = document.getElementById('filterForm');
+    const apartmentsGrid = document.getElementById('apartmentsGrid');
+    const totalResultsCount = document.getElementById('totalResultsCount');
+    const filterLoading = document.getElementById('filterLoading');
+    const sortSelect = document.getElementById('sortSelect');
+    
+    // Debounce function to prevent excessive calls
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
-        // Mapbox Init
-        const token = '{{ mapbox_token }}';
-        if (token && token !== 'None') {
-            mapboxgl.accessToken = token;
+    // Function to update markers on the map
+    function updateMapMarkers(apartments) {
+        if (!map) {
+            console.warn('Map not initialized yet');
+            return;
+        }
+
+        console.log(`Updating ${apartments.length} markers`);
+
+        // Clear existing markers
+        markers.forEach(m => m.remove());
+        markers = [];
+
+        const bounds = new mapboxgl.LngLatBounds();
+        let hasValidCoords = false;
+
+        apartments.forEach(apt => {
+            // Use lat/lng check consistent with template defaults
+            const lat = parseFloat(apt.latitude) || 40.7128;
+            const lng = parseFloat(apt.longitude) || -74.0060;
+            const price = apt.rent || 0;
+            
+            if (!isNaN(lat) && !isNaN(lng)) {
+                hasValidCoords = true;
+                const el = document.createElement('div');
+                el.className = 'map-marker';
+                el.innerHTML = `<div class="badge bg-dark shadow-sm border border-white p-2">$${Math.floor(price).toLocaleString()}</div>`;
+                el.style.cursor = 'pointer';
+
+                try {
+                    const marker = new mapboxgl.Marker(el)
+                        .setLngLat([lng, lat])
+                        .addTo(map);
+                    
+                    markers.push(marker);
+                    bounds.extend([lng, lat]);
+
+                    el.addEventListener('click', () => {
+                        const card = document.querySelector(`.apartment-card[data-apartment-id="${apt.id}"]`);
+                        if (card) {
+                            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            card.classList.add('ring-2', 'ring-warning');
+                            setTimeout(() => card.classList.remove('ring-2', 'ring-warning'), 2000);
+                        }
+                    });
+                } catch (err) {
+                    console.error('Error adding marker:', err, apt);
+                }
+            }
+        });
+        
+        if (hasValidCoords && markers.length > 0) {
             try {
-                const map = new mapboxgl.Map({
+                map.fitBounds(bounds, { padding: 50, maxZoom: 15, duration: 1000 });
+            } catch (err) {
+                console.warn('fitBounds failed:', err);
+            }
+        } else {
+            console.log('No valid coordinates to fit bounds');
+        }
+    }
+
+    // Function to perform AJAX search
+    const performSearch = async () => {
+        filterLoading.classList.remove('d-none');
+        apartmentsGrid.style.opacity = '0.6';
+
+        const formData = new FormData(filterForm);
+        
+        // Clean currency inputs before sending to server
+        const minPriceInput = filterForm.querySelector('input[name="min_price"]');
+        const maxPriceInput = filterForm.querySelector('input[name="max_price"]');
+        
+        if (minPriceInput && minPriceInput.value) {
+            formData.set('min_price', minPriceInput.value.replace(/,/g, ''));
+        }
+        if (maxPriceInput && maxPriceInput.value) {
+            formData.set('max_price', maxPriceInput.value.replace(/,/g, ''));
+        }
+
+        const params = new URLSearchParams(formData);
+        
+        // Add sort if present
+        if (sortSelect) {
+            params.set('sort', sortSelect.value);
+        }
+
+        const url = `${window.location.pathname}?${params.toString()}`;
+        
+        // Update URL without reload
+        window.history.pushState({}, '', url);
+
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) throw new Error('Search failed');
+
+            const data = await response.json();
+            
+            // Render active filter chips
+            const chipsContainer = document.getElementById('activeFilters');
+            if (chipsContainer && data.active_filters) {
+                if (data.active_filters.length > 0) {
+                    chipsContainer.innerHTML = data.active_filters.map(f => `
+                        <div class="filter-chip shadow-sm" data-field="${f.field}" data-value="${f.value}">
+                            ${f.label}
+                            <span class="btn-close-chip"><i class="fas fa-times"></i></span>
+                        </div>
+                    `).join('');
+                } else {
+                    chipsContainer.innerHTML = '';
+                }
+            }
+
+            // Update grid and results count
+            apartmentsGrid.innerHTML = data.html;
+            totalResultsCount.textContent = data.total_results;
+            
+            // Update map markers
+            updateMapMarkers(data.apartments);
+            
+            // Re-apply any UI interactions if needed
+        } catch (error) {
+            console.error('Filter error:', error);
+        } finally {
+            filterLoading.classList.add('d-none');
+            apartmentsGrid.style.opacity = '1';
+        }
+    };
+
+    const debouncedSearch = debounce(performSearch, 500);
+
+    // Mapbox Init
+    function initMap() {
+        if (mapboxToken && mapboxToken !== 'None') {
+            mapboxgl.accessToken = mapboxToken;
+            try {
+                map = new mapboxgl.Map({
                     container: 'map',
                     style: 'mapbox://styles/mapbox/light-v11',
                     center: [-74.0060, 40.7128],
                     zoom: 12
                 });
                 map.addControl(new mapboxgl.NavigationControl(), 'bottom-right');
-
-                const apartmentCards = document.querySelectorAll('.apartment-card');
-                const bounds = new mapboxgl.LngLatBounds();
-
-                apartmentCards.forEach(card => {
-                    const lat = parseFloat(card.dataset.lat);
-                    const lng = parseFloat(card.dataset.lng);
-                    const price = card.dataset.price;
-                    
-                    if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
-                        const el = document.createElement('div');
-                        el.className = 'map-marker';
-                        el.innerHTML = `<div class="badge bg-dark shadow-sm border border-white p-2">$${Math.floor(price).toLocaleString()}</div>`;
-                        el.style.cursor = 'pointer';
-
-                        new mapboxgl.Marker(el)
-                            .setLngLat([lng, lat])
-                            .addTo(map);
-                            
-                        bounds.extend([lng, lat]);
-
-                        el.addEventListener('click', () => {
-                            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            card.classList.add('ring-2', 'ring-warning');
-                            setTimeout(() => card.classList.remove('ring-2', 'ring-warning'), 2000);
-                        });
-                    }
-                });
                 
-                if (apartmentCards.length > 0) {
-                    map.fitBounds(bounds, { padding: 50, maxZoom: 15 });
-                }
+                // Initial markers from data-attributes of existing cards
+                const initialApartments = [];
+                document.querySelectorAll('.apartment-card').forEach(card => {
+                    initialApartments.push({
+                        id: card.dataset.apartmentId,
+                        latitude: card.dataset.lat,
+                        longitude: card.dataset.lng,
+                        rent: card.dataset.price
+                    });
+                });
+                updateMapMarkers(initialApartments);
             } catch (e) {
                 console.error('Map error:', e);
             }
+        }
+    }
+
+    function updateBedsBathsLabel() {
+        const exactMatch = document.getElementById('exactBedrooms').checked;
+        
+        // Update bedroom labels inside the dropdown to show/hide the "+" sign
+        document.querySelectorAll('.filter-dropdown label[for^="bed-"]').forEach(label => {
+            const forAttr = label.getAttribute('for');
+            if (forAttr === 'bed-any' || forAttr === 'bed-0' || forAttr === 'bed-5') return;
+            const val = forAttr.split('-')[1];
+            label.innerText = val + (exactMatch ? '' : '+');
+        });
+    }
+
+    function validatePriceRange() {
+        const minPriceInput = filterForm.querySelector('input[name="min_price"]');
+        const maxPriceInput = filterForm.querySelector('input[name="max_price"]');
+        const warning = document.getElementById('priceRangeWarning');
+        
+        if (!minPriceInput || !maxPriceInput || !warning) return true;
+
+        const min = parseFloat(minPriceInput.value.replace(/,/g, '')) || 0;
+        const max = parseFloat(maxPriceInput.value.replace(/,/g, '')) || Infinity;
+
+        if (max !== Infinity && max < min) {
+            warning.classList.remove('d-none');
+            maxPriceInput.closest('.input-group').classList.add('is-invalid');
+            return false;
+        } else {
+            warning.classList.add('d-none');
+            maxPriceInput.closest('.input-group').classList.remove('is-invalid');
+            return true;
+        }
+    }
+
+    function setupCurrencyInput(input) {
+        if (!input) return;
+
+        const formatCurrency = (value) => {
+            const numeric = value.replace(/[^0-9.]/g, '');
+            if (!numeric) return '';
+            const parts = numeric.split('.');
+            const whole = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            // Ensure .XX format if user types a dot
+            const decimal = parts[1] !== undefined ? '.' + parts[1].slice(0, 2) : '';
+            return whole + decimal;
+        };
+
+        const handleInput = (event) => {
+            const start = input.selectionStart;
+            const oldValue = input.value;
+            const newValue = formatCurrency(oldValue);
+            
+            if (oldValue !== newValue) {
+                input.value = newValue;
+                // Basic cursor position preservation
+                const diff = newValue.length - oldValue.length;
+                input.setSelectionRange(start + diff, start + diff);
+            }
+        };
+
+        input.addEventListener('input', (e) => {
+            handleInput(e);
+            validatePriceRange();
+            debouncedSearch();
+        });
+        
+        input.addEventListener('blur', () => { 
+            if (input.value) {
+                const parts = input.value.replace(/,/g, '').split('.');
+                const whole = parts[0];
+                const decimal = parts[1] || '00';
+                input.value = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '.' + decimal.slice(0, 2).padEnd(2, '0');
+            }
+        });
+
+        // Initial format
+        if (input.value) {
+            input.value = formatCurrency(input.value);
+            // On page load, also pad with .00 if needed
+            if (!input.value.includes('.')) {
+                input.value += '.00';
+            } else if (input.value.split('.')[1].length === 1) {
+                input.value += '0';
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initMap();
+
+        // Initialize currency inputs
+        filterForm.querySelectorAll('.currency-input').forEach(setupCurrencyInput);
+
+        // Handle togglable radio buttons (Bedrooms/Bathrooms)
+        // Standard radio buttons don't allow deselection, so we add a click listener
+        filterForm.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('click', (e) => {
+                // If it was already checked, uncheck it
+                if (radio.dataset.wasChecked === 'true') {
+                    radio.checked = false;
+                    radio.dataset.wasChecked = 'false';
+                    // Trigger search since 'change' won't fire for manual unchecking
+                    performSearch();
+                } else {
+                    // Update all radios in the group
+                    const name = radio.name;
+                    filterForm.querySelectorAll(`input[name="${name}"]`).forEach(r => {
+                        r.dataset.wasChecked = (r === radio).toString();
+                    });
+                }
+            });
+
+            // Set initial state
+            if (radio.checked) {
+                radio.dataset.wasChecked = 'true';
+            }
+        });
+
+        // Listen for all input changes in the filter form
+        // Using 'change' is generally more reliable for checkboxes and radios
+        filterForm.addEventListener('change', (e) => {
+            if (e.target.type !== 'number' && e.target.type !== 'text') {
+                console.log('Filter change triggered:', e.target.name, e.target.value);
+                performSearch();
+            }
+        });
+
+        // For text/number inputs, we want 'input' with debouncing
+        filterForm.addEventListener('input', (e) => {
+            if ((e.target.type === 'number' || e.target.type === 'text') && !e.target.classList.contains('currency-input')) {
+                console.log('Filter input triggered (debounced):', e.target.name, e.target.value);
+                debouncedSearch();
+            }
+        });
+
+        // Prevention of form submission (though the button is gone, enter key might trigger it)
+        filterForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            performSearch();
+        });
+
+        // Sort change listener
+        sortSelect.addEventListener('change', performSearch);
+
+        // Clear Price Buttons
+        document.querySelectorAll('.btn-clear-price').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const input = this.closest('.input-group').querySelector('input');
+                input.value = '';
+                validatePriceRange();
+                debouncedSearch();
+            });
+        });
+
+        // Exact Match & Beds/Baths Label Updates
+        const exactCheckbox = document.getElementById('exactBedrooms');
+        if (exactCheckbox) {
+            exactCheckbox.addEventListener('change', () => {
+                updateBedsBathsLabel();
+                performSearch();
+            });
+        }
+
+        filterForm.querySelectorAll('input[name="min_bedrooms"], input[name="min_bathrooms"]').forEach(input => {
+            input.addEventListener('change', updateBedsBathsLabel);
+        });
+
+        // Initialize label on load
+        updateBedsBathsLabel();
+
+        // Handle Chip Removal
+        const activeFiltersContainer = document.getElementById('activeFilters');
+        if (activeFiltersContainer) {
+            activeFiltersContainer.addEventListener('click', function(e) {
+                const closeBtn = e.target.closest('.btn-close-chip');
+                if (!closeBtn) return;
+
+                const chip = closeBtn.closest('.filter-chip');
+                const field = chip.dataset.field;
+                const value = chip.dataset.value;
+
+                // Find and clear the input
+                // For multi-select, match by name and value
+                let input = filterForm.querySelector(`[name="${field}"][value="${value}"]`);
+                // For single inputs, match by name only
+                if (!input) input = filterForm.querySelector(`[name="${field}"]`);
+
+                if (input) {
+                    if (input.type === 'checkbox' || input.type === 'radio') {
+                        input.checked = false;
+                        if (input.type === 'radio') {
+                            input.dataset.wasChecked = 'false';
+                        }
+                    } else {
+                        input.value = '';
+                    }
+
+                    // Trigger logical updates
+                    if (field === 'min_price' || field === 'max_price') {
+                        validatePriceRange();
+                    }
+                    if (['min_bedrooms', 'min_bathrooms', 'exact_bedrooms'].includes(field)) {
+                        updateBedsBathsLabel();
+                    }
+
+                    performSearch();
+                }
+            });
         }
     });
 </script>

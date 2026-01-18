@@ -47,7 +47,8 @@ def user_login(request):
             
             if user is not None:
                 login(request, user)
-                messages.success(request, f"Welcome back, {user.email}!")
+                name_to_display = user.first_name if user.first_name else user.email
+                messages.success(request, f"Welcome back, {name_to_display}!")
                 
                 # FIX: Validate 'next' parameter to prevent open redirect attacks
                 next_url = request.GET.get('next')
@@ -417,22 +418,33 @@ def broker_dashboard(request):
     
     # Get broker's assigned applicants with profile completion
     from applicants.apartment_matching import get_apartment_matches_for_applicant
-    assigned_applicants = Applicant.objects.filter(assigned_broker=request.user)
+    from applicants.smart_insights import SmartInsights
+    assigned_applicants = Applicant.objects.filter(assigned_broker=request.user).prefetch_related('photos')
     
     # Calculate profile completion and matches for each applicant
+    # Calculate profile completion and matches for each applicant
     for applicant in assigned_applicants:
-        # Calculate profile completion percentage
-        required_fields = [
-            applicant.first_name,
-            applicant.last_name,
-            applicant.email,
-            applicant.phone_number,
-            applicant.date_of_birth,
-            applicant.max_rent_budget,
-            applicant.desired_move_in_date,
-        ]
-        completed = sum(1 for field in required_fields if field)
-        applicant.profile_completion = int((completed / len(required_fields)) * 100)
+        # Calculate Smart Insights
+        insights = SmartInsights.analyze_applicant(applicant)
+        applicant.smart_insights_score = insights['overall_score']
+        
+        # Determine score color
+        if applicant.smart_insights_score >= 80:
+            applicant.smart_insights_color = 'success'
+        elif applicant.smart_insights_score >= 60:
+            applicant.smart_insights_color = 'primary'
+        elif applicant.smart_insights_score >= 40:
+            applicant.smart_insights_color = 'warning'
+        else:
+            applicant.smart_insights_color = 'danger'
+
+        # Get Photo
+        photo = applicant.photos.first()
+        applicant.first_photo_url = photo.thumbnail_url() if photo else None
+
+        # Calculate profile completion - match logic used in applicant dashboard
+        completion_status = applicant.get_field_completion_status()
+        applicant.profile_completion = completion_status['overall']['overall_completion_percentage']
         
         # Check if can calculate matches
         applicant.can_match = bool(applicant.max_rent_budget and applicant.desired_move_in_date)
@@ -440,7 +452,7 @@ def broker_dashboard(request):
         # Get match count if profile allows
         if applicant.can_match:
             try:
-                matches = get_apartment_matches_for_applicant(applicant, limit=10)
+                matches = get_apartment_matches_for_applicant(applicant)
                 applicant.match_count = len(matches)
                 applicant.top_matches = matches[:3] if matches else []
             except:
@@ -528,23 +540,20 @@ def applicant_dashboard(request):
             status__in=['draft', 'NEW']  # Hide drafts and NEW applications from applicants
         ).order_by('-created_at')
         
-        # Get profile completion status - using comprehensive field tracking
+        # Get profile completion status - using the new weighted, context-aware logic
         completion_status = applicant.get_field_completion_status()
-        completion_percentage = completion_status['overall']['overall_completion_percentage']
+        completion_percentage = completion_status['overall_completion_percentage']
 
-        # Build missing fields list from sections
-        missing_fields = {}
-        for section_name, section_data in completion_status['sections'].items():
-            section_missing = [
-                field_data['label'] 
-                for field_name, field_data in section_data['fields'].items() 
-                if not field_data['filled']
-            ]
-            if section_missing:
-                missing_fields[section_name] = section_missing
-
-        # Get next steps (keep using ProfileProgressService for this)
-        next_steps = ProfileProgressService.get_next_profile_steps(applicant)
+        # Get next steps based on the most incomplete step
+        next_steps = []
+        for step_num, step_data in completion_status['steps'].items():
+            if step_data['pct'] < 100:
+                next_steps.append(f"Complete Step {step_num}: {', '.join(step_data['missing'][:3])}...")
+                break
+        
+        # If no steps incomplete, but percentage < 100 (shouldn't happen with new logic but for safety)
+        if not next_steps and completion_percentage < 100:
+            next_steps = ["Update your profile to 100% to unlock all matches."]
                 
         # Always try to get apartment matches
         apartment_matches = []
@@ -552,12 +561,19 @@ def applicant_dashboard(request):
 
         if can_show_matches:
             try:
-                apartment_matches = get_apartment_matches_for_applicant(applicant, limit=6)
+                apartment_matches = get_apartment_matches_for_applicant(applicant)
             except Exception as e:
                 # Log error but don't break dashboard
                 import logging
                 logging.error(f"Error getting apartment matches for applicant {applicant.id}: {str(e)}")
         
+        # Get saved apartments
+        saved_apartments = []
+        try:
+             saved_apartments = applicant.saved_apartments.select_related('apartment', 'apartment__building').all().order_by('-saved_at')
+        except Exception:
+             pass
+
     except Applicant.DoesNotExist:
         applicant = None
         applications = []
@@ -565,6 +581,7 @@ def applicant_dashboard(request):
         missing_fields = {}
         next_steps = ["Create your applicant profile to get started"]
         apartment_matches = []
+        saved_apartments = []
     
     context = {
         'user': request.user,
@@ -574,6 +591,7 @@ def applicant_dashboard(request):
         'profile_incomplete': completion_percentage < 100,
         'next_steps': next_steps,
         'apartment_matches': apartment_matches,
+        'saved_apartments': saved_apartments,
         'has_matches': len(apartment_matches) > 0,
         'can_show_matches': can_show_matches,
     }
@@ -777,7 +795,51 @@ def admin_create_account(request, account_type):
         'account_type': account_type,
         'account_type_title': account_type.title()
     })
+    return render(request, 'users/admin/create_account.html', {
+        'account_type': account_type,
+        'account_type_title': account_type.title()
+    })
 
+
+def public_broker_profile(request, broker_id):
+    """
+    Public profile page for a broker.
+    Visible to applicants.
+    """
+    # Get user and verify they are a broker
+    broker_user = get_object_or_404(User, id=broker_id, is_broker=True)
+    
+    # Get their profile
+    from .profiles_models import BrokerProfile
+    try:
+        broker_profile = BrokerProfile.objects.get(user=broker_user)
+    except BrokerProfile.DoesNotExist:
+        # Fallback if profile missing but user is broker (shouldn't happen)
+        broker_profile = None
+
+    # Get their listings
+    from apartments.models import Apartment
+    # Assuming apartments are linked via building
+    active_listings = Apartment.objects.filter(
+        building__brokers=broker_user,
+        status='available'
+    ).select_related('building').prefetch_related('images')
+    
+    # Statistics
+    total_listings = active_listings.count()
+    rented_count = Apartment.objects.filter(
+        building__brokers=broker_user,
+        status='rented'
+    ).count()
+
+    context = {
+        'broker': broker_user,
+        'profile': broker_profile,
+        'active_listings': active_listings,
+        'total_listings': total_listings,
+        'rented_count': rented_count,
+    }
+    return render(request, 'users/public_profile_broker.html', context)
 
 @require_superuser_or_staff  
 def broker_leaderboard(request):

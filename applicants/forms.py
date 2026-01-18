@@ -104,7 +104,7 @@ def validate_email_domain(value):
         raise ValidationError("Temporary email addresses are not allowed.")
 
 def validate_currency_amount(value):
-    """Validate currency amounts with reasonable limits"""
+    """Validate currency amounts for monthly rent/budget"""
     if value is None:
         return  # Optional field
     
@@ -118,6 +118,18 @@ def validate_currency_amount(value):
     # Check for suspiciously low amounts that might indicate data entry errors
     if value > 0 and value < 100:
         raise ValidationError("Minimum budget is $100 per month.")
+
+def validate_annual_income(value):
+    """Validate annual income amounts"""
+    if value is None:
+        return # Optional field
+        
+    if value < 0:
+        raise ValidationError("Amount cannot be negative.")
+        
+    # Set reasonable limits for annual income (max $100,000,000)
+    if value > 100000000:
+        raise ValidationError("Amount exceeds maximum allowed limit.")
 
 def sanitize_text_input(value):
     """Sanitize text input to prevent XSS"""
@@ -265,6 +277,40 @@ class ApplicantBasicInfoForm(forms.ModelForm):
     phone_number = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(555) 555-5555'}))
     email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'email@example.com'}))
 
+    # SMS and Phone Verification Fields
+    verify_phone = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input',
+            'data-verify-phone': 'true'
+        }),
+        label="Verify my phone number (recommended for security)"
+    )
+
+    sms_opt_in = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input',
+            'data-sms-consent': 'true'
+        }),
+        label="Send me SMS updates about my application status",
+        help_text="Message and data rates may apply. Reply STOP to unsubscribe."
+    )
+
+    tcpa_consent = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input',
+            'data-tcpa-consent': 'true'
+        }),
+        label="I agree to receive automated text messages from DoorWay",
+        help_text=(
+            "By checking this box, you consent to receive automated text messages from DoorWay "
+            "regarding your rental application. Message frequency varies. Message and data rates may apply. "
+            "Text STOP to cancel. Text HELP for help. View our Privacy Policy and Terms of Service."
+        )
+    )
+
     class Meta:
         model = Applicant
         fields = [
@@ -290,7 +336,7 @@ class ApplicantBasicInfoForm(forms.ModelForm):
                 'data-placeholder': "Driver's License State"
             }),
             'monthly_rent': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': 'form-control currency-input',
                 'type': 'text',
                 'placeholder': 'Monthly Rent'
             }),
@@ -305,6 +351,18 @@ class ApplicantBasicInfoForm(forms.ModelForm):
     def clean(self):
         """Cross-field validation and rate limiting"""
         cleaned_data = super().clean()
+        
+        # SMS consent validation
+        phone_number = cleaned_data.get('phone_number')
+        sms_opt_in = cleaned_data.get('sms_opt_in')
+        tcpa_consent = cleaned_data.get('tcpa_consent')
+        
+        if sms_opt_in:
+            if not phone_number:
+                self.add_error('phone_number', "Please provide a phone number to receive SMS updates")
+            
+            if not tcpa_consent:
+                self.add_error('tcpa_consent', "You must agree to receive text messages to opt-in for SMS updates")
         
         # Rate limiting - use IP + user ID if available
         request = getattr(self, 'request', None)
@@ -330,6 +388,61 @@ class ApplicantBasicInfoForm(forms.ModelForm):
                 pass
         return self.cleaned_data.get('monthly_rent')
 
+    def save(self, commit=True):
+        applicant = super().save(commit=commit)
+        
+        # Save SMS preferences
+        if self.request and self.request.user.is_authenticated:
+            # We import here to avoid circular dependencies
+            from users.sms_models import SMSPreferences
+            
+            sms_opt_in = self.cleaned_data.get('sms_opt_in', False)
+            tcpa_consent = self.cleaned_data.get('tcpa_consent', False)
+            phone_number = self.cleaned_data.get('phone_number')
+            verify_phone = self.cleaned_data.get('verify_phone', False)
+            
+            # Get or create preferences
+            prefs, created = SMSPreferences.objects.get_or_create(
+                user=self.request.user,
+                defaults={
+                    'phone_number': phone_number,
+                    'sms_enabled': sms_opt_in,
+                    'tcpa_consent': tcpa_consent,
+                    'tcpa_consent_date': timezone.now() if tcpa_consent else None,
+                    'tcpa_consent_ip': self.request.META.get('REMOTE_ADDR') if tcpa_consent else None
+                }
+            )
+            
+            # If not created, update existing preferences
+            if not created:
+                # Update phone number if changed
+                if phone_number and phone_number != prefs.phone_number:
+                    prefs.phone_number = phone_number
+                    # If phone changed, it needs verification again unless verify_phone is handled elsewhere
+                    # For now, we'll keep verification status unless explicitly reset logic is added
+                
+                # Update consent flags
+                prefs.sms_enabled = sms_opt_in
+                
+                # Only update TCPA consent if it's being granted now
+                if tcpa_consent and not prefs.tcpa_consent:
+                    prefs.tcpa_consent = True
+                    prefs.tcpa_consent_date = timezone.now()
+                    prefs.tcpa_consent_ip = self.request.META.get('REMOTE_ADDR')
+                elif not tcpa_consent:
+                    # If unchecked, remove consent
+                    prefs.tcpa_consent = False
+                
+                prefs.save()
+                
+            # Handle verification request if desired
+            if verify_phone and phone_number:
+                # Logic to trigger verification would go here or be handled by the view
+                # checking this flag. For now, we just ensure the preference record exists.
+                pass
+                
+        return applicant
+
     def __init__(self, *args, **kwargs):
         # Extract request for rate limiting
         self.request = kwargs.pop('request', None)
@@ -341,6 +454,21 @@ class ApplicantBasicInfoForm(forms.ModelForm):
             self.fields['last_name'].initial = self.instance.last_name
             self.fields['email'].initial = self.instance.email
             self.fields['phone_number'].initial = self.instance.phone_number
+            
+            # Initialize SMS fields from user preferences
+            if self.request and self.request.user.is_authenticated:
+                try:
+                    # We try to get preferences without importing the model at top level
+                    # The related_name 'sms_preferences' on User model should work if defined
+                    if hasattr(self.request.user, 'sms_preferences'):
+                        prefs = self.request.user.sms_preferences
+                        self.fields['sms_opt_in'].initial = prefs.sms_enabled
+                        self.fields['tcpa_consent'].initial = prefs.tcpa_consent
+                        # For verify_phone, we default to True if not verified, or False if verified
+                        self.fields['verify_phone'].initial = not prefs.phone_verified
+                except Exception:
+                    # Fail silently if preferences table doesn't exist or other error
+                    pass
         
         # Add security validators to text fields
         self.fields['first_name'].validators.append(sanitize_text_input)
@@ -403,400 +531,468 @@ class ApplicantBasicInfoForm(forms.ModelForm):
 
         # Crispy Forms setup
         self.helper = FormHelper()
+        self.helper.form_tag = False
         self.helper.form_method = 'post'
         self.helper.form_class = 'doorway-form'
 
         self.helper.layout = Layout(
-            # Profile Photo Section
-            HTML('''
-            <div class="mb-4 profile-photo-section">
-                <label class="form-label">Profile Photo</label>
-                <div class="row align-items-center">
-                    <div class="col-auto">
-                        <div class="profile-photo-container position-relative">
-                            {% if form.instance.photos.all %}
-                                <img src="{{ form.instance.photos.first.thumbnail_url }}" 
-                                     alt="Profile Photo" 
-                                     class="preview-image rounded-circle border border-2 border-warning" 
-                                     width="120" 
-                                     height="120" 
-                                     style="object-fit: cover;">
-                            {% else %}
-                                <div class="image-placeholder bg-light rounded-circle border border-2 border-secondary d-flex align-items-center justify-content-center" 
-                                     style="width: 120px; height: 120px;">
-                                    <i class="fas fa-user fa-3x text-muted"></i>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col">
-                        <h6 class="mb-2">Upload Your Profile Photo</h6>
-                        <p class="text-muted small mb-3">Choose a professional photo that represents you well. Accepted formats: JPG, PNG, GIF (max 10MB)</p>
-                        
-                        <div class="d-flex gap-2 mb-3 image-cropper-buttons">
-                            <button type="button" 
-                                    class="btn btn-primary btn-sm"
-                                    onclick="document.getElementById('id_profile_photo').click()">
-                                <i class="fas fa-camera"></i> Upload Photo
-                            </button>
-                        </div>
-                        
-                        <input type="file" 
-                               name="profile_photo" 
-                               id="id_profile_photo" 
-                               accept="image/*"
-                               style="display: none;"
-                               class="form-control">
-                               
-                        <!-- Crop transformation data -->
-                        <input type="hidden" id="crop-data" name="crop_data" value="">
-                    </div>
-                </div>
-            </div>
-            '''),
-            
-            Fieldset(
-                'Personal Information',
-                Row(
-                    Column(Field('first_name', placeholder="First Name"), css_class='col-md-6'),
-                    Column(Field('last_name', placeholder="Last Name"), css_class='col-md-6'),
-                ),
-                Row(
-                    Column(Field('phone_number', placeholder="(555) 555-5555"), css_class='col-md-6'),
-                    Column('email', css_class='col-md-6'),
-                ),
-            ),
-            
-            Fieldset(
-                'Current Address',
-                Row(
-                    Column('street_address_1', css_class='col-md-8'),
-                    Column('street_address_2', css_class='col-md-4'),
-                ),
-                Row(
-                    Column('city', css_class='col-md-5'),
-                    Column('state', css_class='col-md-3'),
-                    Column('zip_code', css_class='col-md-4'),
-                ),
-                HTML('''
-                <label class="form-label">
-                    How long have you lived at your current address? 
-                    <i class="fas fa-info-circle text-success ms-1" 
-                       data-bs-toggle="tooltip" 
-                       data-bs-placement="right" 
-                       title="Important for rental application">
-                    </i>
-                </label>
-                '''),
-                Row(
-                    Column(Field('current_address_years', label=False), css_class='col-md-2'),
-                    Column(Field('current_address_months', label=False), css_class='col-md-2'),
-                    Column(css_class='col-md-8'),
+            # Container 1: Account Information
+            Div(
+                Div(
+                    HTML('<h5 class="mb-0"><i class="fas fa-user-circle me-2"></i>Account Information</h5>'),
+                    css_class='card-header bg-dark text-white'
                 ),
                 Div(
                     HTML('''
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" id="is_rental_checkbox" name="is_rental_checkbox">
-                        <label class="form-check-label" for="is_rental_checkbox">
-                            Is this a Rental?
-                        </label>
+                    <div class="mb-4 profile-photo-section">
+                        <label class="form-label">Profile Photo</label>
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                <div class="profile-photo-container position-relative">
+                                    {% if form.instance.photos.all %}
+                                        <img src="{{ form.instance.photos.first.thumbnail_url }}" 
+                                             alt="Profile Photo" 
+                                             class="preview-image rounded-circle border border-2 border-warning" 
+                                             width="120" 
+                                             height="120" 
+                                             style="object-fit: cover;">
+                                    {% else %}
+                                        <div class="image-placeholder bg-light rounded-circle border border-2 border-secondary d-flex align-items-center justify-content-center" 
+                                             style="width: 120px; height: 120px;">
+                                            <i class="fas fa-user fa-3x text-muted"></i>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col">
+                                <h6 class="mb-2">Upload Your Profile Photo</h6>
+                                <p class="text-muted small mb-3">Choose a professional photo that represents you well. Accepted formats: JPG, PNG, GIF (max 10MB)</p>
+                                
+                                <div class="d-flex gap-2 mb-3 image-cropper-buttons">
+                                    <button type="button" 
+                                            class="btn btn-primary btn-sm"
+                                            onclick="document.getElementById('id_profile_photo').click()">
+                                        <i class="fas fa-camera"></i> Upload Photo
+                                    </button>
+                                </div>
+                                
+                                <input type="file" 
+                                       name="profile_photo" 
+                                       id="id_profile_photo" 
+                                       accept="image/*"
+                                       style="display: none;"
+                                       class="form-control">
+                                       
+                                <!-- Crop transformation data -->
+                                <input type="hidden" id="crop-data" name="crop_data" value="">
+                            </div>
+                        </div>
                     </div>
                     '''),
-                    Field('housing_status', type="hidden"),
-                    Div(
-                        Row(
-                            Column(Field('current_landlord_name', placeholder="Landlord's Name"), css_class='col-md-4'),
-                            Column(Field('current_landlord_phone', placeholder="(555) 555-5555"), css_class='col-md-4'),
-                            Column(Field('current_landlord_email', placeholder="Landlord's Email"), css_class='col-md-4'),
-                        ),
-                        css_id='rental_landlord_fields',
-                        css_class='d-none mb-2'
+                    Row(
+                        Column(Field('first_name', placeholder="First Name"), css_class='col-md-6'),
+                        Column(Field('last_name', placeholder="Last Name"), css_class='col-md-6'),
                     ),
+                    Row(
+                        Column(Field('phone_number', placeholder="(555) 555-5555"), css_class='col-md-6'),
+                        Column('email', css_class='col-md-6'),
+                    ),
+                    # SMS Opt-in Section
                     Div(
-                        HTML('''
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label" for="{{ form.monthly_rent.id_for_label }}">Monthly Rent</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">$</span>
-                                        <input type="text"
-                                               name="{{ form.monthly_rent.html_name }}"
-                                               id="{{ form.monthly_rent.id_for_label }}"
-                                               class="form-control currency-input"
-                                               value="{{ form.monthly_rent.value|default_if_none:'' }}"
-                                               placeholder="1,200.00">
+                        HTML('<h6 class="mb-3"><i class="fas fa-mobile-alt"></i> SMS Notifications</h6>'),
+                        Div(
+                            Field('verify_phone', wrapper_class='form-check'),
+                            css_class='mb-2'
+                        ),
+                        Div(
+                            Field('sms_opt_in', wrapper_class='form-check'),
+                            css_class='mb-2'
+                        ),
+                        Div(
+                            Field('tcpa_consent', wrapper_class='form-check'),
+                            HTML('''
+                            {% if form.tcpa_consent.help_text %}
+                            <div class="alert alert-warning d-flex align-items-center mt-2 p-2 small" role="alert">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <div>{{ form.tcpa_consent.help_text|safe }}</div>
+                            </div>
+                            {% endif %}
+                            '''),
+                            css_class='border-top pt-2 mt-2'
+                        ),
+                        css_class='bg-light p-3 rounded mb-3 mt-3'
+                    ),
+                    css_class='card-body p-4'
+                ),
+                css_class='card shadow-sm mb-4'
+            ),
+
+            # Container 2: Identification
+            Div(
+                Div(
+                    HTML('<h5 class="mb-0"><i class="fas fa-id-card me-2"></i>Identification</h5>'),
+                    css_class='card-header bg-dark text-white'
+                ),
+                Div(
+                    Row(
+                        Column('date_of_birth', css_class='col-md-4'),
+                    ),
+                    HTML('''
+                    <div class="mt-3">
+                        <label class="form-label">
+                            Select Identification Type(s)
+                            <i class="fas fa-question-circle text-muted ms-2" 
+                               data-bs-toggle="tooltip" 
+                               data-bs-placement="right" 
+                               title="At least one form of identification with photos is required for your application. Uploading multiple types (such as Driver's License AND Passport) will help us process your application faster and improve your chances of approval.">
+                            </i>
+                        </label>
+                        <div class="id-type-checkboxes">
+                            <div class="form-check mb-3">
+                                <input class="form-check-input id-type-checkbox" type="checkbox" value="passport" id="id_passport" style="width: 1.25em; height: 1.25em;">
+                                <label class="form-check-label fs-5 ms-2" for="id_passport" style="padding-top: 2px;">
+                                    <i class="fas fa-passport"></i> Passport
+                                </label>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input id-type-checkbox" type="checkbox" value="driver_license" id="id_driver_license" style="width: 1.25em; height: 1.25em;">
+                                <label class="form-check-label fs-5 ms-2" for="id_driver_license" style="padding-top: 2px;">
+                                    <i class="fas fa-id-card"></i> Driver's License
+                                </label>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input id-type-checkbox" type="checkbox" value="state_id" id="id_state_id" style="width: 1.25em; height: 1.25em;">
+                                <label class="form-check-label fs-5 ms-2" for="id_state_id" style="padding-top: 2px;">
+                                    <i class="fas fa-id-badge"></i> State ID
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    '''),
+                    Row(
+                        Column(Field('driver_license_number', placeholder="Driver's License Number"), css_class='col-md-4 driver-license-field d-none'),
+                        Column('driver_license_state', css_class='col-md-4 driver-license-field d-none'),
+                    ),
+                    HTML('''
+                    <!-- Upload sections that will be shown/hidden based on selection -->
+                    <div id="passport_upload" class="id-upload-section mt-3" style="display: none;">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="mb-3"><i class="fas fa-passport"></i> Upload Passport</h6>
+                                <div class="row align-items-center">
+                                    <div class="col-auto">
+                                        <div class="passport-container position-relative">
+                                            <div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" 
+                                                 style="width: 200px; height: 125px;">
+                                                <i class="fas fa-passport fa-3x text-muted"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <p class="text-muted small mb-3">Upload a clear photo of your passport</p>
+                                        <div class="d-flex gap-2 mb-3 image-cropper-buttons">
+                                            <button type="button" class="btn btn-primary btn-sm"
+                                                    onclick="document.getElementById('id_passport_document').click()">
+                                                <i class="fas fa-camera"></i> Upload Passport
+                                            </button>
+                                        </div>
+                                        <input type="file" name="passport_document" id="id_passport_document" 
+                                               accept="image/*" style="display: none;" class="form-control">
+                                        <input type="hidden" id="crop-data-passport" name="crop_data_passport" value="">
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="row">
-                            <div class="col-12 mb-3">
-                                <label class="form-label" for="{{ form.reason_for_moving.id_for_label }}">Reason for Moving</label>
-                                {{ form.reason_for_moving }}
+                    </div>
+                    
+                    <div id="driver_license_upload" class="id-upload-section mt-3" style="display: none;">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="mb-3"><i class="fas fa-id-card"></i> Upload Driver's License</h6>
+                                
+                                <!-- Front of Driver's License -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">Front of Driver's License</label>
+                                    <div class="row align-items-center">
+                                        <div class="col-auto">
+                                            <div class="driver-license-front-container position-relative">
+                                                <div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" 
+                                                     style="width: 200px; height: 125px;">
+                                                    <i class="fas fa-id-card fa-3x text-muted"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <p class="text-muted small mb-3">Upload a clear photo of the front of your driver's license</p>
+                                            <div class="d-flex gap-2 mb-3 image-cropper-buttons">
+                                                <button type="button" class="btn btn-primary btn-sm"
+                                                        onclick="document.getElementById('id_driver_license_front').click()">
+                                                    <i class="fas fa-camera"></i> Upload Front
+                                                </button>
+                                            </div>
+                                            <input type="file" name="driver_license_front" id="id_driver_license_front" 
+                                                   accept="image/*" style="display: none;" class="form-control">
+                                            <input type="hidden" id="crop-data-driver-front" name="crop_data_driver_front" value="">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Back of Driver's License -->
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Back of Driver's License</label>
+                                    <div class="row align-items-center">
+                                        <div class="col-auto">
+                                            <div class="driver-license-back-container position-relative">
+                                                <div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" 
+                                                     style="width: 200px; height: 125px;">
+                                                    <i class="fas fa-id-card fa-3x text-muted"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <p class="text-muted small mb-3">Upload a clear photo of the back of your driver's license</p>
+                                            <div class="d-flex gap-2 mb-3 image-cropper-buttons">
+                                                <button type="button" class="btn btn-primary btn-sm"
+                                                        onclick="document.getElementById('id_driver_license_back').click()">
+                                                    <i class="fas fa-camera"></i> Upload Back
+                                                </button>
+                                            </div>
+                                            <input type="file" name="driver_license_back" id="id_driver_license_back" 
+                                                   accept="image/*" style="display: none;" class="form-control">
+                                            <input type="hidden" id="crop-data-driver-back" name="crop_data_driver_back" value="">
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+                        </div>
+                    </div>
+                    
+                    <div id="state_id_upload" class="id-upload-section mt-3" style="display: none;">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="mb-3"><i class="fas fa-id-badge"></i> Upload State ID</h6>
+                                
+                                <!-- Front of State ID -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">Front of State ID</label>
+                                    <div class="row align-items-center">
+                                        <div class="col-auto">
+                                            <div class="state-id-front-container position-relative">
+                                                <div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" 
+                                                     style="width: 200px; height: 125px;">
+                                                    <i class="fas fa-id-badge fa-3x text-muted"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <p class="text-muted small mb-3">Upload a clear photo of the front of your state ID</p>
+                                            <div class="d-flex gap-2 mb-3 image-cropper-buttons">
+                                                <button type="button" class="btn btn-primary btn-sm"
+                                                        onclick="document.getElementById('id_state_id_front').click()">
+                                                    <i class="fas fa-camera"></i> Upload Front
+                                                </button>
+                                            </div>
+                                            <input type="file" name="state_id_front" id="id_state_id_front" 
+                                                   accept="image/*" style="display: none;" class="form-control">
+                                            <input type="hidden" id="crop-data-state-front" name="crop_data_state_front" value="">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Back of State ID -->
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Back of State ID</label>
+                                    <div class="row align-items-center">
+                                        <div class="col-auto">
+                                            <div class="state-id-back-container position-relative">
+                                                <div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" 
+                                                     style="width: 200px; height: 125px;">
+                                                    <i class="fas fa-id-badge fa-3x text-muted"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <p class="text-muted small mb-3">Upload a clear photo of the back of your state ID</p>
+                                            <div class="d-flex gap-2 mb-3 image-cropper-buttons">
+                                                <button type="button" class="btn btn-primary btn-sm"
+                                                        onclick="document.getElementById('id_state_id_back').click()">
+                                                    <i class="fas fa-camera"></i> Upload Back
+                                                </button>
+                                            </div>
+                                            <input type="file" name="state_id_back" id="id_state_id_back" 
+                                                   accept="image/*" style="display: none;" class="form-control">
+                                            <input type="hidden" id="crop-data-state-back" name="crop_data_state_back" value="">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    '''),
+                    
+                    HTML('<h6 class="mt-4 mb-3">Emergency Contact</h6>'),
+                    Row(
+                        Column(Field('emergency_contact_name', placeholder="Full Name"), css_class='col-md-4'),
+                        Column(Field('emergency_contact_relationship', placeholder="Relationship"), css_class='col-md-4'),
+                        Column(Field('emergency_contact_phone', placeholder="(555) 555-5555"), css_class='col-md-4'),
+                    ),
+                    css_class='card-body p-4'
+                ),
+                css_class='card shadow-sm mb-4'
+            ),
+
+            # Container 3: Residential History
+            Div(
+                Div(
+                    HTML('<h5 class="mb-0"><i class="fas fa-home me-2"></i>Residential History</h5>'),
+                    css_class='card-header bg-dark text-white'
+                ),
+                Div(
+                    # Housing History Meter
+                    HTML('''
+                    <div class="housing-history-meter d-none mb-4" id="housing_history_meter">
+                        <div class="housing-history-status mb-2">
+                            <span><i class="fas fa-home me-2"></i>Housing History Verified</span>
+                            <span id="housing_history_text">0 Years 0 Months</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-danger" id="housing_history_bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="60"></div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-1">
+                            <small class="text-muted">Target: 5 Years</small>
+                            <small class="text-muted" id="housing_history_remaining">Needs 5 years more</small>
+                        </div>
+                        <div class="alert alert-success mt-2 mb-0 d-none" id="housing_history_success">
+                            <i class="fas fa-check-circle me-2"></i>History Verify Requirement Met (+10 Points)
+                        </div>
+                    </div>
+                    '''),
+                    
+                    Fieldset(
+                        'Current Address',
+                        Row(
+                            Column('street_address_1', css_class='col-md-8'),
+                            Column('street_address_2', css_class='col-md-4'),
+                        ),
+                        Row(
+                            Column('city', css_class='col-md-5'),
+                            Column('state', css_class='col-md-3'),
+                            Column('zip_code', css_class='col-md-4'),
+                        ),
+                        HTML('''
+                        <label class="form-label">
+                            How long have you lived at your current address? 
+                            <i class="fas fa-info-circle text-success ms-1" 
+                               data-bs-toggle="tooltip" 
+                               data-bs-placement="right" 
+                               title="Important for rental application">
+                            </i>
+                        </label>
+                        '''),
+                        Row(
+                            Column(Field('current_address_years', label=False), css_class='col-md-2'),
+                            Column(Field('current_address_months', label=False), css_class='col-md-2'),
+                            Column(css_class='col-md-8'),
+                        ),
+                        Div(
+                            HTML('''
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="is_rental_checkbox" name="is_rental_checkbox">
+                                <label class="form-check-label" for="is_rental_checkbox">
+                                    Is this a Rental?
+                                </label>
+                            </div>
+                            '''),
+                            Field('housing_status', type="hidden"),
+                            Div(
+                                Row(
+                                    Column(Field('current_landlord_name', placeholder="Landlord's Name"), css_class='col-md-4'),
+                                    Column(Field('current_landlord_phone', placeholder="(555) 555-5555"), css_class='col-md-4'),
+                                    Column(Field('current_landlord_email', placeholder="Landlord's Email"), css_class='col-md-4'),
+                                ),
+                                css_id='rental_landlord_fields',
+                                css_class='d-none mb-2'
+                            ),
+                            Div(
+                                HTML('''
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label" for="{{ form.monthly_rent.id_for_label }}">Monthly Rent</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">$</span>
+                                                <input type="text"
+                                                       name="{{ form.monthly_rent.html_name }}"
+                                                       id="{{ form.monthly_rent.id_for_label }}"
+                                                       class="form-control currency-input"
+                                                       value="{{ form.monthly_rent.value|default_if_none:'' }}"
+                                                       placeholder="1,200.00">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-12 mb-3">
+                                        <label class="form-label" for="{{ form.reason_for_moving.id_for_label }}">Reason for Moving</label>
+                                        {{ form.reason_for_moving }}
+                                    </div>
+                                </div>
+                                '''),
+                                css_id='rental_additional_fields',
+                                css_class='d-none mb-2'
+                            ),
+                            css_id='current_rental_container',
+                        ),
+                        HTML('''
+                        <div class="mt-2">
+                            <button type="button" id="add-previous-address-btn" class="btn btn-sm" style="background-color: #ffcc00; color: #000000; border: 1px solid #ffcc00;">
+                                <i class="fas fa-plus"></i> Add Previous Address
+                            </button>
+                            <i class="fas fa-info-circle text-success ms-2" 
+                               data-bs-toggle="tooltip" 
+                               data-bs-placement="right" 
+                               title="Adding previous addresses improves your rental application and helps with placement">
+                            </i>
+                        </div>
+                        <div id="previous-addresses-container">
+                            <!-- Dynamic previous address forms will be added here -->
                         </div>
                         '''),
-                        css_id='rental_additional_fields',
-                        css_class='d-none mb-2'
                     ),
-                    css_id='current_rental_container',
-                ),
-                HTML('''
-                <div class="mt-2">
-                    <button type="button" id="add-previous-address-btn" class="btn btn-sm" style="background-color: #ffcc00; color: #000000; border: 1px solid #ffcc00;">
-                        <i class="fas fa-plus"></i> Add Previous Address
-                    </button>
-                    <i class="fas fa-info-circle text-success ms-2" 
-                       data-bs-toggle="tooltip" 
-                       data-bs-placement="right" 
-                       title="Adding previous addresses improves your rental application and helps with placement">
-                    </i>
-                </div>
-                <div id="previous-addresses-container">
-                    <!-- Dynamic previous address forms will be added here -->
-                </div>
-                '''),
-            ),
-            
-            HTML('''
-            <div class="mb-3">
-                <label class="form-label">
-                    Have you ever been evicted before?
-                    <i class="fas fa-info-circle text-success ms-2" 
-                       data-bs-toggle="tooltip" 
-                       data-bs-placement="right" 
-                       title="Important for rental application">
-                    </i>
-                </label>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" id="id_evicted_before_yes" name="evicted_before" value="True" {% if form.evicted_before.value == True %}checked{% endif %}>
-                    <label class="form-check-label" for="id_evicted_before_yes">
-                        Yes
-                    </label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" id="id_evicted_before_no" name="evicted_before" value="False" {% if form.evicted_before.value == False %}checked{% endif %}>
-                    <label class="form-check-label" for="id_evicted_before_no">
-                        No
-                    </label>
-                </div>
-            </div>
-            <div id="eviction_explanation_field" class="mb-3 {% if not form.evicted_before.value %}d-none{% endif %}">
-                <label class="form-label" for="id_eviction_explanation">Please explain the circumstances:</label>
-                <textarea class="form-control" id="id_eviction_explanation" name="eviction_explanation" rows="3" placeholder="Briefly describe what happened and what you learned from the experience...">{{ form.eviction_explanation.value|default:'' }}</textarea>
-            </div>
-            '''),
-
-            Fieldset(
-                'Identification',
-                Row(
-                    Column('date_of_birth', css_class='col-md-4'),
-                ),
-                HTML('''
-                <div class="mt-3">
-                    <label class="form-label">
-                        Select Identification Type(s)
-                        <i class="fas fa-question-circle text-muted ms-2" 
-                           data-bs-toggle="tooltip" 
-                           data-bs-placement="right" 
-                           title="At least one form of identification with photos is required for your application. Uploading multiple types (such as Driver's License AND Passport) will help us process your application faster and improve your chances of approval.">
-                        </i>
-                    </label>
-                    <div class="id-type-checkboxes">
-                        <div class="form-check mb-3">
-                            <input class="form-check-input id-type-checkbox" type="checkbox" value="passport" id="id_passport" style="width: 1.25em; height: 1.25em;">
-                            <label class="form-check-label fs-5 ms-2" for="id_passport" style="padding-top: 2px;">
-                                <i class="fas fa-passport"></i> Passport
+                    
+                    HTML('''
+                    <div class="mb-3 mt-4">
+                        <label class="form-label">
+                            Have you ever been evicted before?
+                            <i class="fas fa-info-circle text-success ms-2" 
+                               data-bs-toggle="tooltip" 
+                               data-bs-placement="right" 
+                               title="Important for rental application">
+                            </i>
+                        </label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" id="id_evicted_before_yes" name="evicted_before" value="True" {% if form.evicted_before.value == True %}checked{% endif %}>
+                            <label class="form-check-label" for="id_evicted_before_yes">
+                                Yes
                             </label>
                         </div>
-                        <div class="form-check mb-3">
-                            <input class="form-check-input id-type-checkbox" type="checkbox" value="driver_license" id="id_driver_license" style="width: 1.25em; height: 1.25em;">
-                            <label class="form-check-label fs-5 ms-2" for="id_driver_license" style="padding-top: 2px;">
-                                <i class="fas fa-id-card"></i> Driver's License
-                            </label>
-                        </div>
-                        <div class="form-check mb-3">
-                            <input class="form-check-input id-type-checkbox" type="checkbox" value="state_id" id="id_state_id" style="width: 1.25em; height: 1.25em;">
-                            <label class="form-check-label fs-5 ms-2" for="id_state_id" style="padding-top: 2px;">
-                                <i class="fas fa-id-badge"></i> State ID
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" id="id_evicted_before_no" name="evicted_before" value="False" {% if form.evicted_before.value == False %}checked{% endif %}>
+                            <label class="form-check-label" for="id_evicted_before_no">
+                                No
                             </label>
                         </div>
                     </div>
-                </div>
-                '''),
-                Row(
-                    Column(Field('driver_license_number', placeholder="Driver's License Number"), css_class='col-md-4 driver-license-field d-none'),
-                    Column('driver_license_state', css_class='col-md-4 driver-license-field d-none'),
+                    <div id="eviction_explanation_field" class="mb-3 {% if not form.evicted_before.value %}d-none{% endif %}">
+                        <label class="form-label" for="id_eviction_explanation">Please explain the circumstances:</label>
+                        <textarea class="form-control" id="id_eviction_explanation" name="eviction_explanation" rows="3" placeholder="Briefly describe what happened and what you learned from the experience...">{{ form.eviction_explanation.value|default:'' }}</textarea>
+                    </div>
+                    '''),
+                    css_class='card-body p-4'
                 ),
-                HTML('''
-                <!-- Upload sections that will be shown/hidden based on selection -->
-                <div id="passport_upload" class="id-upload-section mt-3" style="display: none;">
-                    <div class="card">
-                        <div class="card-body">
-                            <h6 class="mb-3"><i class="fas fa-passport"></i> Upload Passport</h6>
-                            <div class="row align-items-center">
-                                <div class="col-auto">
-                                    <div class="passport-container position-relative">
-                                        <div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" 
-                                             style="width: 200px; height: 125px;">
-                                            <i class="fas fa-passport fa-3x text-muted"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col">
-                                    <p class="text-muted small mb-3">Upload a clear photo of your passport</p>
-                                    <div class="d-flex gap-2 mb-3 image-cropper-buttons">
-                                        <button type="button" class="btn btn-primary btn-sm"
-                                                onclick="document.getElementById('id_passport_document').click()">
-                                            <i class="fas fa-camera"></i> Upload Passport
-                                        </button>
-                                    </div>
-                                    <input type="file" name="passport_document" id="id_passport_document" 
-                                           accept="image/*" style="display: none;" class="form-control">
-                                    <input type="hidden" id="crop-data-passport" name="crop_data_passport" value="">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div id="driver_license_upload" class="id-upload-section mt-3" style="display: none;">
-                    <div class="card">
-                        <div class="card-body">
-                            <h6 class="mb-3"><i class="fas fa-id-card"></i> Upload Driver's License</h6>
-                            
-                            <!-- Front of Driver's License -->
-                            <div class="mb-4">
-                                <label class="form-label fw-bold">Front of Driver's License</label>
-                                <div class="row align-items-center">
-                                    <div class="col-auto">
-                                        <div class="driver-license-front-container position-relative">
-                                            <div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" 
-                                                 style="width: 200px; height: 125px;">
-                                                <i class="fas fa-id-card fa-3x text-muted"></i>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col">
-                                        <p class="text-muted small mb-3">Upload a clear photo of the front of your driver's license</p>
-                                        <div class="d-flex gap-2 mb-3 image-cropper-buttons">
-                                            <button type="button" class="btn btn-primary btn-sm"
-                                                    onclick="document.getElementById('id_driver_license_front').click()">
-                                                <i class="fas fa-camera"></i> Upload Front
-                                            </button>
-                                        </div>
-                                        <input type="file" name="driver_license_front" id="id_driver_license_front" 
-                                               accept="image/*" style="display: none;" class="form-control">
-                                        <input type="hidden" id="crop-data-driver-front" name="crop_data_driver_front" value="">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Back of Driver's License -->
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Back of Driver's License</label>
-                                <div class="row align-items-center">
-                                    <div class="col-auto">
-                                        <div class="driver-license-back-container position-relative">
-                                            <div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" 
-                                                 style="width: 200px; height: 125px;">
-                                                <i class="fas fa-id-card fa-3x text-muted"></i>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col">
-                                        <p class="text-muted small mb-3">Upload a clear photo of the back of your driver's license</p>
-                                        <div class="d-flex gap-2 mb-3 image-cropper-buttons">
-                                            <button type="button" class="btn btn-primary btn-sm"
-                                                    onclick="document.getElementById('id_driver_license_back').click()">
-                                                <i class="fas fa-camera"></i> Upload Back
-                                            </button>
-                                        </div>
-                                        <input type="file" name="driver_license_back" id="id_driver_license_back" 
-                                               accept="image/*" style="display: none;" class="form-control">
-                                        <input type="hidden" id="crop-data-driver-back" name="crop_data_driver_back" value="">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div id="state_id_upload" class="id-upload-section mt-3" style="display: none;">
-                    <div class="card">
-                        <div class="card-body">
-                            <h6 class="mb-3"><i class="fas fa-id-badge"></i> Upload State ID</h6>
-                            
-                            <!-- Front of State ID -->
-                            <div class="mb-4">
-                                <label class="form-label fw-bold">Front of State ID</label>
-                                <div class="row align-items-center">
-                                    <div class="col-auto">
-                                        <div class="state-id-front-container position-relative">
-                                            <div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" 
-                                                 style="width: 200px; height: 125px;">
-                                                <i class="fas fa-id-badge fa-3x text-muted"></i>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col">
-                                        <p class="text-muted small mb-3">Upload a clear photo of the front of your state ID</p>
-                                        <div class="d-flex gap-2 mb-3 image-cropper-buttons">
-                                            <button type="button" class="btn btn-primary btn-sm"
-                                                    onclick="document.getElementById('id_state_id_front').click()">
-                                                <i class="fas fa-camera"></i> Upload Front
-                                            </button>
-                                        </div>
-                                        <input type="file" name="state_id_front" id="id_state_id_front" 
-                                               accept="image/*" style="display: none;" class="form-control">
-                                        <input type="hidden" id="crop-data-state-front" name="crop_data_state_front" value="">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Back of State ID -->
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Back of State ID</label>
-                                <div class="row align-items-center">
-                                    <div class="col-auto">
-                                        <div class="state-id-back-container position-relative">
-                                            <div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" 
-                                                 style="width: 200px; height: 125px;">
-                                                <i class="fas fa-id-badge fa-3x text-muted"></i>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col">
-                                        <p class="text-muted small mb-3">Upload a clear photo of the back of your state ID</p>
-                                        <div class="d-flex gap-2 mb-3 image-cropper-buttons">
-                                            <button type="button" class="btn btn-primary btn-sm"
-                                                    onclick="document.getElementById('id_state_id_back').click()">
-                                                <i class="fas fa-camera"></i> Upload Back
-                                            </button>
-                                        </div>
-                                        <input type="file" name="state_id_back" id="id_state_id_back" 
-                                               accept="image/*" style="display: none;" class="form-control">
-                                        <input type="hidden" id="crop-data-state-back" name="crop_data_state_back" value="">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                '''),
-            ),
-            
-            Fieldset(
-                'Emergency Contact',
-                Row(
-                    Column(Field('emergency_contact_name', placeholder="Full Name"), css_class='col-md-4'),
-                    Column(Field('emergency_contact_relationship', placeholder="Relationship"), css_class='col-md-4'),
-                    Column(Field('emergency_contact_phone', placeholder="(555) 555-5555"), css_class='col-md-4'),
-                ),
+                css_class='card shadow-sm'
             ),
         )
-
 
 class ApplicantHousingForm(forms.ModelForm):
     """Step 2: Housing Needs and Preferences Form"""
@@ -832,12 +1028,9 @@ class ApplicantHousingForm(forms.ModelForm):
         ]
         widgets = {
             'desired_move_in_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'max_rent_budget': forms.NumberInput(attrs={
-                'class': 'form-control currency-field',
-                'step': '0.01',
-                'placeholder': '2500.00',
-                'min': '100',
-                'max': '50000'
+            'max_rent_budget': forms.TextInput(attrs={
+                'class': 'form-control currency-input',
+                'placeholder': '2500.00'
             }),
         }
 
@@ -905,8 +1098,16 @@ class ApplicantHousingForm(forms.ModelForm):
         if 'reason_for_moving' in self.fields:
             self.fields['reason_for_moving'].label = 'Reason for Moving'
 
+    def clean_max_rent_budget(self):
+        # Remove commas from currency formatting
+        raw_value = self.data.get('max_rent_budget')
+        if raw_value:
+            return raw_value.replace(',', '')
+        return self.cleaned_data.get('max_rent_budget')
+
         # Crispy Forms setup
         self.helper = FormHelper()
+        self.helper.form_tag = False
         self.helper.form_method = 'post'
         self.helper.form_class = 'doorway-form'
 
@@ -914,13 +1115,13 @@ class ApplicantHousingForm(forms.ModelForm):
             Fieldset(
                 'Housing Needs',
                 Row(
-                    Column(Field('desired_move_in_date'), css_class='col-md-6 mb-4'),
-                    Column(Field('max_rent_budget', template='applicants/currency_field.html'), css_class='col-md-6 mb-4'),
+                    Column(Field('desired_move_in_date', wrapper_class='smart-match-critical'), css_class='col-md-6 mb-4'),
+                    Column(Field('max_rent_budget', template='applicants/currency_field.html', wrapper_class='smart-match-critical'), css_class='col-md-6 mb-4'),
                 ),
                 HTML('''
                 <div class="row mb-4">
                     <div class="col-md-6 mb-4">
-                        <label class="form-label">Number of Bedrooms</label>
+                        <label class="form-label strategic-match">Number of Bedrooms</label>
                         <div class="d-flex align-items-center">
                             <span class="me-2">FROM:</span>
                             <div class="me-3" style="flex: 1;">
@@ -943,7 +1144,7 @@ class ApplicantHousingForm(forms.ModelForm):
                 </div>
                 <div class="row mb-4">
                     <div class="col-md-6 mb-4">
-                        <label class="form-label">Number of Bathrooms</label>
+                        <label class="form-label strategic-match">Number of Bathrooms</label>
                         <div class="d-flex align-items-center">
                             <span class="me-2">FROM:</span>
                             <div class="me-3" style="flex: 1;">
@@ -962,7 +1163,7 @@ class ApplicantHousingForm(forms.ModelForm):
                     <div class="col-md-12">
                         <div class="form-check mb-2">
                             <input class="form-check-input pets-checkbox" type="checkbox" id="has_pets" name="has_pets" style="width: 1.5em; height: 1.5em; transform: scale(1.2);">
-                            <label class="form-check-label ms-3" for="has_pets" style="font-size: 1.1rem; font-weight: 500; padding-top: 4px;">
+                            <label class="form-check-label ms-3 strategic-match" for="has_pets" style="font-size: 1.1rem; font-weight: 500; padding-top: 4px;">
                                 Pets?
                             </label>
                         </div>
@@ -988,7 +1189,7 @@ class ApplicantHousingForm(forms.ModelForm):
                 'HOUSING PREFERENCES',
                 HTML('''
                 <div class="mb-4">
-                    <h6 class="mb-3">Neighborhood Preferences</h6>
+                    <h6 class="mb-3 strategic-match badge-target">Neighborhood Preferences</h6>
                     <p class="text-muted small mb-3">
                         <i class="fas fa-info-circle"></i> Select your preferred neighborhoods and drag them to rank by priority. 
                         Your #1 choice will have the highest priority in our apartment matching algorithm.
@@ -1065,119 +1266,56 @@ class ApplicantHousingForm(forms.ModelForm):
                         </div>
                     </div>
                     
-                    <div class="amenities-grid" id="building-amenities">
-                        {% for amenity in all_building_amenities %}
-                        <div class="amenity-slider-item unset" data-amenity-id="{{ amenity.id }}" data-amenity-type="building">
-                            <div class="amenity-info">
-                                <div class="d-flex align-items-center">
-                                    {% if amenity.name == "Bike Room" %}
-                                        <i class="fa-solid fa-bicycle me-2 text-warning"></i>
-                                    {% elif amenity.name == "Business center" %}
-                                        <i class="fa-solid fa-briefcase me-2 text-warning"></i>
-                                    {% elif amenity.name == "Children's Play Room" %}
-                                        <i class="fa-solid fa-child me-2 text-warning"></i>
-                                    {% elif amenity.name == "Cold Storage" %}
-                                        <i class="fa-regular fa-snowflake me-2 text-warning"></i>
-                                    {% elif amenity.name == "Concierge" %}
-                                        <i class="fa-solid fa-bell-concierge me-2 text-warning"></i>
-                                    {% elif amenity.name == "Courtyard" %}
-                                        <i class="fa-solid fa-tree me-2 text-warning"></i>
-                                    {% elif amenity.name == "Covered parking" %}
-                                        <i class="fa-solid fa-square-parking me-2 text-warning"></i>
-                                    {% elif amenity.name == "Doorman" %}
-                                        <i class="fa-solid fa-door-closed me-2 text-warning"></i>
-                                    {% elif amenity.name == "Elevator" %}
-                                        <i class="fa-solid fa-arrows-up-down me-2 text-warning"></i>
-                                    {% elif amenity.name == "Fitness Center" %}
-                                        <i class="fa-solid fa-dumbbell me-2 text-warning"></i>
-                                    {% elif amenity.name == "Gym" %}
-                                        <i class="fa-solid fa-dumbbell me-2 text-warning"></i>
-                                    {% elif amenity.name == "Garage Parking" %}
-                                        <i class="fa-solid fa-square-parking me-2 text-warning"></i>
-                                    {% elif amenity.name == "Garbage chute" %}
-                                        <i class="fa-solid fa-trash me-2 text-warning"></i>
-                                    {% elif amenity.name == "Garden" %}
-                                        <i class="fa-solid fa-seedling me-2 text-warning"></i>
-                                    {% elif amenity.name == "Green building" %}
-                                        <i class="fa-solid fa-leaf me-2 text-warning"></i>
-                                    {% elif amenity.name == "Guarantors Welcome" %}
-                                        <i class="fa-regular fa-file-signature me-2 text-warning"></i>
-                                    {% elif amenity.name == "Laundry In Building" %}
-                                        <i class="fa-solid fa-soap me-2 text-warning"></i>
-                                    {% elif amenity.name == "Live In Super" %}
-                                        <i class="fa-solid fa-screwdriver-wrench me-2 text-warning"></i>
-                                    {% elif amenity.name == "Locker Rooms" %}
-                                        <i class="fa-solid fa-lock me-2 text-warning"></i>
-                                    {% elif amenity.name == "Media Room" %}
-                                        <i class="fa-solid fa-tv me-2 text-warning"></i>
-                                    {% elif amenity.name == "Non Smoking Building" %}
-                                        <i class="fa-solid fa-ban-smoking me-2 text-warning"></i>
-                                    {% elif amenity.name == "On site super" %}
-                                        <i class="fa-solid fa-screwdriver-wrench me-2 text-warning"></i>
-                                    {% elif amenity.name == "Outdoor Spaces" %}
-                                        <i class="fa-solid fa-umbrella-beach me-2 text-warning"></i>
-                                    {% elif amenity.name == "Package Room" %}
-                                        <i class="fa-solid fa-box me-2 text-warning"></i>
-                                    {% elif amenity.name == "Parking" %}
-                                        <i class="fa-solid fa-square-parking me-2 text-warning"></i>
-                                    {% elif amenity.name == "Pet spa" %}
-                                        <i class="fa-solid fa-bath me-2 text-warning"></i>
-                                    {% elif amenity.name == "Pool" %}
-                                        <i class="fa-solid fa-water-ladder me-2 text-warning"></i>
-                                    {% elif amenity.name == "Recreation" %}
-                                        <i class="fa-solid fa-table-tennis-paddle-ball me-2 text-warning"></i>
-                                    {% elif amenity.name == "Resident Lounge" %}
-                                        <i class="fa-solid fa-couch me-2 text-warning"></i>
-                                    {% elif amenity.name == "Roof Access" %}
-                                        <i class="fa-solid fa-arrow-up-from-ground-water me-2 text-warning"></i>
-                                    {% elif amenity.name == "Roof Deck" %}
-                                        <i class="fa-solid fa-arrow-up-from-ground-water me-2 text-warning"></i>
-                                    {% elif amenity.name == "Screening room" %}
-                                        <i class="fa-solid fa-tv me-2 text-warning"></i>
-                                    {% elif amenity.name == "Security cameras" %}
-                                        <i class="fa-solid fa-video me-2 text-warning"></i>
-                                    {% elif amenity.name == "Smoke free property" %}
-                                        <i class="fa-solid fa-ban-smoking me-2 text-warning"></i>
-                                    {% elif amenity.name == "Storage" %}
-                                        <i class="fa-solid fa-box-archive me-2 text-warning"></i>
-                                    {% elif amenity.name == "Valet" %}
-                                        <i class="fa-solid fa-key me-2 text-warning"></i>
-                                    {% elif amenity.name == "Verizon Fios" %}
-                                        <i class="fa-solid fa-tower-broadcast me-2 text-warning"></i>
-                                    {% elif amenity.name == "Virtual Doorman" %}
-                                        <i class="fa-solid fa-tablet-screen-button me-2 text-warning"></i>
-                                    {% elif amenity.name == "Wheelchair Access" %}
-                                        <i class="fa-solid fa-wheelchair me-2 text-warning"></i>
-                                    {% elif amenity.name == "Yoga studio" %}
-                                        <i class="fa-solid fa-spa me-2 text-warning"></i>
-                                    {% else %}
-                                        <i class="fa-solid fa-check-circle me-2 text-warning"></i>
-                                    {% endif %}
-                                    <span class="amenity-name">{{ amenity.name }}</span>
-                                </div>
-                                <span class="priority-label text-muted"></span>
-                            </div>
-                            <div class="slider-container mt-2">
-                                <input type="range" 
-                                       min="0" 
-                                       max="3" 
-                                       value="0" 
-                                       step="1" 
-                                       class="amenity-slider unset" 
-                                       name="building_amenity_{{ amenity.id }}"
-                                       data-amenity-id="{{ amenity.id }}"
-                                       data-amenity-type="building"
-                                       data-amenity-name="{{ amenity.name }}"
-                                       data-existing-value="0">
-                                <div class="slider-labels">
-                                    <span class="slider-label-left">Don't Care</span>
-                                    <span class="slider-label-right">Must Have</span>
-                                </div>
-                            </div>
+                    <!-- Search Bar for Building Amenities -->
+                    <div class="mb-3">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0">
+                                <i class="fas fa-search text-muted"></i>
+                            </span>
+                            <input type="text" 
+                                   class="form-control border-start-0 amenity-search" 
+                                   placeholder="Search building amenities..." 
+                                   data-target="building-amenities">
                         </div>
-                        {% empty %}
-                        <p class="text-muted">No building amenities available</p>
-                        {% endfor %}
+                    </div>
+
+                    <div class="amenities-scroll-container shadow-sm border rounded">
+                        <div class="amenities-grid p-3" id="building-amenities">
+                            {% for amenity in all_building_amenities %}
+                            <div class="amenity-slider-item unset" data-amenity-id="{{ amenity.id }}" data-amenity-type="building">
+                                <div class="amenity-info">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fa-solid {{ amenity.icon }} me-2 text-warning"></i>
+                                        <span class="amenity-name">{{ amenity.name }}</span>
+                                    </div>
+                                    <span class="priority-label text-muted"></span>
+                                </div>
+                                <div class="slider-container mt-2">
+                                    <input type="range" 
+                                           min="0" 
+                                           max="3" 
+                                           value="0" 
+                                           step="1" 
+                                           class="amenity-slider unset" 
+                                           name="building_amenity_{{ amenity.id }}"
+                                           data-amenity-id="{{ amenity.id }}"
+                                           data-amenity-type="building"
+                                           data-amenity-name="{{ amenity.name }}"
+                                           data-existing-value="0">
+                                    <div class="slider-labels">
+                                        <span class="slider-label-left">Don't Care</span>
+                                        <span class="slider-label-right">Must Have</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <p class="text-muted">No building amenities available</p>
+                            {% endfor %}
+                        </div>
+                        <div class="no-results p-4 text-center text-muted d-none" id="no-results-building">
+                            <i class="fas fa-search mb-2 d-block opacity-50 fa-2x"></i>
+                            No amenities matches your search.
+                        </div>
                     </div>
                 </div>
                 
@@ -1191,34 +1329,56 @@ class ApplicantHousingForm(forms.ModelForm):
                         </small>
                     </div>
                     
-                    <div class="amenities-grid" id="apartment-amenities">
-                        {% for amenity in all_apartment_amenities %}
-                        <div class="amenity-slider-item unset" data-amenity-id="{{ amenity.id }}" data-amenity-type="apartment">
-                            <div class="amenity-info">
-                                <span class="amenity-name">{{ amenity.name }}</span>
-                                <span class="priority-label text-muted"></span>
-                            </div>
-                            <div class="slider-container mt-2">
-                                <input type="range" 
-                                       min="0" 
-                                       max="3" 
-                                       value="0" 
-                                       step="1" 
-                                       class="amenity-slider unset" 
-                                       name="apartment_amenity_{{ amenity.id }}"
-                                       data-amenity-id="{{ amenity.id }}"
-                                       data-amenity-type="apartment"
-                                       data-amenity-name="{{ amenity.name }}"
-                                       data-existing-value="0">
-                                <div class="slider-labels">
-                                    <span class="slider-label-left">Don't Care</span>
-                                    <span class="slider-label-right">Must Have</span>
+                    <!-- Search Bar for Apartment Amenities -->
+                    <div class="mb-3">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0">
+                                <i class="fas fa-search text-muted"></i>
+                            </span>
+                            <input type="text" 
+                                   class="form-control border-start-0 amenity-search" 
+                                   placeholder="Search apartment features..." 
+                                   data-target="apartment-amenities">
+                        </div>
+                    </div>
+
+                    <div class="amenities-scroll-container shadow-sm border rounded">
+                        <div class="amenities-grid p-3" id="apartment-amenities">
+                            {% for amenity in all_apartment_amenities %}
+                            <div class="amenity-slider-item unset" data-amenity-id="{{ amenity.id }}" data-amenity-type="apartment">
+                                <div class="amenity-info">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fa-solid {{ amenity.icon }} me-2 text-warning"></i>
+                                        <span class="amenity-name">{{ amenity.name }}</span>
+                                    </div>
+                                    <span class="priority-label text-muted"></span>
+                                </div>
+                                <div class="slider-container mt-2">
+                                    <input type="range" 
+                                           min="0" 
+                                           max="3" 
+                                           value="0" 
+                                           step="1" 
+                                           class="amenity-slider unset" 
+                                           name="apartment_amenity_{{ amenity.id }}"
+                                           data-amenity-id="{{ amenity.id }}"
+                                           data-amenity-type="apartment"
+                                           data-amenity-name="{{ amenity.name }}"
+                                           data-existing-value="0">
+                                    <div class="slider-labels">
+                                        <span class="slider-label-left">Don't Care</span>
+                                        <span class="slider-label-right">Must Have</span>
+                                    </div>
                                 </div>
                             </div>
+                            {% empty %}
+                            <p class="text-muted">No apartment amenities available</p>
+                            {% endfor %}
                         </div>
-                        {% empty %}
-                        <p class="text-muted">No apartment amenities available</p>
-                        {% endfor %}
+                        <div class="no-results p-4 text-center text-muted d-none" id="no-results-apartment">
+                            <i class="fas fa-search mb-2 d-block opacity-50 fa-2x"></i>
+                            No features match your search.
+                        </div>
                     </div>
                 </div>
                 '''),
@@ -1293,7 +1453,7 @@ class ApplicantEmploymentForm(forms.ModelForm):
         max_digits=12,
         decimal_places=2,
         required=False,
-        validators=[validate_currency_amount],
+        validators=[validate_annual_income],
         widget=forms.NumberInput(attrs={
             'class': 'form-control currency-field',
             'step': '0.01',
@@ -1316,26 +1476,25 @@ class ApplicantEmploymentForm(forms.ModelForm):
         widgets = {
             'employment_status': forms.Select(attrs={'class': 'form-select select2'}),
             # New employment field widgets
-            'annual_income': forms.NumberInput(attrs={
-                'class': 'form-control currency-field',
-                'step': '0.01',
-                'placeholder': '75000.00',
-                'min': '0'
+            'annual_income': forms.TextInput(attrs={
+                'class': 'form-control currency-input',
+                'placeholder': '75000.00'
             }),
             'supervisor_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(555) 555-5555'}),
             'employment_start_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'employment_end_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             # Legacy field widgets (keep for backward compatibility)
-            'monthly_income': forms.NumberInput(attrs={
-                'class': 'form-control currency-field',
-                'step': '0.01',
-                'placeholder': '5000.00',
-                'min': '0',
-                'max': '500000'  # $500k/month max
+            'monthly_income': forms.TextInput(attrs={
+                'class': 'form-control currency-input',
+                'placeholder': '5000.00'
             }),
             # Student field widgets
             'school_address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '123 University Ave, College Town, NY 12345'}),
             'school_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(555) 555-5555'}),
+            'currently_employed': forms.CheckboxInput(attrs={
+                'class': 'form-check-input currently-employed-checkbox',
+                'style': 'width: 1.25em; height: 1.25em;'
+            }),
         }
 
     def __init__(self, *args, **kwargs):
@@ -1363,7 +1522,7 @@ class ApplicantEmploymentForm(forms.ModelForm):
         currency_fields = ['annual_income', 'average_annual_income']
         for field_name in currency_fields:
             if field_name in self.fields:
-                self.fields[field_name].validators.append(validate_currency_amount)
+                self.fields[field_name].validators.append(validate_annual_income)
         
         # Add email validation
         if 'supervisor_email' in self.fields:
@@ -1389,6 +1548,22 @@ class ApplicantEmploymentForm(forms.ModelForm):
             field.label_suffix = ''
             
         # Customize specific field labels and choices
+        if 'currently_employed' in self.fields:
+            self.fields['currently_employed'].label = 'I am currently employed at this job'
+
+    def clean_annual_income(self):
+        # Remove commas from currency formatting
+        raw_value = self.data.get('annual_income')
+        if raw_value:
+            return raw_value.replace(',', '')
+        return self.cleaned_data.get('annual_income')
+
+    def clean_monthly_income(self):
+        # Remove commas from currency formatting
+        raw_value = self.data.get('monthly_income')
+        if raw_value:
+            return raw_value.replace(',', '')
+        return self.cleaned_data.get('monthly_income')
         self.fields['employment_status'].label = 'Which best describes you?'
         self.fields['employment_status'].required = False
         self.fields['employment_status'].choices = [
@@ -1401,24 +1576,25 @@ class ApplicantEmploymentForm(forms.ModelForm):
 
         # Crispy Forms setup
         self.helper = FormHelper()
+        self.helper.form_tag = False
         self.helper.form_method = 'post'
         self.helper.form_class = 'doorway-form'
 
         self.helper.layout = Layout(
             Fieldset(
                 'Employment Status',
-                Field('employment_status', css_class='employment-status-dropdown mb-4 select2'),
+                Field('employment_status', css_class='employment-status-dropdown mb-4 select2', wrapper_class='smart-match-critical'),
             ),
             
             HTML('<div id="employed-fields" style="display: none;">'),
             Fieldset(
                 'Employment Information',
                 Row(
-                    Column('company_name', css_class='col-md-6'),
+                    Column(Field('company_name', wrapper_class='strategic-match'), css_class='col-md-6'),
                     Column('position', css_class='col-md-6'),
                 ),
                 Row(
-                    Column(Field('annual_income', template='applicants/currency_income_field.html'), css_class='col-md-6'),
+                    Column(Field('annual_income', template='applicants/currency_income_field.html', wrapper_class='smart-match-critical'), css_class='col-md-6'),
                     Column('supervisor_name', css_class='col-md-6'),
                 ),
                 Row(
@@ -1429,7 +1605,7 @@ class ApplicantEmploymentForm(forms.ModelForm):
                 <div class="row mb-3">
                     <div class="col-md-12">
                         <div class="form-check">
-                            <input class="form-check-input currently-employed-checkbox" type="checkbox" name="currently_employed" id="{{ form.currently_employed.id_for_label }}" {% if form.currently_employed.value %}checked{% endif %} style="width: 1.25em; height: 1.25em;">
+                            {{ form.currently_employed }}
                             <label class="form-check-label ms-2" for="{{ form.currently_employed.id_for_label }}" style="font-size: 1.1rem; font-weight: 500;">
                                 I am currently employed here
                             </label>
@@ -1496,7 +1672,7 @@ class ApplicantEmploymentForm(forms.ModelForm):
             Fieldset(
                 'School Information',
                 Row(
-                    Column('school_name', css_class='col-md-6'),
+                    Column(Field('school_name', wrapper_class='strategic-match'), css_class='col-md-6'),
                     Column(Field('year_of_graduation', placeholder="2025"), css_class='col-md-6'),
                 ),
                 Row(
@@ -1572,7 +1748,7 @@ class ApplicantEmploymentForm(forms.ModelForm):
             # Navigation Buttons
             Div(
                 HTML('<a href="{% url \'profile_step2\' %}" class="btn btn-doorway-secondary btn-lg me-3">← Previous</a>'),
-                Submit('employment_submit', 'Complete Profile', css_class='btn btn-success btn-lg me-3'),
+                Submit('employment_submit', 'Save', css_class='btn btn-success btn-lg me-3'),
                 HTML('<a href="{% url \'applicant_dashboard\' %}" class="btn btn-outline-secondary btn-lg">Skip</a>'),
                 css_class='text-center mt-4'
             )
@@ -1638,12 +1814,9 @@ class ApplicantForm(forms.ModelForm):
             'date_of_birth': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'desired_move_in_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             # Currency fields with same restrictions as buildings form
-            'max_rent_budget': forms.NumberInput(attrs={
-                'class': 'form-control currency-field',
-                'step': '0.01',
-                'placeholder': '2500.00',
-                'min': '100',
-                'max': '50000'
+            'max_rent_budget': forms.TextInput(attrs={
+                'class': 'form-control currency-input',
+                'placeholder': '2500.00'
             }),
             'employment_status': forms.Select(attrs={'class': 'form-select select2'}),
         }

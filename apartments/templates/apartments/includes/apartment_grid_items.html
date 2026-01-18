@@ -1,0 +1,17 @@
+{% for apartment in apartments %}
+<div class="col-12 col-md-6 apartment-card" 
+     data-apartment-id="{{ apartment.id }}" 
+     data-price="{{ apartment.rent_price }}" 
+     data-lat="{{ apartment.building.latitude|default:40.7128 }}" 
+     data-lng="{{ apartment.building.longitude|default:-74.0060 }}">
+    <!-- Shared Component: Re-using the same card template as the Smart Matches section above -->
+    {% include 'includes/smart_match_card.html' %}
+</div>
+{% empty %}
+<div class="col-12 text-center py-5">
+    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+    <h4>No apartments found</h4>
+    <p class="text-muted">Try adjusting your filters</p>
+    <a href="{% url 'apartments_list' %}" class="btn btn-outline-dark">Clear All Filters</a>
+</div>
+{% endfor %}

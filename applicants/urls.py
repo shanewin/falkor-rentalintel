@@ -1,5 +1,5 @@
 from django.urls import path, include
-from .views import delete_applicant_photo, delete_pet_photo, applicant_overview, applicants_list, applicant_crm, get_applicant_data
+from .views import delete_applicant_photo, delete_pet_photo, applicant_overview, applicants_list, applicant_crm, get_applicant_data, toggle_saved_apartment
 from .profile_views import progressive_profile, quick_profile_update, profile_step1, profile_step2, profile_step3
 from .activity_views import activity_dashboard, activity_timeline, activity_analytics_api
 
@@ -10,6 +10,7 @@ urlpatterns = [
     path("applicants/", applicants_list, name="applicants_list"),
     path("<int:applicant_id>/crm/", applicant_crm, name="applicant_crm"),
     path("get-applicant-data/<int:applicant_id>/", get_applicant_data, name="get_applicant_data"),
+    path("api/toggle-saved-apartment/", toggle_saved_apartment, name="toggle_saved_apartment"),
     
     # Progressive profile system
     path('my-profile/', progressive_profile, name='progressive_profile'),

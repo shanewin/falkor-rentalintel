@@ -51,8 +51,18 @@ class SmartInsights:
         }
         
         insights['overall_score'] = cls._calculate_overall_score(insights)
-        insights['summary'] = cls._generate_summary(applicant, insights)
         insights['confidence_level'] = cls._determine_confidence(applicant, insights)
+        
+        # Categorize missing fields
+        missing_data = cls._get_critical_missing_fields(applicant)
+        insights['missing_requirements'] = missing_data # Store full struct for debugging
+        
+        # Inject into specific sections for display
+        insights['affordability']['missing_fields'] = missing_data['affordability']
+        insights['employment_stability']['missing_fields'] = missing_data['employment_stability']
+        insights['rental_history']['missing_fields'] = missing_data['rental_history']
+        
+        insights['summary'] = cls._generate_summary(applicant, insights)
         
         return insights
     
@@ -118,9 +128,9 @@ class SmartInsights:
                         if analysis['can_afford']:
                             analysis['details'] = f"Strong affordability: Income of ${income_fmt:,.0f}/month supports ${budget_fmt:,.0f} rent ({multiple_fmt:.1f}x income rule)"
                         elif analysis['income_multiple'] >= Decimal('2.5'):
-                            analysis['details'] = f"Borderline affordability: Income of ${income_fmt:,.0f}/month for ${budget_fmt:,.0f} rent ({multiple_fmt:.1f}x). Consider with strong credit/references."
+                            analysis['details'] = f"Borderline affordability: Income of ${income_fmt:,.0f}/month for Applicant's Max Budget of ${budget_fmt:,.0f} ({multiple_fmt:.1f}x). Consider with strong credit/references."
                         else:
-                            analysis['details'] = f"Poor affordability: Income of ${income_fmt:,.0f}/month insufficient for ${budget_fmt:,.0f} rent ({multiple_fmt:.1f}x income rule)"
+                            analysis['details'] = f"Poor affordability: Income of ${income_fmt:,.0f}/month is insufficient for Applicant's Max Budget of ${budget_fmt:,.0f} ({multiple_fmt:.1f}x income rule)."
                     else:
                         analysis['details'] = "Invalid rent budget: must be greater than $0"
                 except (InvalidOperation, ValueError) as e:
@@ -193,7 +203,14 @@ class SmartInsights:
             analysis['strengths'].append(f"Multiple income sources ({job_count} jobs)")
             analysis['stability_score'] += 10
         elif job_count == 0:
-            analysis['concerns'].append("No employment information provided")
+            # Check if income exists even if jobs don't (Stated Income case)
+            has_income = (applicant.annual_income and applicant.annual_income > 0)
+            if not has_income:
+                analysis['concerns'].append("No employment information provided")
+            else:
+                 # Income exists but no employment details - relied on missing_fields list to warn user
+                 # Adding a specific concern for clarity
+                 analysis['concerns'].append("Income stated without verified employment source")
         
         return analysis
     
@@ -227,14 +244,21 @@ class SmartInsights:
                 analysis['strengths'].append(f"Some stability at current address ({duration_display})")
             else:
                 analysis['concerns'].append(f"Short duration at current address ({duration_display})")
-        elif applicant.length_at_current_address:
-            # Fallback to old text field if new fields not filled
-            duration = applicant.length_at_current_address.lower()
-            if any(word in duration for word in ['year', 'years']) and not any(word in duration for word in ['month', '<', 'less']):
-                analysis['history_score'] += 20
-                analysis['strengths'].append(f"Stable at current address ({applicant.length_at_current_address})")
-            else:
                 analysis['concerns'].append(f"Short duration at current address ({applicant.length_at_current_address})")
+        
+        # Total Housing History (5-Year Rule) is calculated here
+        total_history_months = cls._calculate_total_housing_history_months(applicant)
+        if total_history_months >= 60:
+            analysis['history_score'] += 10
+            years_fmt = total_history_months / 12
+            analysis['strengths'].append(f"5+ Years Housing History Verified ({years_fmt:.1f} years)")
+        elif total_history_months >= 36:
+            analysis['history_score'] += 5
+            years_fmt = total_history_months / 12
+            analysis['strengths'].append(f"Good Housing History ({years_fmt:.1f} years)")
+        else:
+            years_fmt = total_history_months / 12
+            analysis['concerns'].append(f"Limited Housing History Verified ({years_fmt:.1f} years)")
         
         # Housing status
         if applicant.housing_status == 'rent':
@@ -380,7 +404,22 @@ class SmartInsights:
         """Generate AI-like summary of the applicant"""
         score = insights['overall_score']
         affordability = insights['affordability']
+        confidence = insights.get('confidence_level', 'Medium')
         
+        # Check if there are significant missing fields across sections
+        missing_affordability = insights['affordability'].get('missing_fields', [])
+        missing_employment = insights['employment_stability'].get('missing_fields', [])
+        missing_housing = insights['rental_history'].get('missing_fields', [])
+        total_missing = len(missing_affordability) + len(missing_employment) + len(missing_housing)
+        
+        # Scenario: Low Score primarily due to missing data (Low Confidence)
+        if confidence == 'Low' and score < 50 and total_missing > 0:
+            risk_level = "UNABLE TO ASSESS"
+            recommendation = "INSUFFICIENT DATA"
+            summary = f"**{recommendation}** - Score is limited by missing information. Please review the specific sections below for details."
+            return summary
+
+        # Standard Scenarios
         if score >= 80:
             risk_level = "LOW RISK"
             recommendation = "HIGHLY RECOMMENDED"
@@ -410,6 +449,8 @@ class SmartInsights:
             # Sanitize text before displaying
             sanitized_strength = escape(str(employment['strengths'][0]))
             summary += f"Employment: {sanitized_strength}. "
+        elif missing_employment:
+             summary += f"Missing critical employment data. "
         
         if insights['red_flags']:
             summary += f"⚠️ {len(insights['red_flags'])} concern(s) identified."
@@ -445,3 +486,71 @@ class SmartInsights:
             return "Medium"
         else:
             return "Low"
+
+    @classmethod
+    def _calculate_total_housing_history_months(cls, applicant):
+        """Calculate total months of housing history provided"""
+        total_months = 0
+        
+        # Current Address
+        if applicant.current_address_years:
+            total_months += applicant.current_address_years * 12
+        if applicant.current_address_months:
+            total_months += applicant.current_address_months
+            
+        # Previous Addresses
+        for addr in applicant.previous_addresses.all():
+            if addr.years:
+                total_months += addr.years * 12
+            if addr.months:
+                total_months += addr.months
+                
+        return total_months
+
+    @classmethod
+    def _get_critical_missing_fields(cls, applicant):
+        """Identify critical missing fields categorized by section"""
+        categorized_missing = {
+            'affordability': [],
+            'employment_stability': [],
+            'rental_history': []
+        }
+        
+        # Get full completion status
+        status = applicant.get_field_completion_status()
+        
+        # Map critical needs to sections
+        # Format: (Section Name in Completion Status, List of (Nice Name, Field Key, Destination Category))
+        mappings = {
+            'Employment Information': [
+                ('Start Date', 'employment_start_date', 'employment_stability'),
+                ('Company', 'company_name', 'employment_stability'),
+                ('Status', 'employment_status', 'employment_stability')
+            ],
+            'Current Housing Details': [
+                ('Landlord Info', 'current_landlord_name', 'rental_history'),
+                ('Move Reason', 'reason_for_moving', 'rental_history')
+            ],
+            'Current Address': [
+                ('Address Duration', 'length_at_current_address', 'rental_history')
+            ]
+        }
+        
+        # 1. Income Check (Affordability)
+        has_income = (applicant.annual_income is not None and applicant.annual_income > 0)
+        jobs_filled = getattr(status['sections'].get('Related Data', {}).get('fields', {}).get('jobs_count', {}), 'filled', False)
+        
+        if not has_income and not jobs_filled:
+            categorized_missing['affordability'].append("Annual Income")
+
+        # 2. Check other critical fields
+        sections = status.get('sections', {})
+        for section_name, fields_list in mappings.items():
+            section_data = sections.get(section_name, {}).get('fields', {})
+            
+            for nice_name, field_key, destination in fields_list:
+                field_data = section_data.get(field_key)
+                if field_data and not field_data.get('filled', False):
+                    categorized_missing[destination].append(nice_name)
+                    
+        return categorized_missing

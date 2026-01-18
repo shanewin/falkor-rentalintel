@@ -13,10 +13,12 @@ class BrokerProfileForm(forms.ModelForm):
     
     # Override years_experience to use choices
     YEARS_CHOICES = [('', 'Select Years')] + [(i, f'{i} year{"s" if i != 1 else ""}') for i in range(1, 21)]
-    years_experience = forms.ChoiceField(
+    years_experience = forms.TypedChoiceField(
         choices=YEARS_CHOICES,
         widget=forms.Select(attrs={'class': 'form-select select2'}),
-        required=False
+        required=False,
+        coerce=int,
+        empty_value=0
     )
     
     # Explicitly define fields that are now properties

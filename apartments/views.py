@@ -33,7 +33,7 @@ def apartments_list(request):
         try:
             from applicants.apartment_matching import get_apartment_matches_for_applicant
             applicant = request.user.applicant_profile
-            smart_matches = get_apartment_matches_for_applicant(applicant, limit=6)  # Show top 6 matches
+            smart_matches = get_apartment_matches_for_applicant(applicant)  # Show all matches
         except ImportError as e:
             logger.warning(f"Smart matching module not available: {e}")
             smart_matches = []
@@ -44,9 +44,18 @@ def apartments_list(request):
     # Handle AJAX requests for filtering
     if is_ajax_request:
         try:
+            from django.template.loader import render_to_string
+            
             apartments_data = services.serialize_apartments_for_map(apartments)
             
+            # Render only the grid part for seamless updates
+            html = render_to_string('apartments/includes/apartment_grid_items.html', {
+                'apartments': apartments,
+                'total_results': apartments.count()
+            }, request=request)
+            
             return JsonResponse({
+                'html': html,
                 'apartments': apartments_data,
                 'total_results': apartments.count(),
                 'active_filters': filters,
@@ -163,8 +172,64 @@ def apartment_overview(request, apartment_id):
             )
         except Exception as e:
             logger.error(f"Failed to track apartment view: {e}")
-    
-    return render(request, 'apartments/apartment_overview.html', {'apartment': apartment})
+
+    # Broker Logic: Reverse Matching
+    smart_matches = []
+    if request.user.is_authenticated and (request.user.is_superuser or getattr(request.user, 'is_broker', False)):
+        try:
+            from applicants.models import Applicant
+            from applicants.apartment_matching import ApartmentMatchingService
+
+            # Find applicants who have this neighborhood in their preferences
+            # (Broadening scope to ensure we catch all potential matches logic)
+            candidates = Applicant.objects.select_related('user').all()
+
+            for applicant in candidates:
+                try:
+                    service = ApartmentMatchingService(applicant)
+                    score = service._calculate_match_percentage(apartment)
+                    
+                    # Add ALL scored candidates to the list, regardless of score value
+                    smart_matches.append({
+                        'applicant': applicant,
+                        'match_percentage': score,
+                        # Get details for tooltip/explanation if needed
+                        'match_details': service._get_match_details(apartment, score)
+                    })
+                except Exception as e:
+                    logger.error(f"Error scoring applicant {applicant.id}: {e}")
+            
+            # Sort by highest match first
+            smart_matches.sort(key=lambda x: x['match_percentage'], reverse=True)
+
+        except Exception as e:
+            logger.error(f"Error in broker smart matching: {e}")
+
+    # Check if saved by applicant
+    is_saved = False
+    if request.user.is_authenticated and getattr(request.user, 'is_applicant', False):
+        try:
+             # Use the related_name 'saved_apartments' logic
+             # Assuming request.user.applicant_profile is available and reliable (or fetch it)
+             from applicants.models import Applicant
+             applicant = Applicant.objects.get(user=request.user)
+             is_saved = applicant.saved_apartments.filter(apartment=apartment).exists()
+        except:
+             pass
+
+    # Check for previous contact
+    has_contacted = False
+    if request.user.is_authenticated:
+        from .models import BrokerInquiry
+        has_contacted = BrokerInquiry.objects.filter(apartment=apartment, applicant=request.user).exists()
+
+    return render(request, 'apartments/apartment_overview.html', {
+        'apartment': apartment,
+        'mapbox_token': getattr(settings, 'MAPBOX_API_TOKEN', ''),
+        'smart_matches': smart_matches, # Pass matches to template
+        'is_saved': is_saved, 
+        'has_contacted': has_contacted,
+    })
 
 
 def get_apartment_data(request, apartment_id):
@@ -367,9 +432,18 @@ def contact_broker(request, apartment_id):
         form = BrokerContactForm(request.POST)
         if form.is_valid():
             try:
-                success = services.handle_broker_contact(apartment, form.cleaned_data)
+                # Pass request.user if authenticated, else None
+                user = request.user if request.user.is_authenticated else None
+                success = services.handle_broker_contact(apartment, form.cleaned_data, user=user)
                 
                 if success:
+                    # Auto-save apartment for applicants
+                    if user and hasattr(user, 'applicant_profile'):
+                        try:
+                            user.applicant_profile.saved_apartments.add(apartment)
+                        except Exception as e:
+                            logger.error(f"Failed to auto-save apartment {apartment.id} for user {user.id}: {e}")
+                            
                     messages.success(request, 'Your message has been sent to the broker. You should hear back within 24 hours!')
                 else:
                     messages.warning(request, 'Message sent, but no broker contact information is available for this property.')

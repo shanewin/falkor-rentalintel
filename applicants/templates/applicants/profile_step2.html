@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load crispy_forms_tags %}
+{% load user_extras %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
@@ -136,6 +137,73 @@
         gap: 10px;
     }
 }
+
+/* Amenity Search & Scroll UX - Moved to template for guaranteed loading */
+.amenities-scroll-container {
+    max-height: 480px !important;
+    overflow-y: auto !important;
+    background-color: #fcfcfc;
+    border: 1px solid #dee2e6 !important;
+    border-radius: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: #dee2e6 transparent;
+}
+
+.amenities-scroll-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.amenities-scroll-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.amenities-scroll-container::-webkit-scrollbar-thumb {
+    background-color: #dee2e6;
+    border-radius: 10px;
+}
+
+.amenity-search {
+    border-radius: 8px !important;
+    padding: 0.6rem 1rem !important;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    border: 1px solid #ced4da !important;
+}
+
+.amenity-search:focus {
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1) !important;
+    border-color: #0d6efd !important;
+    outline: none;
+}
+
+    /* Smart Match Badges */
+    .smart-match-critical label::after, .smart-match-critical.badge-target::after {
+        content: 'Smart Match Critical';
+        font-size: 0.65rem;
+        background-color: #ffd700;
+        color: #000;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 8px;
+        font-weight: bold;
+        text-transform: uppercase;
+        vertical-align: middle;
+        display: inline-block;
+    }
+
+    .strategic-match label::after, .strategic-match.badge-target::after {
+        content: 'Strategic Match';
+        font-size: 0.65rem;
+        background-color: #f0f0f0;
+        color: #666;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 8px;
+        font-weight: bold;
+        text-transform: uppercase;
+        vertical-align: middle;
+        display: inline-block;
+    }
 </style>
 {% endblock %}
 
@@ -171,43 +239,58 @@
     <div class="card shadow-sm mb-4">
         <div class="card-body">
             <h6 class="mb-3">Profile Completion Progress ({{ completion_percentage }}% Complete)</h6>
-            <div class="progress mb-3" style="height: 8px;">
-                <div class="progress-bar bg-warning" role="progressbar" style="width: 66%;" aria-valuenow="66" aria-valuemin="0" aria-valuemax="100"></div>
+            <div class="progress mb-3" style="height: 10px; border-radius: 5px;">
+                <div class="progress-bar bg-warning" role="progressbar" style="width: {{ completion_percentage }}%;" aria-valuenow="{{ completion_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
             </div>
+            
             <div class="row text-center">
+                {% for step_num, step_data in completion_status.steps.items %}
                 <div class="col-4">
-                    <a href="{% url 'profile_step1' %}" class="text-decoration-none">
+                    <a href="{% url 'profile_step'|add:step_num|default:'profile_step1' %}" class="text-decoration-none">
                         <div class="d-flex flex-column align-items-center">
-                            <div class="rounded-circle bg-light text-muted d-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
-                                <strong>1</strong>
+                            <div class="rounded-circle {% if current_step == step_num %}bg-dark text-white border border-secondary{% elif step_data.pct == 100 %}bg-success text-white{% else %}bg-light text-muted{% endif %} d-flex align-items-center justify-content-center mb-2 position-relative" style="width: 44px; height: 44px; transition: all 0.3s ease;">
+                                {% if step_data.pct == 100 %}
+                                    <i class="fas fa-check"></i>
+                                {% else %}
+                                    <strong>{{ step_num }}</strong>
+                                {% endif %}
+                                
+                                {% if step_data.pct < 100 and step_data.pct > 0 and current_step != step_num %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark border border-white" style="font-size: 0.6rem;">
+                                    {{ step_data.pct }}%
+                                </span>
+                                {% endif %}
                             </div>
-                            <small class="text-muted">Personal Info</small>
+                            <small class="{% if current_step == step_num %}text-dark fw-bold{% else %}text-muted{% endif %}">
+                                {% if step_num == 1 %}Personal Info{% elif step_num == 2 %}Housing Needs{% else %}Employment{% endif %}
+                            </small>
                         </div>
                     </a>
                 </div>
-                <div class="col-4">
-                    <a href="{% url 'profile_step2' %}" class="text-decoration-none">
-                        <div class="d-flex flex-column align-items-center">
-                            <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
-                                <strong>2</strong>
-                            </div>
-                            <small class="text-dark fw-bold">Housing Needs & Preferences</small>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-4">
-                    <a href="{% url 'profile_step3' %}" class="text-decoration-none">
-                        <div class="d-flex flex-column align-items-center">
-                            <div class="rounded-circle bg-light text-muted d-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
-                                <strong>3</strong>
-                            </div>
-                            <small class="text-muted">Employment & Income</small>
-                        </div>
-                    </a>
-                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
+
+    <!-- Alert for Missing Fields in Current Step -->
+    {% with current_step_data=completion_status.steps|get_item:current_step %}
+    {% if current_step_data.missing %}
+    <div class="alert alert-warning border-start border-4 border-warning shadow-sm mb-4">
+        <div class="d-flex align-items-center">
+            <div class="me-3">
+                <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+            </div>
+            <div>
+                <h6 class="alert-heading mb-1 fw-bold">Items missing in this step:</h6>
+                <p class="mb-0 small">
+                    Completing these will significantly improve your match score: 
+                    <span class="fw-bold">{{ current_step_data.missing|join:", " }}</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endwith %}
     
     <!-- Step 2: Housing Needs -->
     <div class="card shadow-sm">
@@ -234,6 +317,50 @@
 
 <!-- Include forms.js -->
 <script src="{% static 'js/forms.js' %}"></script>
+<script src="{% static 'applicants/js/smart_insights.js' %}"></script>
+
+<!-- Search filtering logic -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInputs = document.querySelectorAll('.amenity-search');
+    searchInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            const targetGridId = this.dataset.target;
+            const grid = document.getElementById(targetGridId);
+            
+            if (!grid) return;
+
+            const items = grid.querySelectorAll('.amenity-slider-item');
+            let visibleCount = 0;
+
+            items.forEach(item => {
+                const nameSpan = item.querySelector('.amenity-name');
+                if (!nameSpan) return;
+                
+                const nameText = nameSpan.textContent.toLowerCase();
+                if (nameText.includes(query)) {
+                    item.style.setProperty('display', 'block', 'important');
+                    visibleCount++;
+                } else {
+                    item.style.setProperty('display', 'none', 'important');
+                }
+            });
+
+            // Toggle "No results" message
+            const type = targetGridId.split('-')[0]; // building or apartment
+            const noResultsMsg = document.getElementById('no-results-' + type);
+            if (noResultsMsg) {
+                if (visibleCount === 0) {
+                    noResultsMsg.classList.remove('d-none');
+                } else {
+                    noResultsMsg.classList.add('d-none');
+                }
+            }
+        });
+    });
+});
+</script>
 
 <!-- Page-specific JavaScript -->
 <script>

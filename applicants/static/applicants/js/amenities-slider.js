@@ -66,6 +66,8 @@
     function updateSliderAppearance(slider) {
         const value = parseInt(slider.value);
         const item = slider.closest('.amenity-slider-item');
+        if (!item) return; // Guard clause for new layout if still present
+        
         const label = item.querySelector('.priority-label');
         const amenityName = slider.dataset.amenityName || 'Unknown';
         
@@ -75,28 +77,28 @@
         // Update based on value
         if (value === 0) {
             // Unset/Don't Care
-            label.textContent = '';
+            if (label) label.textContent = '';
             slider.className = 'amenity-slider unset';
             item.classList.add('unset');
             console.log(amenityName + ': Unset (Don\'t Care)');
             
         } else if (value === 1) {
             // Nice to Have
-            label.textContent = 'Nice to Have';
+            if (label) label.textContent = 'Nice to Have';
             slider.className = 'amenity-slider nice-to-have';
             item.classList.add('nice-to-have');
             console.log(amenityName + ': Nice to Have');
             
         } else if (value === 2) {
             // Important (formerly Very Important)
-            label.textContent = 'Important';
+            if (label) label.textContent = 'Important';
             slider.className = 'amenity-slider very-important';
             item.classList.add('very-important');
             console.log(amenityName + ': Important');
             
         } else if (value === 3) {
             // Must Have
-            label.textContent = 'Must Have';
+            if (label) label.textContent = 'Must Have';
             slider.className = 'amenity-slider must-have';
             item.classList.add('must-have');
             console.log(amenityName + ': Must Have');
@@ -156,25 +158,10 @@
         console.log('All sliders reset to unset');
     }
     
-    /**
-     * Set sliders to demo values (for testing)
-     */
-    function setDemoValues() {
-        const sliders = document.querySelectorAll('.amenity-slider');
-        if (sliders.length > 0) {
-            // Set first few to demo values
-            if (sliders[0]) { sliders[0].value = 4; updateSliderAppearance(sliders[0]); }
-            if (sliders[1]) { sliders[1].value = 3; updateSliderAppearance(sliders[1]); }
-            if (sliders[2]) { sliders[2].value = 2; updateSliderAppearance(sliders[2]); }
-            console.log('Demo values set');
-        }
-    }
-    
     // Expose functions to global scope for debugging
     window.amenitiesSliderDebug = {
         getAllValues: getAllSliderValues,
-        resetAll: resetAllSliders,
-        setDemo: setDemoValues
+        resetAll: resetAllSliders
     };
     
 })();

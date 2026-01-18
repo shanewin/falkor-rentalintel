@@ -57,4 +57,7 @@ urlpatterns = [
     path('verify-my-phone/', sms_views.verify_phone_for_user, name='verify_my_phone'),
     path('sms-status/', sms_views.sms_verification_status, name='sms_verification_status'),
     path('webhook/twilio/', sms_views.twilio_webhook, name='twilio_webhook'),
+    
+    # Public Profiles
+    path('brokers/<int:broker_id>/', views.public_broker_profile, name='public_broker_profile'),
 ]

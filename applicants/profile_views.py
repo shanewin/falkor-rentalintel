@@ -69,192 +69,10 @@ def get_step_completion_status(applicant):
 @login_required
 def progressive_profile(request):
     """
-    Progressive profile completion for applicants
-    Shows completion percentage and guides users through missing fields
+    Redirects the old summary page to Step 1 of the profile.
+    Notifications are now handled in-context on the step pages.
     """
-    # Get or create applicant profile linked to user
-    try:
-        applicant = request.user.applicant_profile
-    except Applicant.DoesNotExist:
-        # Create applicant profile if it doesn't exist
-        # Only email is truly required, everything else is optional
-        applicant = Applicant.objects.create(
-            user=request.user,
-            email=request.user.email,
-            first_name='',
-            last_name='',
-            # All other fields will use model defaults or be None/blank
-        )
-    
-    # Use the same ProfileProgressService as the dashboard for consistency
-    completion_status = applicant.get_field_completion_status()
-    completion_percentage = completion_status['overall']['overall_completion_percentage']
-    missing_fields_list = {}
-    for section_name, section_data in completion_status['sections'].items():
-        section_missing = [field_data['label'] for field_name, field_data in section_data['fields'].items() if not field_data['filled']]
-        if section_missing:
-            missing_fields_list[section_name] = section_missing
-        # Keep the detailed completion status for UI purposes but use ProfileProgressService for percentage
-        completion_status = applicant.get_field_completion_status()
-    
-    # Convert missing fields list to dictionary format for compatibility
-    missing_fields = {}
-    if missing_fields_list:
-        for section, fields in missing_fields_list.items():
-            if fields:
-                missing_fields[section] = fields
-    
-    if request.method == 'POST':
-        form = ApplicantForm(request.POST, instance=applicant)
-        if form.is_valid():
-            with transaction.atomic():
-                applicant = form.save()
-                
-                # Handle profile photo upload
-                if 'profile_photo' in request.FILES:
-                    import json
-                    import base64
-                    from io import BytesIO
-                    from PIL import Image
-                    from django.core.files.base import ContentFile
-                    from .models import ApplicantPhoto
-                    
-                    # Remove existing photos first (assuming one profile photo)
-                    ApplicantPhoto.objects.filter(applicant=applicant).delete()
-                    
-                    # Get crop data if provided
-                    crop_data = request.POST.get('crop_data', '')
-                    
-                    if crop_data:
-                        try:
-                            crop_info = json.loads(crop_data)
-                            
-                            # If we have a cropped image from Cropper.js
-                            if crop_info.get('cropped') and crop_info.get('croppedImage'):
-                                # Extract base64 data
-                                cropped_image_data = crop_info['croppedImage']
-                                if cropped_image_data.startswith('data:image'):
-                                    format_info, base64_data = cropped_image_data.split(';base64,')
-                                    image_data = base64.b64decode(base64_data)
-                                    
-                                    # Create a file from the cropped data
-                                    image_file = ContentFile(image_data, name=f"profile_{applicant.id}_cropped.jpg")
-                                    
-                                    # Create new photo with cropped image
-                                    photo = ApplicantPhoto(applicant=applicant, image=image_file)
-                                    photo.save()
-                                else:
-                                    # Fallback to original file
-                                    photo = ApplicantPhoto(applicant=applicant, image=request.FILES['profile_photo'])
-                                    photo.save()
-                            else:
-                                # No crop, use original file
-                                photo = ApplicantPhoto(applicant=applicant, image=request.FILES['profile_photo'])
-                                photo.save()
-                        except (json.JSONDecodeError, ValueError, KeyError) as e:
-                            # Fallback to original file if crop data is invalid
-                            photo = ApplicantPhoto(applicant=applicant, image=request.FILES['profile_photo'])
-                            photo.save()
-                    else:
-                        # No crop data, use original file
-                        photo = ApplicantPhoto(applicant=applicant, image=request.FILES['profile_photo'])
-                        photo.save()
-                
-                # Handle previous address submissions
-                previous_addresses_data = []
-                for i in range(1, 5):  # Up to 4 previous addresses
-                    street_address_1 = request.POST.get(f'prev_street_address_1_{i}', '').strip()
-                    if street_address_1:  # Only process if there's a street address
-                        previous_addresses_data.append({
-                            'order': i,
-                            'street_address_1': street_address_1,
-                            'street_address_2': request.POST.get(f'prev_street_address_2_{i}', '').strip(),
-                            'city': request.POST.get(f'prev_city_{i}', '').strip(),
-                            'state': request.POST.get(f'prev_state_{i}', '').strip(),
-                            'zip_code': request.POST.get(f'prev_zip_code_{i}', '').strip(),
-                            'length_at_address': _format_duration_from_dropdowns(
-                                request.POST.get(f'prev_address_years_{i}', ''),
-                                request.POST.get(f'prev_address_months_{i}', '')
-                            ),
-                            'housing_status': request.POST.get(f'prev_housing_status_{i}', 'own'),
-                            'landlord_name': request.POST.get(f'prev_landlord_name_{i}', '').strip(),
-                            'landlord_phone': request.POST.get(f'prev_landlord_phone_{i}', '').strip(),
-                            'landlord_email': request.POST.get(f'prev_landlord_email_{i}', '').strip(),
-                            'monthly_rent': request.POST.get(f'prev_monthly_rent_{i}', '').strip(),
-                        })
-                
-                # Clear existing previous addresses and create new ones
-                PreviousAddress.objects.filter(applicant=applicant).delete()
-                for addr_data in previous_addresses_data:
-                    PreviousAddress.objects.create(
-                        applicant=applicant,
-                        order=addr_data['order'],
-                        street_address_1=addr_data['street_address_1'],
-                        street_address_2=addr_data['street_address_2'] if addr_data['street_address_2'] else None,
-                        city=addr_data['city'] if addr_data['city'] else None,
-                        state=addr_data['state'] if addr_data['state'] else None,
-                        zip_code=addr_data['zip_code'] if addr_data['zip_code'] else None,
-                        length_at_address=addr_data['length_at_address'] if addr_data['length_at_address'] else None,
-                        housing_status=addr_data['housing_status'],
-                        landlord_name=addr_data['landlord_name'] if addr_data['landlord_name'] else None,
-                        landlord_phone=addr_data['landlord_phone'] if addr_data['landlord_phone'] else None,
-                        landlord_email=addr_data['landlord_email'] if addr_data['landlord_email'] else None,
-                        monthly_rent=addr_data['monthly_rent'] if addr_data['monthly_rent'] else None,
-                    )
-                
-                # Handle dynamic employment data (jobs, income sources, assets)
-                process_dynamic_jobs(request, applicant)
-                process_dynamic_income_sources(request, applicant) 
-                process_dynamic_assets(request, applicant)
-                
-
-                # Use comprehensive field tracking for consistent percentage calculation
-                new_completion_status = applicant.get_field_completion_status()
-                new_percentage = new_completion_status['overall']['overall_completion_percentage']
-                                
-                if new_percentage == 100:
-                    messages.success(request, "Congratulations! Your profile is now complete.")
-                elif new_percentage > completion_percentage:
-                    messages.success(request, f"Great progress! Your profile is now {new_percentage}% complete.")
-                else:
-                    messages.success(request, "Profile updated successfully.")
-                
-                return redirect('progressive_profile')
-    else:
-        form = ApplicantForm(instance=applicant)
-    
-    # Organize form fields by section for better UX - matching exactly what's in ApplicantForm
-    sections = {
-        'Basic Information': ['first_name', 'last_name', 'phone_number', 'email'],
-        'Current Address': ['street_address_1', 'street_address_2', 'city', 'state', 'zip_code'],
-        'Housing Preferences': ['desired_move_in_date', 'number_of_bedrooms', 'number_of_bathrooms', 
-                               'max_rent_budget', 'open_to_roommates'],
-        'Identification': ['date_of_birth', 'driver_license_number', 'driver_license_state'],
-        'Neighborhood & Amenities': ['neighborhood_preferences', 'amenities'],
-        'Emergency Contact': ['emergency_contact_name', 'emergency_contact_relationship', 
-                             'emergency_contact_phone'],
-        'Employment & Income': ['company_name', 'position', 'annual_income', 'supervisor_name', 
-                               'supervisor_email', 'supervisor_phone'],
-    }
-    
-    # Get existing previous addresses
-    previous_addresses = PreviousAddress.objects.filter(applicant=applicant).order_by('order')
-    
-    context = {
-        'form': form,
-        'applicant': applicant,
-        'completion_percentage': completion_percentage,
-        'missing_fields': missing_fields,
-        'completion_status': completion_status,  # Add detailed completion status
-        'sections': sections,
-        'previous_addresses': previous_addresses,
-        # Add existing employment data for JavaScript loading
-        'existing_jobs': list(applicant.jobs.all()),
-        'existing_income_sources': list(applicant.income_sources.all()),
-        'existing_assets': list(applicant.assets.all()),
-    }
-    
-    return render(request, 'applicants/progressive_profile.html', context)
+    return redirect('profile_step1')
 
 
 @login_required
@@ -323,7 +141,7 @@ def profile_step1(request):
         )
     
     if request.method == 'POST':
-        form = ApplicantBasicInfoForm(request.POST, instance=applicant)
+        form = ApplicantBasicInfoForm(request.POST, request.FILES, instance=applicant, request=request)
         if form.is_valid():
             with transaction.atomic():
                 applicant = form.save()
@@ -456,6 +274,8 @@ def profile_step1(request):
                                 request.POST.get(f'prev_address_years_{i}', ''),
                                 request.POST.get(f'prev_address_months_{i}', '')
                             ),
+                            'years': request.POST.get(f'prev_address_years_{i}', ''),
+                            'months': request.POST.get(f'prev_address_months_{i}', ''),
                             'housing_status': request.POST.get(f'prev_housing_status_{i}', 'own'),
                             'landlord_name': request.POST.get(f'prev_landlord_name_{i}', '').strip(),
                             'landlord_phone': request.POST.get(f'prev_landlord_phone_{i}', '').strip(),
@@ -475,6 +295,8 @@ def profile_step1(request):
                         state=addr_data['state'] if addr_data['state'] else None,
                         zip_code=addr_data['zip_code'] if addr_data['zip_code'] else None,
                         length_at_address=addr_data['length_at_address'] if addr_data['length_at_address'] else None,
+                        years=int(addr_data.get('years')) if addr_data.get('years') else 0,
+                        months=int(addr_data.get('months')) if addr_data.get('months') else 0,
                         housing_status=addr_data['housing_status'],
                         landlord_name=addr_data['landlord_name'] if addr_data['landlord_name'] else None,
                         landlord_phone=addr_data['landlord_phone'] if addr_data['landlord_phone'] else None,
@@ -485,7 +307,7 @@ def profile_step1(request):
                 messages.success(request, "Basic information saved! Let's continue with your housing preferences.")
                 return redirect('profile_step2')
     else:
-        form = ApplicantBasicInfoForm(instance=applicant)
+        form = ApplicantBasicInfoForm(instance=applicant, request=request)
     
     # Get existing previous addresses
     previous_addresses = PreviousAddress.objects.filter(applicant=applicant).order_by('order')
@@ -497,9 +319,9 @@ def profile_step1(request):
     # Get completion status for progress bar
     completion_status = get_step_completion_status(applicant)
     
-    # Calculate actual profile completion percentage
+    # Calculate actual profile completion percentage using the new logic
     completion_status = applicant.get_field_completion_status()
-    completion_percentage = completion_status['overall']['overall_completion_percentage']
+    completion_percentage = completion_status['overall_completion_percentage']
     
     context = {
         'form': form,
@@ -532,7 +354,7 @@ def profile_step2(request):
         )
     
     if request.method == 'POST':
-        form = ApplicantHousingForm(request.POST, instance=applicant)
+        form = ApplicantHousingForm(request.POST, request.FILES, instance=applicant, request=request)
         if form.is_valid():
             with transaction.atomic():
                 form.save()
@@ -706,7 +528,7 @@ def profile_step2(request):
     
     # Calculate actual profile completion percentage
     completion_status = applicant.get_field_completion_status()
-    completion_percentage = completion_status['overall']['overall_completion_percentage']
+    completion_percentage = completion_status['overall_completion_percentage']
     
     # Get existing pets for the template
     from .models import Pet, NeighborhoodPreference
@@ -774,7 +596,7 @@ def profile_step3(request):
         )
     
     if request.method == 'POST':
-        form = ApplicantEmploymentForm(request.POST, instance=applicant)
+        form = ApplicantEmploymentForm(request.POST, request.FILES, instance=applicant, request=request)
         if form.is_valid():
             with transaction.atomic():
                 # Save the main form
@@ -791,7 +613,7 @@ def profile_step3(request):
             
             # Calculate completion after final save
             completion_status = applicant.get_field_completion_status()
-            completion_percentage = completion_status['overall']['overall_completion_percentage']
+            completion_percentage = completion_status['overall_completion_percentage']
 
             if completion_percentage == 100:
                 messages.success(request, "Congratulations! Your profile is now complete.")
@@ -799,6 +621,8 @@ def profile_step3(request):
                 messages.success(request, f"Profile updated! Your profile is now {completion_percentage}% complete.")
             
             return redirect('applicant_dashboard')
+        else:
+            messages.error(request, f"Please correct the errors below: {form.errors}")
     else:
         form = ApplicantEmploymentForm(instance=applicant)
     
@@ -807,7 +631,7 @@ def profile_step3(request):
     
     # Calculate actual profile completion percentage
     completion_status = applicant.get_field_completion_status()
-    completion_percentage = completion_status['overall']['overall_completion_percentage']
+    completion_percentage = completion_status['overall_completion_percentage']
     
     context = {
         'form': form,

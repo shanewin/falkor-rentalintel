@@ -158,6 +158,16 @@ class Building(models.Model):
 
     internal_notes = RichTextField(blank=True, null=True)
 
+    # Neighborhood & Lifestyle Data (cached from APIs)
+    walk_score = models.IntegerField(blank=True, null=True, help_text="Walk Score (0-100)")
+    walk_description = models.CharField(max_length=100, blank=True, null=True, help_text="Text description of walkability")
+    bike_score = models.IntegerField(blank=True, null=True, help_text="Bike Score (0-100)")
+    bike_description = models.CharField(max_length=100, blank=True, null=True, help_text="Text description of bikeability")
+    transit_score = models.IntegerField(blank=True, null=True, help_text="Transit Score (0-100)")
+    transit_description = models.CharField(max_length=100, blank=True, null=True, help_text="Text description of transit access")
+    
+    neighborhood_data_updated = models.DateTimeField(blank=True, null=True, help_text="Last time API data was updated")
+
     def __str__(self):
         return f"{self.name} – {self.street_address_1}, {self.city}, {self.state}"
     
@@ -180,6 +190,10 @@ class Building(models.Model):
             "Broker Name": self.broker_name,
             "Description": self.description,
             "Internal Notes": self.internal_notes,
+            "Walk Score": self.walk_score,
+            "Walk Description": self.walk_description,
+            "Bike Score": self.bike_score,
+            "Transit Score": self.transit_score,
         }
         # Filter out fields with None or empty values
         return {k: v for k, v in fields.items() if v}
@@ -188,6 +202,7 @@ class Building(models.Model):
 
 class Amenity(models.Model):
     name = models.CharField(max_length=100)
+    icon = models.CharField(max_length=50, default='fa-check-circle', help_text="FontAwesome icon class (e.g. 'fa-swimming-pool')")
 
     def __str__(self):
         return self.name
@@ -305,3 +320,41 @@ class BuildingSpecial(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.get_special_type_display()}) for {self.building.name}"
+
+
+class NearbySchool(models.Model):
+    """
+    Nearby school information cached from GreatSchools or similar API.
+    Business Context: School quality is a top 3 decision factor for families.
+    """
+    building = models.ForeignKey(Building, on_delete=models.CASCADE, related_name='nearby_schools')
+    name = models.CharField(max_length=255)
+    rating = models.IntegerField(
+        blank=True, 
+        null=True, 
+        help_text="GreatSchools rating (1-10)"
+    )
+    grades = models.CharField(
+        max_length=100, 
+        blank=True, 
+        null=True, 
+        help_text="e.g. 'PK-5' or '9-12'"
+    )
+    distance = models.DecimalField(
+        max_digits=4, 
+        decimal_places=2, 
+        help_text="Distance in miles"
+    )
+    school_type = models.CharField(
+        max_length=50, 
+        blank=True, 
+        null=True, 
+        help_text="e.g. 'Public', 'Private', 'Charter'"
+    )
+    
+    class Meta:
+        ordering = ['distance']
+        unique_together = ['building', 'name']
+
+    def __str__(self):
+        return f"{self.name} ({self.rating}/10) - {self.distance} mi"

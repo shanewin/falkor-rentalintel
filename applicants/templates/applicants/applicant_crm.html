@@ -129,45 +129,118 @@
         <!-- Activity Feed -->
         <div class="col-md-8">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4><i class="fas fa-stream me-2"></i>Activity Feed</h4>
-                <ul class="nav nav-tabs border-0">
-                    <li class="nav-item">
-                        <button class="nav-link active" onclick="filterActivities('all')">All</button>
+                <h4><i class="fas fa-stream me-2"></i>History</h4>
+                <ul class="nav nav-pills" id="crmTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="activity-tab" data-bs-toggle="tab" data-bs-target="#activity" type="button" role="tab" aria-controls="activity" aria-selected="true">Activity Feed</button>
                     </li>
-                    <li class="nav-item">
-                        <button class="nav-link" onclick="filterActivities('login')">Logins</button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" onclick="filterActivities('profile')">Profile</button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" onclick="filterActivities('apartment')">Apartments</button>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="inquiries-tab" data-bs-toggle="tab" data-bs-target="#inquiries" type="button" role="tab" aria-controls="inquiries" aria-selected="false">Inquiries</button>
                     </li>
                 </ul>
             </div>
             
-            <div class="card shadow-sm" style="max-height: 600px; overflow-y: auto;">
-                <div class="list-group list-group-flush">
-                    {% for activity in recent_activities %}
-                        <div class="list-group-item d-flex" data-type="{{ activity.activity_type }}">
-                            <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; background-color: {{ activity.color_class }};">
-                                <i class="{{ activity.icon_class }} text-white"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <div class="fw-semibold mb-1">{{ activity.description }}</div>
-                                <div class="text-muted small">
-                                    {{ activity.created_at|date:"M d, Y g:i A" }}
-                                    {% if activity.triggered_by %} • by {{ activity.triggered_by.username }}{% endif %}
-                                    {% if activity.ip_address %} • {{ activity.ip_address }}{% endif %}
+            <div class="tab-content" id="crmTabsContent">
+                <!-- Activity Feed Tab -->
+                <div class="tab-pane fade show active" id="activity" role="tabpanel" aria-labelledby="activity-tab">
+                    <div class="d-flex justify-content-end mb-2">
+                        <ul class="nav nav-tabs border-0 small">
+                            <li class="nav-item">
+                                <button class="nav-link active py-1 px-2" onclick="filterActivities('all')">All</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link py-1 px-2" onclick="filterActivities('login')">Logins</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link py-1 px-2" onclick="filterActivities('profile')">Profile</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link py-1 px-2" onclick="filterActivities('apartment')">Apartments</button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="card shadow-sm" style="max-height: 600px; overflow-y: auto;">
+                        <div class="list-group list-group-flush">
+                            {% for activity in recent_activities %}
+                                <div class="list-group-item d-flex activity-item" data-type="{{ activity.activity_type }}">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; background-color: {{ activity.color_class }};">
+                                        <i class="{{ activity.icon_class }} text-white"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-semibold mb-1">{{ activity.description }}</div>
+                                        <div class="text-muted small">
+                                            {{ activity.created_at|date:"M d, Y g:i A" }}
+                                            {% if activity.triggered_by %} • by {{ activity.triggered_by.username }}{% endif %}
+                                            {% if activity.ip_address %} • {{ activity.ip_address }}{% endif %}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            {% empty %}
+                                <div class="list-group-item text-center py-5">
+                                    <i class="fas fa-inbox fa-2x text-muted mb-3 d-block"></i>
+                                    <p class="text-muted mb-0">No activities recorded yet.</p>
+                                </div>
+                            {% endfor %}
                         </div>
-                    {% empty %}
-                        <div class="list-group-item text-center py-5">
-                            <i class="fas fa-inbox fa-2x text-muted mb-3 d-block"></i>
-                            <p class="text-muted mb-0">No activities recorded yet.</p>
+                    </div>
+                </div>
+
+                <!-- Inquiries Tab -->
+                <div class="tab-pane fade" id="inquiries" role="tabpanel" aria-labelledby="inquiries-tab">
+                    <div class="card shadow-sm">
+                        <div class="list-group list-group-flush">
+                            {% for inquiry in inquiries %}
+                                <div class="list-group-item p-3">
+                                    <div class="d-flex w-100 justify-content-between mb-2">
+                                        <h5 class="mb-1">
+                                            <a href="{% url 'apartment_overview' inquiry.apartment.id %}" class="text-decoration-none">
+                                                {{ inquiry.apartment.building.name }} Unit {{ inquiry.apartment.unit_number }}
+                                            </a>
+                                        </h5>
+                                        <small class="text-muted">{{ inquiry.created_at|date:"M d, Y" }}</small>
+                                    </div>
+                                    
+                                    <div class="d-flex align-items-center mb-2">
+                                        {% if inquiry.inquiry_type == 'request_tour' %}
+                                            <span class="badge bg-primary me-2"><i class="fas fa-calendar-alt me-1"></i> Tour Request</span>
+                                        {% else %}
+                                            <span class="badge bg-info me-2"><i class="fas fa-question-circle me-1"></i> Question</span>
+                                        {% endif %}
+                                        <small class="text-muted">{{ inquiry.created_at|time:"g:i A" }}</small>
+                                    </div>
+
+                                    {% if inquiry.inquiry_type == 'request_tour' %}
+                                        {% if inquiry.preferred_times %}
+                                            <div class="bg-light p-2 rounded small mb-2">
+                                                <strong>Preferred Times:</strong>
+                                                <ul class="mb-0 ps-3 mt-1">
+                                                    {% for time in inquiry.preferred_times %}
+                                                        <li>{{ time }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="bg-light p-2 rounded small text-muted fst-italic mb-2">
+                                            "{{ inquiry.message }}"
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <div class="small text-muted">
+                                        <i class="fas fa-user me-1"></i> {{ inquiry.name }} 
+                                        <i class="fas fa-envelope ms-3 me-1"></i> {{ inquiry.email }}
+                                        <i class="fas fa-phone ms-3 me-1"></i> {{ inquiry.phone }}
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <div class="list-group-item text-center py-5">
+                                    <i class="fas fa-paper-plane fa-2x text-muted mb-3 d-block"></i>
+                                    <p class="text-muted mb-0">No inquiries sent yet.</p>
+                                </div>
+                            {% endfor %}
                         </div>
-                    {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>

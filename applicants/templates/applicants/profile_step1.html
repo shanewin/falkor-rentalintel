@@ -1,12 +1,43 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load crispy_forms_tags %}
+{% load user_extras %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/doorway-forms.css' %}">
 <link rel="stylesheet" href="{% static 'applicants/css/applicants.css' %}">
 <!-- Cropper.js CSS -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+<style>
+    /* Smart Match Badges */
+    .smart-match-critical label::after, .smart-match-critical.badge-target::after {
+        content: 'Smart Match Critical';
+        font-size: 0.65rem;
+        background-color: #ffd700;
+        color: #000;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 8px;
+        font-weight: bold;
+        text-transform: uppercase;
+        vertical-align: middle;
+        display: inline-block;
+    }
+
+    .strategic-match label::after, .strategic-match.badge-target::after {
+        content: 'Strategic Match';
+        font-size: 0.65rem;
+        background-color: #f0f0f0;
+        color: #666;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 8px;
+        font-weight: bold;
+        text-transform: uppercase;
+        vertical-align: middle;
+        display: inline-block;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -41,50 +72,61 @@
     <div class="card shadow-sm mb-4">
         <div class="card-body">
             <h6 class="mb-3">Profile Completion Progress ({{ completion_percentage }}% Complete)</h6>
-            <div class="progress mb-3" style="height: 8px;">
-                <div class="progress-bar bg-warning" role="progressbar" style="width: 33%;" aria-valuenow="33" aria-valuemin="0" aria-valuemax="100"></div>
+            <div class="progress mb-3" style="height: 10px; border-radius: 5px;">
+                <div class="progress-bar bg-warning" role="progressbar" style="width: {{ completion_percentage }}%;" aria-valuenow="{{ completion_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
             </div>
+            
             <div class="row text-center">
+                {% for step_num, step_data in completion_status.steps.items %}
                 <div class="col-4">
-                    <a href="{% url 'profile_step1' %}" class="text-decoration-none">
+                    <a href="{% url 'profile_step'|add:step_num|default:'profile_step1' %}" class="text-decoration-none">
                         <div class="d-flex flex-column align-items-center">
-                            <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
-                                <strong>1</strong>
+                            <div class="rounded-circle {% if current_step == step_num %}bg-dark text-white border border-secondary{% elif step_data.pct == 100 %}bg-success text-white{% else %}bg-light text-muted{% endif %} d-flex align-items-center justify-content-center mb-2 position-relative" style="width: 44px; height: 44px; transition: all 0.3s ease;">
+                                {% if step_data.pct == 100 %}
+                                    <i class="fas fa-check"></i>
+                                {% else %}
+                                    <strong>{{ step_num }}</strong>
+                                {% endif %}
+                                
+                                {% if step_data.pct < 100 and step_data.pct > 0 and current_step != step_num %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark border border-white" style="font-size: 0.6rem;">
+                                    {{ step_data.pct }}%
+                                </span>
+                                {% endif %}
                             </div>
-                            <small class="text-dark fw-bold">Personal Info</small>
+                            <small class="{% if current_step == step_num %}text-dark fw-bold{% else %}text-muted{% endif %}">
+                                {% if step_num == 1 %}Personal Info{% elif step_num == 2 %}Housing Needs{% else %}Employment{% endif %}
+                            </small>
                         </div>
                     </a>
                 </div>
-                <div class="col-4">
-                    <a href="{% url 'profile_step2' %}" class="text-decoration-none">
-                        <div class="d-flex flex-column align-items-center">
-                            <div class="rounded-circle bg-light text-muted d-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
-                                <strong>2</strong>
-                            </div>
-                            <small class="text-muted">Housing Needs & Preferences</small>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-4">
-                    <a href="{% url 'profile_step3' %}" class="text-decoration-none">
-                        <div class="d-flex flex-column align-items-center">
-                            <div class="rounded-circle bg-light text-muted d-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
-                                <strong>3</strong>
-                            </div>
-                            <small class="text-muted">Employment</small>
-                        </div>
-                    </a>
-                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
 
-    <!-- Step 1: Basic Information -->
-    <div class="card shadow-sm">
-        <div class="card-header bg-dark text-white">
-            <h5 class="mb-0"><i class="fas fa-user me-2"></i>Step 1: Personal Information</h5>
+    <!-- Alert for Missing Fields in Current Step -->
+    {% with current_step_data=completion_status.steps|get_item:current_step %}
+    {% if current_step_data.missing %}
+    <div class="alert alert-warning border-start border-4 border-warning shadow-sm mb-4">
+        <div class="d-flex align-items-center">
+            <div class="me-3">
+                <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+            </div>
+            <div>
+                <h6 class="alert-heading mb-1 fw-bold">Items missing in this step:</h6>
+                <p class="mb-0 small">
+                    Completing these will significantly improve your match score: 
+                    <span class="fw-bold">{{ current_step_data.missing|join:", " }}</span>
+                </p>
+            </div>
         </div>
-        <div class="card-body p-4">
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- Step 1: Basic Information -->
+
             <form method="post" enctype="multipart/form-data" class="doorway-form">
                 {% csrf_token %}
                 {% crispy form form.helper %}
@@ -100,8 +142,7 @@
                     </div>
                 </div>
             </form>
-        </div>
-    </div>
+
 </div>
 
 <!-- Cropper.js JavaScript -->
@@ -110,6 +151,7 @@
 
 {% block extra_js %}
 <script src="{% static 'js/forms.js' %}"></script>
+<script src="{% static 'applicants/js/smart_insights.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize Bootstrap tooltips
@@ -126,6 +168,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Setup previous addresses
     setupPreviousAddresses();
+
+    // Setup Housing History Meter (Real-time calculation)
+    setupHousingHistoryMeter();
     
     // Setup eviction checkbox
     setupEvictionCheckbox();
@@ -198,6 +243,7 @@ function setupRentalCheckbox() {
     toggleRentalFields(shouldShowRental);
 
     setupCurrencyInput(monthlyRentInput);
+    if (monthlyRentInput) monthlyRentInput.classList.add('currency-input');
 }
 
 // Identification document uploads functionality
@@ -213,6 +259,8 @@ function setupIdentificationUploads() {
                     
                     // Initialize Universal Image Cropper for this section's upload fields
                     initializeIdentificationCroppers(this.value);
+                } else {
+                    uploadSection.style.display = 'none';
                 }
 
                 if (this.value === 'driver_license') {
@@ -251,38 +299,6 @@ function toggleDriverLicenseFields(visible) {
     fields.forEach(field => field.classList.toggle('d-none', !visible));
 }
 
-function setupCurrencyInput(input) {
-    if (!input) return;
-
-    const formatCurrency = (value) => {
-        const numeric = value.replace(/[^0-9.]/g, '');
-        if (!numeric) return '';
-        const parts = numeric.split('.');
-        const whole = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        const decimal = parts[1] ? '.' + parts[1].slice(0, 2) : '';
-        return whole + decimal;
-    };
-
-    const handleInput = (event) => {
-        const caret = input.selectionStart;
-        input.value = formatCurrency(input.value);
-        // Reset caret to end after formatting
-        input.setSelectionRange(input.value.length, input.value.length);
-    };
-
-    input.addEventListener('input', handleInput);
-    input.addEventListener('blur', () => { input.value = formatCurrency(input.value); });
-
-    const form = input.closest('form');
-    if (form) {
-        form.addEventListener('submit', () => {
-            input.value = input.value.replace(/,/g, '');
-        });
-    }
-
-    // Initial format
-    input.value = formatCurrency(input.value);
-}
 
 // Initialize Universal Image Cropper for identification uploads
 function initializeIdentificationCroppers(idType) {
@@ -761,6 +777,105 @@ function setupEvictionCheckbox() {
             explanationField.classList.remove('d-none');
         }
     }
+}
+// Housing History Meter Functionality
+function setupHousingHistoryMeter() {
+    const meter = document.getElementById('housing_history_meter');
+    const bar = document.getElementById('housing_history_bar');
+    const text = document.getElementById('housing_history_text');
+    const remainingText = document.getElementById('housing_history_remaining');
+    const successAlert = document.getElementById('housing_history_success');
+    
+    // Show meter only if we have fields to track
+    if (!meter) return;
+    meter.classList.remove('d-none');
+
+    function calculateTotalMonths() {
+        let totalMonths = 0;
+        
+        // 1. Current Address
+        const currentYears = parseInt(document.querySelector('[name="current_address_years"]')?.value) || 0;
+        const currentMonths = parseInt(document.querySelector('[name="current_address_months"]')?.value) || 0;
+        totalMonths += (currentYears * 12) + currentMonths;
+        
+        // 2. Previous Addresses (Iterate dynamically added fields)
+        // Select all Year dropdowns that start with prev_address_years_
+        const prevYearSelects = document.querySelectorAll('select[name^="prev_address_years_"]');
+        prevYearSelects.forEach(select => {
+            const index = select.name.split('_').pop(); // extract index
+            const years = parseInt(select.value) || 0;
+            const monthsSelect = document.querySelector(`select[name="prev_address_months_${index}"]`);
+            const months = monthsSelect ? (parseInt(monthsSelect.value) || 0) : 0;
+            
+            totalMonths += (years * 12) + months;
+        });
+
+        return totalMonths;
+    }
+
+    function updateMeter() {
+        const totalMonths = calculateTotalMonths();
+        const years = Math.floor(totalMonths / 12);
+        const months = totalMonths % 12;
+        
+        // Update Text
+        let durationText = `${years} Year${years !== 1 ? 's' : ''}`;
+        if (months > 0) durationText += ` ${months} Month${months !== 1 ? 's' : ''}`;
+        text.textContent = durationText;
+        
+        // Update Progress Bar
+        // Target is 60 months (5 years)
+        const percentage = Math.min((totalMonths / 60) * 100, 100);
+        bar.style.width = `${percentage}%`;
+        bar.setAttribute('aria-valuenow', percentage);
+        
+        // Update Status & Color
+        if (totalMonths >= 60) {
+            bar.classList.remove('bg-danger', 'bg-warning');
+            bar.classList.add('bg-success');
+            remainingText.textContent = "Requirement Met";
+            successAlert.classList.remove('d-none');
+            meter.classList.add('border-success');
+        } else if (totalMonths >= 36) { // 3 years partial credit
+            bar.classList.remove('bg-danger', 'bg-success');
+            bar.classList.add('bg-warning');
+            const remaining = 60 - totalMonths;
+            const rYears = (remaining / 12).toFixed(1);
+            remainingText.textContent = `Needs ${rYears} more years for full credit`;
+            successAlert.classList.add('d-none');
+            meter.classList.remove('border-success');
+        } else {
+            bar.classList.remove('bg-warning', 'bg-success');
+            bar.classList.add('bg-danger');
+            const remaining = 60 - totalMonths;
+            const rYears = (remaining / 12).toFixed(1);
+            remainingText.textContent = `Needs ${rYears} more years`;
+            successAlert.classList.add('d-none');
+            meter.classList.remove('border-success');
+        }
+    }
+
+    // Attach Event Listeners
+    // Use event delegation for dynamic previous address fields
+    document.body.addEventListener('change', function(e) {
+        if (e.target.matches('select[name^="prev_address_years_"]') || 
+            e.target.matches('select[name^="prev_address_months_"]') ||
+            e.target.matches('[name="current_address_years"]') ||
+            e.target.matches('[name="current_address_months"]')) {
+            updateMeter();
+        }
+    });
+    
+    // Also listen for "Remove" clicks on previous addresses
+    document.body.addEventListener('click', function(e) {
+        if (e.target.closest('.btn-outline-danger') && e.target.textContent.includes('Remove')) {
+            // Wait slightly for DOM removal
+            setTimeout(updateMeter, 100);
+        }
+    });
+
+    // Initial Calculation
+    updateMeter();
 }
 </script>
 {% endblock %}

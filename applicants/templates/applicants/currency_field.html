@@ -7,12 +7,10 @@
     </label>
     <div class="input-group">
         <span class="input-group-text">$</span>
-        <input type="number" 
+        <input type="text" 
                name="{{ field.html_name }}" 
-               class="form-control"
+               class="form-control currency-input"
                {% if field.value %}value="{{ field.value }}"{% endif %}
-               step="0.01"
-               min="0"
                {% if field.field.widget.attrs.placeholder %}placeholder="{{ field.field.widget.attrs.placeholder }}"{% endif %}
                id="{{ field.id_for_label }}">
     </div>

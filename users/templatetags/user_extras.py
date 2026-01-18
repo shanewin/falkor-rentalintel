@@ -210,3 +210,16 @@ def get_user_profile_completion(user):
         pass
     
     return 0
+
+@register.filter
+def get_item(dictionary, key):
+    """
+    Template filter to get an item from a dictionary using a variable key.
+    Usage: {{ my_dict|get_item:my_key }}
+    """
+    if dictionary and isinstance(dictionary, dict):
+        res = dictionary.get(key)
+        if res is None:
+            res = dictionary.get(str(key))
+        return res
+    return None

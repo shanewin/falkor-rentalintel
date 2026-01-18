@@ -62,64 +62,55 @@ class TestSmartInsights:
         self.assert_equal(substring in text, False, f"{test_name} - does NOT contain '{substring}'")
 
     def create_test_applicant(self, **kwargs):
-        """Create a test applicant with default values - no database save needed for analysis"""
-        import uuid
-        defaults = {
-            'first_name': 'Test',
-            'last_name': 'User',
-            'email': f'test{uuid.uuid4()}@example.com',  # Unique email
-            'phone_number': '555-123-4567',
-            'employment_status': 'employed',
-            'evicted_before': False,
-        }
-        defaults.update(kwargs)
-        
-        # Create mock applicant
-        applicant = Applicant(**defaults)
-        
-        # Mock the related field managers without assignment
-        def mock_all():
-            return []
-        def mock_count():
-            return 0
-        def mock_exists():
-            return False
-        def mock_filter(**filter_kwargs):
-            # Create a simple object that has the same interface
-            class FilterResult:
-                def exists(self):
-                    return False
-                def all(self):
-                    return []
-                def count(self):
-                    return 0
-            return FilterResult()
-        def mock_select_related():
-            class SelectRelatedResult:
-                def all(self):
-                    return []
-            return SelectRelatedResult()
-        
-        # Monkey patch the managers
-        if hasattr(applicant, 'jobs'):
-            applicant.jobs.all = mock_all
-            applicant.jobs.count = mock_count
-            applicant.jobs.exists = mock_exists
-            applicant.jobs.filter = mock_filter
-            applicant.jobs.select_related = mock_select_related
-            
-        if hasattr(applicant, 'income_sources'):
-            applicant.income_sources.all = mock_all
-            applicant.income_sources.count = mock_count
-            applicant.income_sources.exists = mock_exists
-            applicant.income_sources.filter = mock_filter
-            applicant.income_sources.select_related = mock_select_related
-            
-        if hasattr(applicant, 'previous_addresses'):
-            applicant.previous_addresses.all = mock_all
-            applicant.previous_addresses.count = mock_count
-        
-        return applicant
+        """Create a mock applicant structure that mimics the Django model but without DB constraints"""
+        class MockRelatedManager:
+            def __init__(self, data=None):
+                self._data = data if data else []
+            def all(self):
+                return self._data
+            def count(self):
+                return len(self._data)
+            def exists(self):
+                return len(self._data) > 0
+            def select_related(self):
+                return self
+            def filter(self, **kwargs):
+                return self # simplified
+
+        class MockApplicant:
+            def __init__(self, **kwargs):
+                # Default all standard fields to None or sensible defaults
+                self.id = 1
+                self.first_name = 'Test'
+                self.last_name = 'User'
+                self.annual_income = None
+                self.employment_start_date = None
+                self.employment_status = None
+                self.company_name = None
+                self.supervisor_name = None
+                self.current_address_years = 0
+                self.current_address_months = 0
+                self.current_landlord_name = None
+                self.length_at_current_address = None
+                self.housing_status = 'own'
+                self.evicted_before = False
+                self.eviction_explanation = None
+                self.max_rent_budget = None
+                self.phone_number = None
+                self.email = None
+                self.current_address_duration_display = "1 year"
+                self.emergency_contact_name = None
+
+                # Apply kwargs
+                for k, v in kwargs.items():
+                    setattr(self, k, v)
+                
+                # Setup managers
+                self.jobs = MockRelatedManager()
+                self.income_sources = MockRelatedManager()
+                self.previous_addresses = MockRelatedManager()
+
+        return MockApplicant(**kwargs)
 
     def test_decimal_precision(self):
         """TEST 1: Decimal Precision for Financial Calculations"""
@@ -346,6 +337,72 @@ class TestSmartInsights:
             "Safe content is preserved"
         )
 
+    def test_housing_history(self):
+        """TEST 5: 5-Year Housing History Calculation"""
+        print("🧪 TEST 5: 5-YEAR HOUSING HISTORY")
+        print("=" * 50)
+
+        # Case 1: Short History (< 3 years)
+        # 1 year current, 1 year previous = 2 years total
+        applicant_short = self.create_test_applicant(
+            current_address_years=1,
+            current_address_months=0
+        )
+        
+        # Mock previous address
+        class MockAddress:
+            def __init__(self, y, m):
+                self.years = y
+                self.months = m
+        
+        previous_addrs = [MockAddress(1, 0)]
+        
+        # Patch the mock
+        applicant_short.previous_addresses.all = lambda: previous_addrs
+        applicant_short.previous_addresses.count = lambda: len(previous_addrs)
+
+        result_short = SmartInsights.analyze_applicant(applicant_short)
+        print(f"Short History (2 years): Score={result_short['rental_history']['history_score']}")
+        
+        # Should NOT have "Good Housing History" or "5+ Years"
+        strengths_text = " ".join(result_short['rental_history']['strengths'])
+        concerns_text = " ".join(result_short['rental_history']['concerns'])
+        
+        self.assert_contains(concerns_text, "Limited Housing History", "Detects limited history (< 3 years)")
+
+        # Case 2: Good History (3-5 years)
+        # 2 years current, 1.5 years previous = 3.5 years
+        applicant_med = self.create_test_applicant(
+            current_address_years=2,
+            current_address_months=0,
+            housing_status='rent'
+        )
+        previous_addrs_med = [MockAddress(1, 6)]
+        applicant_med.previous_addresses.all = lambda: previous_addrs_med
+        
+        result_med = SmartInsights.analyze_applicant(applicant_med)
+        print(f"Medium History (3.5 years): Score={result_med['rental_history']['history_score']}")
+        strengths_med = " ".join(result_med['rental_history']['strengths'])
+        
+        self.assert_contains(strengths_med, "Good Housing History", "Detects good history (3-5 years)")
+
+        # Case 3: 5+ Year History
+        # 2 years current, 3.5 years previous = 5.5 years
+        applicant_long = self.create_test_applicant(
+            current_address_years=2,
+            current_address_months=0,
+            housing_status='own' # Owns gives +10, History +10
+        )
+        previous_addrs_long = [MockAddress(3, 6)]
+        applicant_long.previous_addresses.all = lambda: previous_addrs_long
+        
+        result_long = SmartInsights.analyze_applicant(applicant_long)
+        print(f"Long History (5.5 years): Score={result_long['rental_history']['history_score']}")
+        strengths_long = " ".join(result_long['rental_history']['strengths'])
+        
+        self.assert_contains(strengths_long, "5+ Years Housing History", "Detects 5+ years history")
+
+
     def run_all_tests(self):
         """Run all tests and display summary"""
         print("🧪 SMART INSIGHTS CRITICAL BUG FIX VALIDATION")
@@ -357,6 +414,7 @@ class TestSmartInsights:
             self.test_none_vs_zero_income()
             self.test_fair_housing_compliance()
             self.test_xss_protection()
+            self.test_housing_history()
             
         except Exception as e:
             print(f"❌ CRITICAL ERROR: {str(e)}")

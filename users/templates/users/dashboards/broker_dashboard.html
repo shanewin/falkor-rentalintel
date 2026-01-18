@@ -80,34 +80,59 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Applicant</th>
-                        <th>Profile Status</th>
-                        <th>Smart Matches</th>
-                        <th>Actions</th>
+                        <th style="width: 35%;">Applicant</th>
+                        <th style="width: 20%;">Profile Status</th>
+                        <th style="width: 15%;">Smart Insights</th>
+                        <th style="width: 15%;">Smart Matches</th>
+                        <th style="width: 15%;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for applicant in assigned_applicants %}
                     <tr>
                         <td>
-                            <strong>{{ applicant.first_name }} {{ applicant.last_name }}</strong>
-                            <br>
-                            <small class="text-muted">{{ applicant.email }}</small>
+                            <div class="d-flex align-items-center">
+                                {% if applicant.first_photo_url %}
+                                <img src="{{ applicant.first_photo_url }}" class="rounded-circle me-3 flex-shrink-0" style="width: 48px; height: 48px; object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                                {% else %}
+                                <div class="rounded-circle me-3 flex-shrink-0 bg-light d-flex align-items-center justify-content-center border" style="width: 48px; height: 48px;">
+                                    <i class="fas fa-user text-secondary"></i>
+                                </div>
+                                {% endif %}
+                                <div style="min-width: 0;">
+                                    <strong>{{ applicant.first_name }} {{ applicant.last_name }}</strong>
+                                    <br>
+                                    <small class="text-muted text-truncate d-block">{{ applicant.email }}</small>
+                                </div>
+                            </div>
                         </td>
                         <td>
-                            <div class="progress progress-custom">
-                                <div class="progress-bar 
-                                    {% if applicant.profile_completion >= 100 %}bg-success
-                                    {% elif applicant.profile_completion >= 75 %}bg-info
-                                    {% elif applicant.profile_completion >= 50 %}bg-warning
-                                    {% else %}bg-danger{% endif %}" role="progressbar"
-                                    style="width: {{ applicant.profile_completion }}%">
-                                    {{ applicant.profile_completion }}%
+                            <div class="d-flex align-items-center">
+                                <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                    <div class="progress-bar 
+                                        {% if applicant.profile_completion >= 100 %}bg-success
+                                        {% elif applicant.profile_completion >= 75 %}bg-info
+                                        {% elif applicant.profile_completion >= 50 %}bg-warning
+                                        {% else %}bg-danger{% endif %}" role="progressbar"
+                                        style="width: {{ applicant.profile_completion }}%"
+                                        aria-valuenow="{{ applicant.profile_completion }}" 
+                                        aria-valuemin="0" 
+                                        aria-valuemax="100">
+                                    </div>
                                 </div>
+                                <span class="fw-bold small text-muted" style="min-width: 35px;">{{ applicant.profile_completion }}%</span>
                             </div>
                             {% if not applicant.can_match %}
                             <small class="text-danger">Missing budget/move date</small>
                             {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex flex-column">
+                                <span class="badge bg-{{ applicant.smart_insights_color }} fs-6 mb-1" style="width: fit-content;">
+                                    {{ applicant.smart_insights_score }} / 100
+                                </span>
+                                <small class="text-muted" style="font-size: 0.75rem;">AI Score</small>
+                            </div>
                         </td>
                         <td>
                             {% if applicant.can_match %}
@@ -116,7 +141,7 @@
                             <br>
                             {% for match in applicant.top_matches|slice:":2" %}
                             <small class="text-muted">
-                                • {{ match.apartment.building.street_address_1|truncatechars:20 }} #{{ match.apartment.unit_number }}
+                                • <span class="text-{{ match.match_details.match_color }} fw-bold">{{ match.match_percentage }}%</span> - {{ match.apartment.building.street_address_1|truncatechars:20 }} #{{ match.apartment.unit_number }}
                             </small><br>
                             {% endfor %}
                             {% else %}
@@ -127,19 +152,13 @@
                             {% endif %}
                         </td>
                         <td>
-                            <div class="btn-group btn-group-sm">
-                                {% if applicant.id %}
-                                <a href="{% url 'applicant_overview' applicant.id %}" class="btn btn-outline-primary">
-                                    <i class="fas fa-eye"></i> View
-                                </a>
-                                {% endif %}
-                                {% if applicant.match_count > 0 %}
-                                <a href="{% url 'broker_create_application' %}?applicant={{ applicant.id }}"
-                                    class="btn btn-outline-success">
-                                    <i class="fas fa-plus"></i> Create App
-                                </a>
-                                {% endif %}
-                            </div>
+                            {% if applicant.id %}
+                            <a href="{% url 'applicant_overview' applicant.id %}" class="btn btn-outline-dark btn-sm w-100">
+                                <i class="fas fa-eye me-1"></i> View Profile
+                            </a>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}

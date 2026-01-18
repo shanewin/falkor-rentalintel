@@ -25,4 +25,42 @@ def get_fallback_image(apartment_id):
         'https://images.unsplash.com/photo-1560185007-cde436f6a4d0?w=600&h=400&fit=crop&q=80', # Wide living room
     ]
     
+    
     return images[safe_id % len(images)]
+
+@register.filter
+def format_phone(value):
+    """
+    Formats a phone number as (XXX) XXX-XXXX.
+    Expects a 10-digit number or string.
+    """
+    if not value:
+        return ""
+    
+    # Strip non-digits
+    import re
+    digits = re.sub(r'\D', '', str(value))
+    
+    # Handle standard US numbers without country code
+    if len(digits) == 10:
+        return f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+    
+    # Handle US numbers with country code '1'
+    elif len(digits) == 11 and digits.startswith('1'):
+        return f"({digits[1:4]}) {digits[4:7]}-{digits[7:]}"
+    
+    # Handle numbers with extensions (assuming >10 digits and probably US-ish start)
+    # This is a best-effort heuristic for the messy data seen (+1-971...x5555)
+    elif len(digits) > 10:
+        # If it looks like US (starts with 1), try to format the first 11 digits
+        if digits.startswith('1'):
+             main_number = f"({digits[1:4]}) {digits[4:7]}-{digits[7:11]}"
+             extension = digits[11:]
+             return f"{main_number} x{extension}"
+        else:
+             # Assume first 10 is the number, rest is extension
+             main_number = f"({digits[:3]}) {digits[3:6]}-{digits[6:10]}"
+             extension = digits[10:]
+             return f"{main_number} x{extension}"
+             
+    return value

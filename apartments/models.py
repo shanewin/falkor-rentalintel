@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from django.conf import settings
 from buildings.models import Building
 from cloudinary.models import CloudinaryField
 from cloudinary.utils import cloudinary_url
@@ -27,6 +28,7 @@ from .search_models import (
 class ApartmentAmenity(models.Model):
     """Amenities that apply to individual apartments, separate from building amenities."""
     name = models.CharField(max_length=100)
+    icon = models.CharField(max_length=50, default='fa-check-circle', help_text="FontAwesome icon class (e.g. 'fa-swimming-pool')")
 
     def __str__(self):
         return self.name
@@ -364,3 +366,27 @@ class ApartmentConcession(models.Model):
 
     def __str__(self):
         return f"{self.name or 'Concession'} - {self.months_free} months free - {self.lease_terms}"
+
+
+class BrokerInquiry(models.Model):
+    INQUIRY_TYPE_CHOICES = [
+        ('request_tour', 'Schedule a Tour'),
+        ('ask_question', 'Ask a Question'),
+    ]
+
+    apartment = models.ForeignKey('Apartment', on_delete=models.CASCADE, related_name='inquiries')
+    applicant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='submitted_inquiries')
+    broker = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='received_inquiries')
+    
+    name = models.CharField(max_length=100)
+    email = models.EmailField()
+    phone = models.CharField(max_length=20)
+    
+    inquiry_type = models.CharField(max_length=20, choices=INQUIRY_TYPE_CHOICES)
+    message = models.TextField(blank=True, null=True)
+    preferred_times = models.JSONField(default=list, blank=True, null=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"Inquiry from {self.name} for {self.apartment}"
