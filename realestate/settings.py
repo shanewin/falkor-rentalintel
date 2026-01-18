@@ -7,9 +7,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY')
 
-DEBUG = True
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'web', '0.0.0.0', '.railway.app', '.up.railway.app']
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='.railway.app,localhost,127.0.0.1').split(',')
+
+# Secure Proxy SSL Header for Railway
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -104,15 +109,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'realestate.wsgi.application'
 
 
+import dj_database_url
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DATABASE_NAME', 'doorway_db'),
-        'USER': os.getenv('DATABASE_USER', 'doorway_user'),
-        'PASSWORD': os.getenv('DATABASE_PASSWORD', 'doorway_pass'),
-        'HOST': os.getenv('DATABASE_HOST', 'db'),
-        'PORT': os.getenv('DATABASE_PORT', '5432'),
-    }
+    'default': dj_database_url.config(
+        default=f"postgres://{os.getenv('DATABASE_USER', 'doorway_user')}:{os.getenv('DATABASE_PASSWORD', 'doorway_pass')}@{os.getenv('DATABASE_HOST', 'db')}:{os.getenv('DATABASE_PORT', '5432')}/{os.getenv('DATABASE_NAME', 'doorway_db')}",
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 from django.db.backends.signals import connection_created

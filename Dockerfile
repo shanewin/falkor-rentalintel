@@ -8,6 +8,9 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     curl \
     postgresql-client \
+    poppler-utils \
+    libmagic1 \
+    tesseract-ocr \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python dependencies
