@@ -5,6 +5,7 @@
     "dockerfilePath": "Dockerfile"
   },
   "deploy": {
+    "startCommand": "sh -c \"gunicorn realestate.wsgi:application --bind 0.0.0.0:$PORT\"",
     "restartPolicyType": "ALWAYS",
     "restartPolicyMaxRetries": 10
   }
