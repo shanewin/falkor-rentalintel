@@ -527,7 +527,7 @@ def applicant_dashboard(request):
         try:
             applicant = request.user.applicant_profile
         except Applicant.DoesNotExist:
-            applicant = Applicant.objects.get(email=request.user.email)
+            applicant = Applicant.objects.get(_email=request.user.email)
             # Link the applicant to the user if not already linked
             if not applicant.user:
                 applicant.user = request.user
