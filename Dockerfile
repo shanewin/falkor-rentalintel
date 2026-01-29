@@ -32,7 +32,7 @@ ENV SECRET_KEY=dummy-secret-key-for-build \
     TWILIO_ACCOUNT_SID=dummy \
     TWILIO_AUTH_TOKEN=dummy \
     TWILIO_FROM_PHONE=dummy \
-    FIELD_ENCRYPTION_KEY=dummy-encryption-key
+    FIELD_ENCRYPTION_KEY=N2yX1XjZyQ4x_V-4y5_uO-Z7yR_xL_vLfRQ6f18x_N8=
 
 # Collect static files (with dummy env vars)
 RUN python manage.py collectstatic --noinput
