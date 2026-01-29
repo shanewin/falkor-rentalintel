@@ -112,7 +112,7 @@
             <p>Hi{% if user %} {{ user.first_name }}{% endif %},</p>
             
             {% if purpose == "registration" %}
-                <p>Welcome to DoorWay! Please verify your email address to activate your account.</p>
+                <p>Welcome to {{ SITE_NAME|default:"Falkor" }}! Please verify your email address to activate your account.</p>
             {% elif purpose == "password_reset" %}
                 <p>You've requested to reset your password. Use the code below to verify your identity.</p>
             {% elif purpose == "email_change" %}
@@ -136,10 +136,10 @@
         </div>
 
         <div class="footer">
-            <p>This is an automated message from DoorWay.</p>
+            <p>This is an automated message from {{ SITE_NAME|default:"Falkor" }}.</p>
             <p>Please do not reply to this email.</p>
             <p style="margin-top: 15px; font-size: 12px;">
-                &copy; {% now "Y" %} DoorWay. All rights reserved.
+                &copy; {% now "Y" %} {{ SITE_NAME|default:"Falkor" }}. All rights reserved.
             </p>
         </div>
     </div>

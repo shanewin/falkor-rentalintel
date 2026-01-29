@@ -57,6 +57,11 @@ class BrokerProfileForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
+        if self.instance and self.instance.pk:
+            self.fields['first_name'].initial = self.instance.first_name
+            self.fields['last_name'].initial = self.instance.last_name
+            self.fields['phone_number'].initial = self.instance.phone_number
+        
         # Make most fields optional (only email from User model is truly required)
         for field_name, field in self.fields.items():
             if field_name not in ['profile_photo']:  # Keep photo explicitly optional
@@ -144,6 +149,15 @@ class BrokerProfileForm(forms.ModelForm):
             Submit('broker_submit', 'Save Profile', css_class='btn btn-primary'),
         )
 
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.first_name = self.cleaned_data.get('first_name')
+        instance.last_name = self.cleaned_data.get('last_name')
+        instance.phone_number = self.cleaned_data.get('phone_number')
+        if commit:
+            instance.save()
+        return instance
+
 
 class OwnerProfileForm(forms.ModelForm):
     profile_photo = CloudinaryFileField(required=False)
@@ -181,6 +195,11 @@ class OwnerProfileForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
+        if self.instance and self.instance.pk:
+            self.fields['first_name'].initial = self.instance.first_name
+            self.fields['last_name'].initial = self.instance.last_name
+            self.fields['primary_phone'].initial = self.instance.primary_phone
+
         # Setup number inputs
         self.fields['number_of_properties'].widget = forms.NumberInput(attrs={'class': 'form-control', 'min': '0'})
         self.fields['total_units'].widget = forms.NumberInput(attrs={'class': 'form-control', 'min': '0'})
@@ -301,6 +320,15 @@ class OwnerProfileForm(forms.ModelForm):
             Submit('owner_submit', 'Save Profile', css_class='btn btn-primary'),
         )
 
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.first_name = self.cleaned_data.get('first_name')
+        instance.last_name = self.cleaned_data.get('last_name')
+        instance.primary_phone = self.cleaned_data.get('primary_phone')
+        if commit:
+            instance.save()
+        return instance
+
 
 class StaffProfileForm(forms.ModelForm):
     profile_photo = CloudinaryFileField(required=False)
@@ -338,6 +366,10 @@ class StaffProfileForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
+        if self.instance and self.instance.pk:
+            self.fields['first_name'].initial = self.instance.first_name
+            self.fields['last_name'].initial = self.instance.last_name
+
         # Crispy Forms setup
         self.helper = FormHelper(self)
         self.helper.form_method = 'post'
@@ -454,6 +486,14 @@ class StaffProfileForm(forms.ModelForm):
             Submit('staff_submit', 'Save Profile', css_class='btn btn-primary'),
         )
 
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.first_name = self.cleaned_data.get('first_name')
+        instance.last_name = self.cleaned_data.get('last_name')
+        if commit:
+            instance.save()
+        return instance
+
 
 class AdminProfileForm(forms.ModelForm):
     # Add email field from the User model
@@ -487,9 +527,13 @@ class AdminProfileForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # If instance exists, populate email from the related User
-        if self.instance and self.instance.pk and hasattr(self.instance, 'user'):
-            self.fields['email'].initial = self.instance.user.email
+        # If instance exists, populate initial data from model properties/User
+        if self.instance and self.instance.pk:
+            if hasattr(self.instance, 'user'):
+                self.fields['email'].initial = self.instance.user.email
+            self.fields['first_name'].initial = self.instance.first_name
+            self.fields['last_name'].initial = self.instance.last_name
+            self.fields['phone_number'].initial = self.instance.phone_number
         
         # Apply consistent styling to all fields
         for field_name, field in self.fields.items():
@@ -567,6 +611,11 @@ class AdminProfileForm(forms.ModelForm):
                 instance.user.email = new_email
                 if commit:
                     instance.user.save()
+        
+        # Save property-based fields (handles User model updates via setters)
+        instance.first_name = self.cleaned_data.get('first_name')
+        instance.last_name = self.cleaned_data.get('last_name')
+        instance.phone_number = self.cleaned_data.get('phone_number')
         
         if commit:
             instance.save()

@@ -507,50 +507,61 @@ class SmartInsights:
                 
         return total_months
 
+    @staticmethod
+    def _is_field_filled(value):
+        """Helper to check if a field value is considered 'filled' for AI purposes"""
+        if value is None:
+            return False
+        if isinstance(value, str) and not value.strip():
+            return False
+        if isinstance(value, (int, float, Decimal)) and value <= 0:
+            # For financial fields, 0 or negative is considered 'unfilled' for matching
+            return False
+        return True
+
     @classmethod
     def _get_critical_missing_fields(cls, applicant):
-        """Identify critical missing fields categorized by section"""
+        """Identify critical missing fields categorized by section.
+        
+        This method directly inspects Applicant fields to ensure Smart Insights 
+        remains accurate even if the UI Profile Completion steps aren't finished.
+        """
         categorized_missing = {
             'affordability': [],
             'employment_stability': [],
             'rental_history': []
         }
         
-        # Get full completion status
-        status = applicant.get_field_completion_status()
+        # 1. Affordability Check
+        if not cls._is_field_filled(applicant.annual_income):
+            # Check if they have jobs even if annual_income (cached) isn't set
+            if not applicant.jobs.exists():
+                categorized_missing['affordability'].append("Annual Income")
         
-        # Map critical needs to sections
-        # Format: (Section Name in Completion Status, List of (Nice Name, Field Key, Destination Category))
-        mappings = {
-            'Employment Information': [
-                ('Start Date', 'employment_start_date', 'employment_stability'),
-                ('Company', 'company_name', 'employment_stability'),
-                ('Status', 'employment_status', 'employment_stability')
-            ],
-            'Current Housing Details': [
-                ('Landlord Info', 'current_landlord_name', 'rental_history'),
-                ('Move Reason', 'reason_for_moving', 'rental_history')
-            ],
-            'Current Address': [
-                ('Address Duration', 'length_at_current_address', 'rental_history')
-            ]
-        }
-        
-        # 1. Income Check (Affordability)
-        has_income = (applicant.annual_income is not None and applicant.annual_income > 0)
-        jobs_filled = getattr(status['sections'].get('Related Data', {}).get('fields', {}).get('jobs_count', {}), 'filled', False)
-        
-        if not has_income and not jobs_filled:
-            categorized_missing['affordability'].append("Annual Income")
+        if not cls._is_field_filled(applicant.max_rent_budget):
+            categorized_missing['affordability'].append("Max Rent Budget")
 
-        # 2. Check other critical fields
-        sections = status.get('sections', {})
-        for section_name, fields_list in mappings.items():
-            section_data = sections.get(section_name, {}).get('fields', {})
+        # 2. Employment Stability Check
+        if not cls._is_field_filled(applicant.employment_status):
+            categorized_missing['employment_stability'].append("Employment Status")
+        
+        if not applicant.jobs.exists():
+            categorized_missing['employment_stability'].append("Current Employer Info")
+
+        # 3. Rental History Check
+        if not cls._is_field_filled(applicant.street_address_1):
+            categorized_missing['rental_history'].append("Current Street Address")
+        
+        if not cls._is_field_filled(applicant.city):
+            categorized_missing['rental_history'].append("Current City")
             
-            for nice_name, field_key, destination in fields_list:
-                field_data = section_data.get(field_key)
-                if field_data and not field_data.get('filled', False):
-                    categorized_missing[destination].append(nice_name)
+        if not cls._is_field_filled(applicant.zip_code):
+            categorized_missing['rental_history'].append("Current Zip Code")
+
+        if not cls._is_field_filled(applicant.current_landlord_name):
+            categorized_missing['rental_history'].append("Current Landlord Name")
+
+        if not applicant.previous_addresses.exists():
+            categorized_missing['rental_history'].append("Previous Address History")
                     
         return categorized_missing

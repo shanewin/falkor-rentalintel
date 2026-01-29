@@ -105,7 +105,7 @@
                 <div class="col-md-4 mb-3">
                     <div class="p-3 border rounded-3 h-100 bg-light-hover transition-all shadow-sm-hover position-relative">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0 fw-bold">Step {{ step_num }}</h6>
+                            <h6 class="mb-0 fw-bold">{{ step_data.name }}</h6>
                             <span class="badge {% if step_data.pct == 100 %}bg-success{% elif step_data.pct > 0 %}bg-warning text-dark{% else %}bg-secondary{% endif %} rounded-pill">
                                 {{ step_data.pct }}%
                             </span>
@@ -255,9 +255,10 @@
                 <table class="table table-hover mb-0 align-middle">
                     <thead class="bg-light">
                         <tr>
-                            <th class="ps-4">Property</th>
-                            <th>Unit Details</th>
-                            <th>Submitted</th>
+                            <th class="ps-4">Building</th>
+                            <th>Unit</th>
+                            <th>Broker</th>
+                            <th>Created On</th>
                             <th>Status</th>
                             <th class="pe-4 text-end">Actions</th>
                         </tr>
@@ -269,24 +270,41 @@
                                 <div class="fw-bold">
                                     {% if application.apartment %}
                                     {{ application.apartment.building.name }}
-                                    {% elif application.manual_building_address %}
-                                    {{ application.manual_building_address }}
+                                    {% elif application.manual_building_name %}
+                                    {{ application.manual_building_name }}
                                     {% else %}
                                     Application #{{ application.id }}
                                     {% endif %}
                                 </div>
-                                {% if application.broker %}
-                                <small class="text-muted">Broker: {{ application.broker.email }}</small>
-                                {% endif %}
+                                <small class="text-muted">
+                                    {% if application.apartment %}
+                                    {{ application.apartment.building.street_address_1 }}, {{ application.apartment.building.city }}
+                                    {% elif application.manual_building_address %}
+                                    {{ application.manual_building_address }}
+                                    {% endif %}
+                                </small>
                             </td>
                             <td>
                                 {% if application.apartment %}
-                                Unit {{ application.apartment.unit_number }}<br>
+                                <div class="fw-bold">
+                                    <a href="{% url 'apartment_overview' application.apartment.id %}" class="text-primary text-decoration-none">
+                                        Unit {{ application.apartment.unit_number }}
+                                    </a>
+                                </div>
                                 <small class="text-muted">${{ application.apartment.rent_price }}/month</small>
                                 {% elif application.manual_unit_number %}
-                                Unit {{ application.manual_unit_number }}
+                                <div class="fw-bold">Unit {{ application.manual_unit_number }}</div>
                                 {% else %}
                                 <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if application.broker %}
+                                <a href="{% url 'public_broker_profile' application.broker.id %}" class="text-decoration-none fw-medium">
+                                    {{ application.broker.get_full_name|default:application.broker.email }}
+                                </a>
+                                {% else %}
+                                <span class="text-muted">N/A</span>
                                 {% endif %}
                             </td>
                             <td>{{ application.created_at|date:"M d, Y" }}</td>
@@ -304,9 +322,6 @@
                                 {% endif %}
                             </td>
                             <td class="pe-4 text-end">
-                                <a href="{% url 'v2_application_overview' application.id %}" class="btn btn-outline-primary btn-sm">
-                                    <i class="fas fa-eye"></i> View
-                                </a>
                                 {% if not application.submitted_by_applicant %}
                                 <a href="{% url 'applicant_complete' application.unique_link %}" class="btn btn-primary btn-sm ms-1">
                                     <i class="fas fa-edit"></i> Complete

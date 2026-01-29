@@ -204,6 +204,20 @@
         vertical-align: middle;
         display: inline-block;
     }
+
+    /* Milestone Hover Effects */
+    .milestone-link {
+        transition: all 0.2s ease-in-out;
+        display: block;
+    }
+    .milestone-link:hover .rounded-circle {
+        transform: scale(1.1);
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .milestone-link:hover small {
+        color: #000 !important;
+        text-decoration: underline;
+    }
 </style>
 {% endblock %}
 
@@ -246,7 +260,7 @@
             <div class="row text-center">
                 {% for step_num, step_data in completion_status.steps.items %}
                 <div class="col-4">
-                    <a href="{% url 'profile_step'|add:step_num|default:'profile_step1' %}" class="text-decoration-none">
+                    <a href="{% if step_num == 1 %}{% url 'profile_step1' %}{% elif step_num == 2 %}{% url 'profile_step2' %}{% else %}{% url 'profile_step3' %}{% endif %}" class="text-decoration-none milestone-link">
                         <div class="d-flex flex-column align-items-center">
                             <div class="rounded-circle {% if current_step == step_num %}bg-dark text-white border border-secondary{% elif step_data.pct == 100 %}bg-success text-white{% else %}bg-light text-muted{% endif %} d-flex align-items-center justify-content-center mb-2 position-relative" style="width: 44px; height: 44px; transition: all 0.3s ease;">
                                 {% if step_data.pct == 100 %}
@@ -392,12 +406,13 @@ document.addEventListener('DOMContentLoaded', function() {
     function initPets() {
         console.log('Initializing pets system');
         
-        const petsCheckbox = document.getElementById('has_pets');
+        const yesRadio = document.getElementById('id_has_pets_yes');
+        const noRadio = document.getElementById('id_has_pets_no');
         const petsContainer = document.getElementById('pets-container');
         const addPetBtn = document.getElementById('add-pet-btn');
         const petsListContainer = document.getElementById('pets-list-container');
         
-        if (!petsCheckbox || !petsContainer) {
+        if (!yesRadio || !noRadio || !petsContainer) {
             console.log('Pets elements not found');
             return;
         }
@@ -489,9 +504,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Handle pets checkbox
-        petsCheckbox.addEventListener('change', function() {
-            if (this.checked) {
+        // Handle pets radio buttons
+        const togglePets = (hasPets) => {
+            if (hasPets) {
                 petsContainer.style.display = 'block';
                 if (petCount === 0) {
                     addPet();
@@ -502,6 +517,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 petCount = 0;
                 if (addPetBtn) addPetBtn.style.display = 'inline-block';
             }
+        };
+
+        yesRadio.addEventListener('change', function() {
+            if (this.checked) togglePets(true);
+        });
+        
+        noRadio.addEventListener('change', function() {
+            if (this.checked) togglePets(false);
         });
         
         // Handle add pet button

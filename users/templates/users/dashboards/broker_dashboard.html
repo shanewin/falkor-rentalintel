@@ -1,23 +1,65 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load apartment_extras %}
 
 {% block title %}Broker Dashboard - Doorway{% endblock %}
 
-{% block extra_css %}{% endblock %}
+{% block extra_css %}
+<style>
+    /* Custom Falkor Pagination */
+    .pagination .page-link {
+        color: #000;
+        background-color: #ffc107; /* Yellow */
+        border-color: #ffb100;
+    }
+    .pagination .page-item.active .page-link {
+        background-color: #000; /* Black */
+        border-color: #000;
+        color: #ffc107; /* Yellow text */
+    }
+    .pagination .page-link:hover {
+        background-color: #e0a800;
+        border-color: #e0a800;
+        color: #000;
+    }
+    .pagination .page-item.disabled .page-link {
+        background-color: #fff3cd;
+        border-color: #ffb100;
+        color: #856404;
+    }
+    /* Custom Falkor Badge */
+    .badge-falkor {
+        background-color: #ffc107 !important;
+        color: #000 !important;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="page-header">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-md-8">
-                <h1><i class="fas fa-briefcase"></i> Broker Dashboard</h1>
-                <p>
-                    {% if broker_profile %}
-                    Welcome back, {{ broker_profile.first_name }} {{ broker_profile.last_name }} | {{ broker_profile.business_name }}
+                <div class="d-flex align-items-center">
+                    {% if broker_profile and broker_profile.profile_photo %}
+                        <img src="{{ broker_profile.get_profile_photo_url }}" class="rounded-circle me-3 shadow-sm border border-white" style="width: 80px; height: 80px; object-fit: cover;">
                     {% else %}
-                    Welcome back, {{ user.email }} | Real Estate Professional
+                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-3 shadow-sm border border-white" style="width: 80px; height: 80px;">
+                            <i class="fas fa-user-tie fa-2x text-secondary"></i>
+                        </div>
                     {% endif %}
-                </p>
+                    <div>
+                        <h1 class="mb-0">Broker Dashboard</h1>
+                        <p class="mb-0">
+                            {% if broker_profile %}
+                            Welcome back, {{ broker_profile.first_name }} {{ broker_profile.last_name }} | {{ broker_profile.business_name }}
+                            {% else %}
+                            Welcome back, {{ user.email }} | Real Estate Professional
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
             </div>
             <div class="col-md-4 text-end">
                 <a href="{% url 'broker_progressive_profile' %}" class="btn btn-primary">
@@ -70,9 +112,26 @@
 
     <!-- My Assigned Applicants (PRIORITY VIEW) -->
     <div class="table-container mb-4">
-        <div class="table-header">
-            <i class="fas fa-users"></i> My Assigned Applicants
-            <span class="badge bg-primary ms-2">{{ assigned_applicants.count }}</span>
+        <div class="table-header d-flex justify-content-between align-items-center">
+            <div>
+                <i class="fas fa-users"></i> My Assigned Applicants
+                <span class="badge badge-falkor ms-2">{{ assigned_applicants|length }}</span>
+            </div>
+            <div class="search-box" style="max-width: 300px;">
+                <form action="" method="get" class="d-flex">
+                    <div class="input-group input-group-sm">
+                        <input type="text" name="q" class="form-control" placeholder="Search applicants..." value="{{ q }}">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-search"></i>
+                        </button>
+                        {% if q %}
+                        <a href="?" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
         </div>
 
         {% if assigned_applicants %}
@@ -88,12 +147,15 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for applicant in assigned_applicants %}
+                    {% for applicant in applicants_page %}
                     <tr>
                         <td>
                             <div class="d-flex align-items-center">
                                 {% if applicant.first_photo_url %}
-                                <img src="{{ applicant.first_photo_url }}" class="rounded-circle me-3 flex-shrink-0" style="width: 48px; height: 48px; object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                                <img src="{{ applicant.first_photo_url }}" 
+                                     class="rounded-circle me-3 flex-shrink-0" 
+                                     style="width: 48px; height: 48px; object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1);"
+                                     onerror="this.src='{% static 'images/default-profile.png' %}';this.onerror=null;">
                                 {% else %}
                                 <div class="rounded-circle me-3 flex-shrink-0 bg-light d-flex align-items-center justify-content-center border" style="width: 48px; height: 48px;">
                                     <i class="fas fa-user text-secondary"></i>
@@ -165,6 +227,56 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination -->
+        {% if applicants_page.paginator.num_pages > 1 %}
+        <div class="p-3 border-top d-flex justify-content-center">
+            <nav aria-label="Applicant pagination">
+                <ul class="pagination pagination-sm mb-0">
+                    {% if applicants_page.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if q %}&q={{ q }}{% endif %}" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ applicants_page.previous_page_number }}{% if q %}&q={{ q }}{% endif %}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">&laquo;&laquo;</span></li>
+                    <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+                    {% endif %}
+
+                    {% for i in applicants_page.paginator.page_range %}
+                        {% if applicants_page.number == i %}
+                        <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                        {% elif i > applicants_page.number|add:'-3' and i < applicants_page.number|add:'3' %}
+                        <li class="page-item"><a class="page-link" href="?page={{ i }}{% if q %}&q={{ q }}{% endif %}">{{ i }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if applicants_page.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ applicants_page.next_page_number }}{% if q %}&q={{ q }}{% endif %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ applicants_page.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+                    <li class="page-item disabled"><span class="page-link">&raquo;&raquo;</span></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
         {% else %}
         <div class="p-5 text-center">
             <i class="fas fa-users fa-3x text-muted mb-3"></i>
@@ -177,27 +289,59 @@
     <!-- My Apartments -->
     {% if assigned_apartments %}
     <div class="table-container mb-4">
-        <div class="table-header">
-            <i class="fas fa-home"></i> My Apartments
+        <div class="table-header d-flex justify-content-between align-items-center" id="apartments">
+            <div>
+                <i class="fas fa-home"></i> My Apartments
+                <span class="badge badge-falkor ms-2">{{ assigned_apartments|length }}</span>
+            </div>
+            <div class="search-box" style="max-width: 300px;">
+                <form action="" method="get" class="d-flex">
+                    <div class="input-group input-group-sm">
+                        <input type="text" name="apt_q" class="form-control" placeholder="Search units/buildings..." value="{{ apt_q }}">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-search"></i>
+                        </button>
+                        {% if apt_q %}
+                        <a href="?#apartments" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
         </div>
 
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Unit</th>
+                        <th style="width: 35%;">Apartment</th>
                         <th>Building</th>
                         <th>Smart Matches</th>
                         <th>View</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for apartment in assigned_apartments %}
+                    {% for apartment in apartments_page %}
                     <tr>
                         <td>
-                            <strong>{{ apartment.unit_number }}</strong>
-                            <br>
-                            <small class="text-muted">{{ apartment.bedrooms|floatformat:0|default:"Studio" }}BR / {{ apartment.bathrooms|floatformat:1 }}BA</small>
+                            <div class="d-flex align-items-center">
+                                {% if apartment.first_photo_url %}
+                                <img src="{{ apartment.first_photo_url }}" 
+                                     class="rounded me-3 flex-shrink-0" 
+                                     style="width: 80px; height: 55px; object-fit: cover; border: 1px solid #dee2e6;"
+                                     onerror="this.src='{{ apartment.id|get_fallback_image }}';this.onerror=null;">
+                                {% else %}
+                                <div class="rounded me-3 flex-shrink-0 bg-light d-flex align-items-center justify-content-center border" style="width: 80px; height: 55px;">
+                                    <i class="fas fa-building text-secondary"></i>
+                                </div>
+                                {% endif %}
+                                <div style="min-width: 0;">
+                                    <strong>Unit {{ apartment.unit_number }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ apartment.bedrooms|floatformat:0|default:"Studio" }}BR / {{ apartment.bathrooms|floatformat:1 }}BA</small>
+                                </div>
+                            </div>
                         </td>
                         <td>
                             <strong>{{ apartment.building.street_address_1 }}</strong>
@@ -205,7 +349,7 @@
                             <small class="text-muted">{{ apartment.building.city }}, {{ apartment.building.state }}</small>
                         </td>
                         <td>
-                            <span class="badge bg-primary">{{ apartment.smart_matches_count|default:0 }}</span>
+                            <span class="badge badge-falkor">{{ apartment.smart_matches_count|default:0 }}</span>
                             <br>
                             <small class="text-muted">applicants matched</small>
                         </td>
@@ -220,6 +364,55 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Apartment Pagination -->
+        {% if apartments_page.paginator.num_pages > 1 %}
+        <div class="p-3 border-top d-flex justify-content-center">
+            <nav aria-label="Apartment pagination">
+                <ul class="pagination pagination-sm mb-0">
+                    {% if apartments_page.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?apt_page=1{% if apt_q %}&apt_q={{ apt_q }}{% endif %}#apartments" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?apt_page={{ apartments_page.previous_page_number }}{% if apt_q %}&apt_q={{ apt_q }}{% endif %}#apartments" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">&laquo;&laquo;</span></li>
+                    <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+                    {% endif %}
+
+                    {% for i in apartments_page.paginator.page_range %}
+                        {% if apartments_page.number == i %}
+                        <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                        {% elif i > apartments_page.number|add:'-3' and i < apartments_page.number|add:'3' %}
+                        <li class="page-item"><a class="page-link" href="?apt_page={{ i }}{% if apt_q %}&apt_q={{ apt_q }}{% endif %}#apartments">{{ i }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if apartments_page.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?apt_page={{ apartments_page.next_page_number }}{% if apt_q %}&apt_q={{ apt_q }}{% endif %}#apartments" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?apt_page={{ apartments_page.paginator.num_pages }}{% if apt_q %}&apt_q={{ apt_q }}{% endif %}#apartments" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+                    <li class="page-item disabled"><span class="page-link">&raquo;&raquo;</span></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
     </div>
 
     {% else %}
@@ -376,12 +569,11 @@
             <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
             <h4>No Applications Yet</h4>
             <p class="mb-3 text-muted">Get started by creating your first rental application.</p>
-            <a href="{% url 'application_form_legacy' %}" class="btn btn-doorway-primary">
+            <a href="{% url 'broker_create_application' %}" class="btn btn-doorway-primary">
                 <i class="fas fa-plus"></i> Create Your First Application
             </a>
         </div>
         {% endif %}
     </div>
-</div>
 </div>
 {% endblock %}

@@ -23,49 +23,6 @@ def _format_duration_from_dropdowns(years_str, months_str):
     return ' and '.join(parts)
 
 
-def get_step_completion_status(applicant):
-    """
-    Check actual completion status of each step based on form fields
-    """
-    if not applicant:
-        return {'step1': False, 'step2': False, 'step3': False}
-    
-    # Step 1: Basic Info - require more than just account basics
-    # Check if user has filled additional info beyond account creation
-    step1_complete = bool(
-        applicant.first_name and applicant.last_name and applicant.email and
-        (applicant.phone_number or 
-         applicant.street_address_1 or 
-         applicant.date_of_birth or
-         applicant.emergency_contact_name)
-    )
-    
-    # Step 2: Housing Needs - check if any housing preference fields are filled (ignoring default values)
-    step2_complete = bool(
-        applicant.desired_move_in_date or 
-        (applicant.number_of_bedrooms and applicant.number_of_bedrooms != 1.0) or 
-        (applicant.number_of_bathrooms and applicant.number_of_bathrooms != 1.0) or 
-        applicant.max_rent_budget or
-        applicant.amenities.exists() or
-        applicant.neighborhood_preferences.exists()
-    )
-    
-    # Step 3: Employment - check if any employment fields are filled
-    step3_complete = bool(
-        applicant.company_name or 
-        applicant.position or 
-        applicant.annual_income or 
-        applicant.jobs.exists() or
-        applicant.income_sources.exists()
-    )
-    
-    return {
-        'step1': step1_complete,
-        'step2': step2_complete,
-        'step3': step3_complete
-    }
-
-
 @login_required
 def progressive_profile(request):
     """
@@ -88,10 +45,12 @@ def quick_profile_update(request):
     # Get missing fields
     completion_status = applicant.get_field_completion_status()
     missing_fields = {}
-    for section_name, section_data in completion_status['sections'].items():
-        section_missing = [field_data['label'] for field_name, field_data in section_data['fields'].items() if not field_data['filled']]
-        if section_missing:
-            missing_fields[section_name] = section_missing
+    
+    for step_num, step_data in completion_status.get('steps', {}).items():
+        step_missing = step_data.get('missing', [])
+        if step_missing:
+            step_name = step_data.get('name', f"Step {step_num}")
+            missing_fields[step_name] = step_missing
     
     if not missing_fields:
         messages.info(request, "Your profile is complete!")
@@ -145,6 +104,16 @@ def profile_step1(request):
         if form.is_valid():
             with transaction.atomic():
                 applicant = form.save()
+                
+                # Update housing_status based on the manual checkbox
+                is_rental = request.POST.get('is_rental_checkbox') == 'on'
+                if is_rental:
+                    applicant.housing_status = 'rent'
+                    applicant.save()
+                elif 'is_rental_checkbox' in request.POST:
+                    # Only set to 'own' if the checkbox was present but unchecked
+                    applicant.housing_status = 'own'
+                    applicant.save()
                 
                 # Handle profile photo upload (same logic as progressive_profile)
                 if 'profile_photo' in request.FILES:
@@ -316,10 +285,7 @@ def profile_step1(request):
     from .models import IdentificationDocument
     identification_documents = IdentificationDocument.objects.filter(applicant=applicant)
     
-    # Get completion status for progress bar
-    completion_status = get_step_completion_status(applicant)
-    
-    # Calculate actual profile completion percentage using the new logic
+    # Calculate actual profile completion percentage using the unified model logic
     completion_status = applicant.get_field_completion_status()
     completion_percentage = completion_status['overall_completion_percentage']
     
@@ -523,9 +489,6 @@ def profile_step2(request):
     else:
         form = ApplicantHousingForm(instance=applicant)
     
-    # Get completion status for progress bar
-    completion_status = get_step_completion_status(applicant)
-    
     # Calculate actual profile completion percentage
     completion_status = applicant.get_field_completion_status()
     completion_percentage = completion_status['overall_completion_percentage']
@@ -626,8 +589,6 @@ def profile_step3(request):
     else:
         form = ApplicantEmploymentForm(instance=applicant)
     
-    # Get completion status for progress bar
-    completion_status = get_step_completion_status(applicant)
     
     # Calculate actual profile completion percentage
     completion_status = applicant.get_field_completion_status()

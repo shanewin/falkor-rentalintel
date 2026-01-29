@@ -2,13 +2,17 @@ from users.models import User
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
-from .forms import ApplicationForm, ApplicantCompletionForm, PersonalInfoForm, PreviousAddressForm, IncomeForm
+from .forms import PersonalInfoForm, PreviousAddressForm, IncomeForm
 from .models import (
     UploadedFile, Application, ApplicationActivity, ApplicationSection, 
-    PersonalInfoData, PreviousAddress, SectionStatus, IncomeData
+    PersonalInfoData, PreviousAddress, SectionStatus, IncomeData,
+    Pet, PetPhoto
 )
-from applicants.models import Applicant
+from django.core.files.base import ContentFile
+import base64
+from applicants.models import Applicant, SavedApartment
 from apartments.models import Apartment
+from applicants.apartment_matching import ApartmentMatchingService
 import cloudinary.uploader
 # Import activity tracking
 from applicants.signals import trigger_document_uploaded
@@ -51,78 +55,6 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 
 
-@login_required
-def application(request):
-    if not request.user.is_broker and not request.user.is_superuser:
-        messages.error(request, "You are not authorized to create applications.")
-        return redirect("applications_list")  # Redirect non-brokers
-
-    # ✅ Get applicant if broker pre-selects one
-    applicant_id = request.GET.get("applicant_id")  
-    apartment_id = request.GET.get("apartment_id")  # Optional apartment pre-selection
-    
-    applicant = None
-    apartment = None
-    
-    if applicant_id:
-        try:
-            applicant = Applicant.objects.get(id=applicant_id)
-        except Applicant.DoesNotExist:
-            messages.error(request, "The selected applicant does not exist.")
-            return redirect("applications_list")  # Redirect if invalid applicant
-
-    if apartment_id:
-        try:
-            apartment = Apartment.objects.get(id=apartment_id)
-        except Apartment.DoesNotExist:
-            messages.error(request, "The selected apartment does not exist.")
-            return redirect("applications_list")
-
-    if request.method == "POST":
-        application_form = ApplicationForm(request.POST, applicant=applicant, apartment=apartment, user=request.user)  # ✅ Pass user for context
-
-        if application_form.is_valid():
-            application = application_form.save(commit=False)
-            
-            # ✅ Get applicant if selected (now optional)
-            applicant = application_form.cleaned_data.get("applicant") or applicant
-            if applicant:
-                application.applicant = applicant
-                
-                # Update applicant profile with any new data from form
-                from .services import ApplicationDataService
-                ApplicationDataService.update_applicant_from_application(
-                    applicant, application_form.cleaned_data
-                )
-            
-            application.broker = request.user
-            application.required_documents = application_form.cleaned_data.get("required_documents", [])
-            application.save()  # ✅ Save once instead of twice
-
-            # Log appropriate activity based on what information is available
-            if application.apartment:
-                location = f"{application.apartment.building.name} Unit {application.apartment.unit_number}"
-            elif application.manual_building_address:
-                location = f"{application.manual_building_address} Unit {application.manual_unit_number}"
-            else:
-                location = "property (details to be added)"
-                
-            if application.applicant:
-                log_activity(application, f"Broker {request.user.email} created an application for {application.applicant.first_name} {application.applicant.last_name} at {location}.")
-            else:
-                log_activity(application, f"Broker {request.user.email} created an application for {location} (applicant to be added).")
-
-            messages.success(request, "Application created successfully!")
-            return redirect("application_detail", uuid=application.unique_link)
-
-    else:
-        application_form = ApplicationForm(applicant=applicant, apartment=apartment, user=request.user)  # ✅ Pre-fill form with data if provided
-
-    return render(
-        request,
-        "applications/application_form.html",
-        {"application_form": application_form, "applicant": applicant, "apartment": apartment},
-    )
 
 
 
@@ -190,9 +122,10 @@ def application_list(request):
         # Get all apartments in those buildings
         broker_apartments = Apartment.objects.filter(building__in=broker_buildings)
         
-        # Show applications for broker's apartments OR applications created by the broker
+        # Show applications assigned to the broker OR unassigned applications for their apartments
         applications = Application.objects.filter(
-            models.Q(apartment__in=broker_apartments) | models.Q(broker=request.user)
+            models.Q(broker=request.user) | 
+            (models.Q(apartment__in=broker_apartments) & models.Q(broker__isnull=True))
         ).select_related('applicant', 'apartment__building', 'broker').order_by('-created_at')
     elif request.user.is_applicant:
         # Get the applicant profile for the current user
@@ -285,42 +218,6 @@ def delete_uploaded_file(request, file_id):
 
 
 
-def application_edit(request, application_id):
-    application = get_object_or_404(Application, id=application_id)
-
-    # Check if user has access to edit this application
-    can_edit = False
-    if request.user.is_superuser:
-        can_edit = True
-    elif request.user.is_broker:
-        # Broker can edit if they created it OR if it's for their assigned apartment
-        from buildings.models import Building
-        broker_buildings = Building.objects.filter(brokers=request.user)
-        if application.broker == request.user or (application.apartment and application.apartment.building in broker_buildings):
-            can_edit = True
-    elif hasattr(request.user, 'applicant_profile') and application.applicant == request.user.applicant_profile:
-        can_edit = True
-    
-    if not can_edit:
-        messages.error(request, "You are not authorized to edit this application.")
-        return redirect("application_detail", application_id=application.id)
-
-    if request.method == 'POST':
-        form = ApplicationForm(request.POST, instance=application)
-
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Application updated successfully!")
-            return redirect("application_detail", application_id=application.id)
-
-    else:
-        form = ApplicationForm(instance=application)
-
-    return render(
-        request,
-        "applications/application_edit.html",
-        {"form": form, "application": application}
-    )
 
 
 
@@ -650,200 +547,6 @@ def approve_application(request, application_id):
 # ===== V2 APPLICATION SYSTEM VIEWS =====
 
 @login_required
-def broker_create_application(request):
-    """Enhanced broker application creation workflow"""
-    if not (request.user.is_broker or request.user.is_superuser):
-        messages.error(request, "You are not authorized to create applications.")
-        return redirect('applications_list')
-    
-    if request.method == 'POST':
-        action = request.POST.get('action')
-        
-        try:
-            # Handle temporary application creation for preview
-            if action == 'create_temp_preview':
-                return handle_temp_application_creation(request)
-            
-            # Create new applicant if needed
-            applicant = None
-            applicant_type = request.POST.get('applicant_type')
-            
-            if applicant_type == 'existing':
-                applicant_id = request.POST.get('applicant')
-                if applicant_id:
-                    try:
-                        applicant = Applicant.objects.get(id=applicant_id)
-                    except Applicant.DoesNotExist:
-                        messages.error(request, "Selected applicant not found.")
-                        return redirect('broker_create_application')
-                        
-            elif applicant_type == 'new':
-                # Create new applicant with minimal info
-                email = request.POST.get('new_applicant_email')
-                phone = request.POST.get('new_applicant_phone')
-                first_name = request.POST.get('new_applicant_first_name', '')
-                last_name = request.POST.get('new_applicant_last_name', '')
-                
-                if email:
-                    # Check if applicant already exists
-                    existing_applicant = Applicant.objects.filter(email=email).first()
-                    if existing_applicant:
-                        applicant = existing_applicant
-                        messages.info(request, f"Using existing applicant: {applicant.email}")
-                    else:
-                        from datetime import date
-                        applicant = Applicant.objects.create(
-                            email=email,
-                            phone_number=phone or '',
-                            first_name=first_name,
-                            last_name=last_name,
-                            date_of_birth=date(1990, 1, 1),  # Temporary date for broker creation
-                            street_address_1='Temporary Address',  # Required field
-                            city='New York',  # Required field
-                            zip_code='10001'  # Required field
-                        )
-                        messages.success(request, f"Created new applicant: {applicant.email}")
-            
-            # Get property information
-            apartment = None
-            property_type = request.POST.get('property_type')
-            
-            if property_type == 'existing':
-                apartment_id = request.POST.get('apartment')
-                if apartment_id:
-                    try:
-                        apartment = Apartment.objects.get(id=apartment_id)
-                    except Apartment.DoesNotExist:
-                        messages.error(request, "Selected apartment not found.")
-                        return redirect('broker_create_application')
-            
-            # Create application
-            application = Application.objects.create(
-                apartment=apartment,
-                applicant=applicant,
-                broker=request.user,
-                application_version='v2',
-                current_section=1
-            )
-            
-            # Set manual property fields if needed
-            if property_type == 'manual':
-                # CRITICAL: Only superusers can create applications for manual properties
-                if not request.user.is_superuser:
-                    messages.error(request, "Access denied. Only administrators can create applications for properties not in the database.")
-                    return redirect('broker_create_application')
-                    
-                application.manual_building_name = request.POST.get('manual_building_name', '')
-                application.manual_building_address = request.POST.get('manual_building_address', '')
-                application.manual_unit_number = request.POST.get('manual_unit_number', '')
-            
-            # Set customization options
-            required_documents = request.POST.getlist('required_documents')
-            application.required_documents = required_documents
-            
-            application_fee = request.POST.get('application_fee', '50.00')
-            try:
-                application.application_fee_amount = float(application_fee)
-            except (ValueError, TypeError):
-                application.application_fee_amount = 50.00
-            
-            application.save()
-            
-            # Initialize V2 section status
-            section_statuses = {
-                1: SectionStatus.NOT_STARTED,
-                2: SectionStatus.NOT_STARTED,
-                3: SectionStatus.NOT_STARTED,
-                4: SectionStatus.NOT_STARTED,
-                5: SectionStatus.NOT_STARTED,
-            }
-            application.section_statuses = section_statuses
-            application.save()
-            
-            # Create ApplicationSection records
-            section_names = {
-                1: 'Personal Information',
-                2: 'Income',
-                3: 'Legal',
-                4: 'Review',
-                5: 'Payment'
-            }
-            
-            for section_num, section_name in section_names.items():
-                ApplicationSection.objects.create(
-                    application=application,
-                    section_number=section_num,
-                    status=SectionStatus.NOT_STARTED
-                )
-            
-            # Log activity
-            property_desc = str(apartment) if apartment else f"{application.manual_building_name or 'Property'}"
-            applicant_desc = str(applicant) if applicant else "TBD"
-            log_activity(application, f"Broker {request.user.email} created application for {applicant_desc} at {property_desc}")
-            
-            # Handle send action
-            if action == 'create_and_send' and applicant:
-                from .email_utils import send_application_link_email
-                from .sms_utils import send_application_link_sms, validate_phone_number
-                
-                send_email = request.POST.get('send_email') == 'on'
-                send_sms = request.POST.get('send_sms') == 'on'
-                
-                email_sent = False
-                sms_sent = False
-                
-                # Send email if requested and email available
-                if send_email and applicant.email:
-                    email_sent = send_application_link_email(application, request)
-                    if email_sent:
-                        log_activity(application, f"Application link emailed to {applicant.email}")
-                    else:
-                        messages.warning(request, f"Email sending failed to {applicant.email}")
-                
-                # Send SMS if requested and phone available
-                if send_sms and applicant.phone_number:
-                    # Validate phone number first
-                    is_valid, formatted_phone = validate_phone_number(applicant.phone_number)
-                    if is_valid:
-                        sms_success, sms_result = send_application_link_sms(formatted_phone, application)
-                        if sms_success:
-                            sms_sent = True
-                            log_activity(application, f"Application link sent via SMS to {formatted_phone}")
-                        else:
-                            messages.warning(request, f"SMS sending failed: {sms_result}")
-                    else:
-                        messages.warning(request, f"Invalid phone number format: {formatted_phone}")
-                
-                # Success message based on what was sent
-                sent_methods = []
-                if email_sent:
-                    sent_methods.append("email")
-                if sms_sent:
-                    sent_methods.append("SMS")
-                
-                if sent_methods:
-                    success_msg = f"Application created and sent via {' and '.join(sent_methods)} to {applicant.email or applicant.phone_number}"
-                else:
-                    success_msg = "Application created successfully"
-                    if send_email or send_sms:
-                        messages.info(request, "No contact methods were successful. Please send the link manually.")
-                
-                messages.success(request, success_msg)
-            else:
-                messages.success(request, "Application created successfully!")
-            
-            return redirect('broker_confirmation', application_id=application.id)
-            
-        except Exception as e:
-            import traceback
-            print(f"ERROR in broker_create_application: {str(e)}")
-            print(f"Traceback: {traceback.format_exc()}")
-            messages.error(request, f"An error occurred while creating the application: {str(e)}")
-            # Don't redirect on error, show the form again
-    
-    # GET request - show the form
-    form = ApplicationForm()
-    return render(request, 'applications/broker_create_application.html', {'form': form})
 
 
 # Progressive Broker Application Creation Utilities
@@ -875,19 +578,116 @@ def clear_broker_session_data(request):
 # Progressive Broker Application Creation Views
 @login_required
 def broker_create_step1(request):
-    """Step 1: Property Selection"""
+    """Step 1: Applicant Selection (Refactored)"""
     if not (request.user.is_broker or request.user.is_superuser):
         messages.error(request, "You are not authorized to create applications.")
         return redirect('applications_list')
     
+    # Handle pre-selected applicant from GET parameters (e.g. from profile page)
+    preselected_applicant_id = request.GET.get('applicant_id')
+    if preselected_applicant_id:
+        try:
+            applicant = Applicant.objects.get(id=preselected_applicant_id)
+            set_broker_session_data(request, 'applicant_type', 'existing')
+            set_broker_session_data(request, 'applicant_id', preselected_applicant_id)
+            # If coming from profile, we can skip to step 2 directly if desired, 
+            # but let's show step 1 with it selected for clarity.
+        except Applicant.DoesNotExist:
+            pass
+
     if request.method == 'POST':
         # Store step 1 data in session
+        applicant_type = request.POST.get('applicant_type')
+        set_broker_session_data(request, 'applicant_type', applicant_type)
+        
+        if applicant_type == 'existing':
+            applicant_id = request.POST.get('applicant')
+            if not applicant_id:
+                messages.error(request, "Please select an existing applicant.")
+                return redirect('broker_create_step1')
+            set_broker_session_data(request, 'applicant_id', applicant_id)
+        elif applicant_type == 'new':
+            first_name = request.POST.get('new_applicant_first_name', '').strip()
+            last_name = request.POST.get('new_applicant_last_name', '').strip()
+            email = request.POST.get('new_applicant_email', '').strip()
+            phone = request.POST.get('new_applicant_phone', '').strip()
+            
+            # Strict validation for new prospects
+            if not all([first_name, last_name, email]):
+                messages.error(request, "First Name, Last Name, and Email are required for new prospects.")
+                # Store whatever they entered so far
+                set_broker_session_data(request, 'new_applicant_first_name', first_name)
+                set_broker_session_data(request, 'new_applicant_last_name', last_name)
+                set_broker_session_data(request, 'new_applicant_email', email)
+                set_broker_session_data(request, 'new_applicant_phone', phone)
+                return redirect('broker_create_step1')
+
+            set_broker_session_data(request, 'new_applicant_email', email)
+            set_broker_session_data(request, 'new_applicant_phone', phone)
+            set_broker_session_data(request, 'new_applicant_first_name', first_name)
+            set_broker_session_data(request, 'new_applicant_last_name', last_name)
+            # Clear existing applicant_id if switching to new
+            set_broker_session_data(request, 'applicant_id', None)
+        
+        return redirect('broker_create_step2')
+    
+    # Get available applicants for selection - filter by assigned broker if not superuser
+    if request.user.is_superuser:
+        applicants = Applicant.objects.all().order_by('_first_name', '_last_name')
+    else:
+        from django.db.models import Q
+        applicants = Applicant.objects.filter(
+            Q(assigned_broker=request.user) |
+            Q(applications__apartment__building__brokers=request.user)
+        ).distinct().order_by('_first_name', '_last_name')
+    
+    # Prefetch data for preview card and pre-calculate simplified scores
+    from applicants.smart_insights import SmartInsights
+    applicants = applicants.prefetch_related('photos', 'jobs', 'income_sources', 'previous_addresses')
+    
+    # Add temporary score attribute for template
+    for applicant in applicants:
+        # We only need the overall_score for the list view to keep it fast
+        analysis = SmartInsights.analyze_applicant(applicant)
+        applicant.smart_score = analysis['overall_score']
+    
+    context = {
+        'applicants': applicants,
+        'current_step': 1,
+        'session_data': get_broker_session_data(request),
+    }
+    return render(request, 'applications/broker_create_step1.html', context)
+
+@login_required
+def broker_create_step2(request):
+    """Step 2: Property Selection (Refactored)"""
+    if not (request.user.is_broker or request.user.is_superuser):
+        messages.error(request, "You are not authorized to create applications.")
+        return redirect('applications_list')
+    
+    # Check if applicant was selected in Step 1
+    applicant_id = get_broker_session_data(request, 'applicant_id')
+    applicant_type = get_broker_session_data(request, 'applicant_type')
+    
+    if not applicant_type:
+        messages.warning(request, "Please complete step 1 first.")
+        return redirect('broker_create_step1')
+    
+    applicant = None
+    if applicant_id:
+        try:
+            applicant = Applicant.objects.get(id=applicant_id)
+        except Applicant.DoesNotExist:
+            pass
+
+    if request.method == 'POST':
+        # Store step 2 data in session
         property_type = request.POST.get('property_type')
         
         # Enforce restriction: only superusers can enter property manually
         if property_type == 'manual' and not request.user.is_superuser:
             messages.error(request, "You are not authorized to enter properties manually. Please select an existing property.")
-            return redirect('broker_create_step1')
+            return redirect('broker_create_step2')
         
         set_broker_session_data(request, 'property_type', property_type)
         
@@ -899,51 +699,48 @@ def broker_create_step1(request):
             set_broker_session_data(request, 'manual_building_address', request.POST.get('manual_building_address', ''))
             set_broker_session_data(request, 'manual_unit_number', request.POST.get('manual_unit_number', ''))
         
-        return redirect('broker_create_step2')
-    
-    # Get available apartments for selection
-    apartments = Apartment.objects.all().order_by('building__name', 'unit_number')
-    
-    context = {
-        'apartments': apartments,
-        'current_step': 1,
-        'session_data': get_broker_session_data(request),
-    }
-    return render(request, 'applications/broker_create_step1.html', context)
-
-@login_required
-def broker_create_step2(request):
-    """Step 2: Applicant Selection"""
-    if not (request.user.is_broker or request.user.is_superuser):
-        messages.error(request, "You are not authorized to create applications.")
-        return redirect('applications_list')
-    
-    # Check if step 1 was completed
-    if not get_broker_session_data(request, 'property_type'):
-        messages.warning(request, "Please complete step 1 first.")
-        return redirect('broker_create_step1')
-    
-    if request.method == 'POST':
-        # Store step 2 data in session
-        applicant_type = request.POST.get('applicant_type')
-        set_broker_session_data(request, 'applicant_type', applicant_type)
-        
-        if applicant_type == 'existing':
-            applicant_id = request.POST.get('applicant')
-            set_broker_session_data(request, 'applicant_id', applicant_id)
-        elif applicant_type == 'new':
-            set_broker_session_data(request, 'new_applicant_email', request.POST.get('new_applicant_email', ''))
-            set_broker_session_data(request, 'new_applicant_phone', request.POST.get('new_applicant_phone', ''))
-            set_broker_session_data(request, 'new_applicant_first_name', request.POST.get('new_applicant_first_name', ''))
-            set_broker_session_data(request, 'new_applicant_last_name', request.POST.get('new_applicant_last_name', ''))
-        
         return redirect('broker_create_step3')
     
-    # Get available applicants for selection
-    applicants = Applicant.objects.all().order_by('first_name', 'last_name')
+    # --- Apartment Prioritization Logic ---
+    saved_apartments = []
+    smart_matches = []
+    other_apartments = []
+    
+    already_listed_ids = set()
+    
+    if applicant:
+        # 1. Saved Apartments
+        saved_qs = SavedApartment.objects.filter(applicant=applicant).select_related('apartment', 'apartment__building')
+        for sa in saved_qs:
+            if sa.apartment.id not in already_listed_ids:
+                saved_apartments.append(sa.apartment)
+                already_listed_ids.add(sa.apartment.id)
+        
+        # 2. Smart Matches
+        try:
+            matching_service = ApartmentMatchingService(applicant)
+            matches = matching_service.get_apartment_matches(limit=15)
+            for match in matches:
+                apt = match['apartment']
+                if apt.id not in already_listed_ids:
+                    # Add match percentage for display
+                    apt.match_percentage = match['match_percentage']
+                    smart_matches.append(apt)
+                    already_listed_ids.add(apt.id)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error getting smart matches in broker_create_step2: {e}")
+    
+    # 3. All Other Available Apartments
+    others_qs = Apartment.objects.filter(status='available').exclude(id__in=already_listed_ids).select_related('building').prefetch_related('images', 'amenities').order_by('building__name', 'unit_number')
+    other_apartments = list(others_qs)
     
     context = {
-        'applicants': applicants,
+        'applicant': applicant,
+        'saved_apartments': saved_apartments,
+        'smart_matches': smart_matches,
+        'other_apartments': other_apartments,
         'current_step': 2,
         'session_data': get_broker_session_data(request),
     }
@@ -951,49 +748,28 @@ def broker_create_step2(request):
 
 @login_required
 def broker_create_step3(request):
-    """Step 3: Application Settings"""
+    """Step 3: Application Settings & Review (Consolidated)"""
     if not (request.user.is_broker or request.user.is_superuser):
         messages.error(request, "You are not authorized to create applications.")
         return redirect('applications_list')
     
-    # Check if previous steps were completed
-    if not get_broker_session_data(request, 'property_type') or not get_broker_session_data(request, 'applicant_type'):
+    # Check if this step is allowed
+    session_data = get_broker_session_data(request)
+    if not session_data.get('property_type') or not session_data.get('applicant_type'):
         messages.warning(request, "Please complete previous steps first.")
         return redirect('broker_create_step1')
     
     if request.method == 'POST':
-        # Store step 3 data in session
-        application_fee = request.POST.get('application_fee', '50.00')
-        set_broker_session_data(request, 'application_fee', application_fee)
-        
-        return redirect('broker_create_step4')
-    
-    context = {
-        'current_step': 3,
-        'session_data': get_broker_session_data(request),
-    }
-    return render(request, 'applications/broker_create_step3.html', context)
-
-@login_required
-def broker_create_step4(request):
-    """Step 4: Review & Create Application"""
-    if not (request.user.is_broker or request.user.is_superuser):
-        messages.error(request, "You are not authorized to create applications.")
-        return redirect('applications_list')
-    
-    # Check if all previous steps were completed
-    session_data = get_broker_session_data(request)
-    required_keys = ['property_type', 'applicant_type']
-    
-    for key in required_keys:
-        if not session_data.get(key):
-            messages.warning(request, "Please complete all previous steps first.")
-            return redirect('broker_create_step1')
-    
-    if request.method == 'POST':
         try:
-            # Create the application using session data
-            application = create_application_from_session(request, session_data)
+            # Store final settings
+            application_fee = request.POST.get('application_fee', '50.00')
+            set_broker_session_data(request, 'application_fee', application_fee)
+            
+            # Refresh session data to include the fee we just set
+            final_session_data = get_broker_session_data(request)
+
+            # Create the application directly (Merged from Step 4)
+            application = create_application_from_session(request, final_session_data)
             
             # Clear session data
             clear_broker_session_data(request)
@@ -1003,14 +779,38 @@ def broker_create_step4(request):
             
         except Exception as e:
             messages.error(request, f"Error creating application: {str(e)}")
-            return redirect('broker_create_step4')
+            return redirect('broker_create_step3')
     
-    # Prepare data for review
-    context = prepare_review_context(session_data)
-    context['current_step'] = 4
-    context['session_data'] = session_data
-    
-    return render(request, 'applications/broker_create_step4.html', context)
+    # Fetch objects for display
+    applicant = None
+    if session_data.get('applicant_id'):
+        # KEY FIX: Query Applicant model, not User model. 
+        # Also prefetch photos and calculate score for the rich summary card
+        try:
+            from applicants.smart_insights import SmartInsights
+            applicant = Applicant.objects.select_related('user').prefetch_related('photos').filter(id=session_data.get('applicant_id')).first()
+            if applicant:
+                analysis = SmartInsights.analyze_applicant(applicant)
+                applicant.smart_score = analysis['overall_score']
+        except ImportError:
+            # Fallback if SmartInsights not available or circular import
+            applicant = Applicant.objects.filter(id=session_data.get('applicant_id')).first()
+        
+    apartment = None
+    if session_data.get('apartment_id'):
+        # Prefetch amenities and images for rich summary card
+        apartment = Apartment.objects.select_related('building').prefetch_related('amenities').filter(id=session_data.get('apartment_id')).first()
+
+    context = {
+        'current_step': 3,
+        'session_data': session_data,
+        'applicant': applicant,
+        'apartment': apartment,
+        'is_last_step': True
+    }
+    return render(request, 'applications/broker_create_step3.html', context)
+
+
 
 def create_application_from_session(request, session_data):
     """Create application from session data"""
@@ -1246,6 +1046,23 @@ def create_v2_application(request, apartment_id=None):
     return redirect('section1_personal_info', application_id=application.id)
 
 
+def process_cropped_image(crop_data_json, original_file):
+    if crop_data_json:
+        try:
+            crop_info = json.loads(crop_data_json)
+            if crop_info.get('cropped') and crop_info.get('croppedImage'):
+                # Extract base64 image data
+                image_data = crop_info['croppedImage']
+                if 'base64,' in image_data:
+                    format, imgstr = image_data.split('base64,')
+                    ext = format.split('/')[-1].split(';')[0]
+                    # Create a ContentFile from the base64 data
+                    return ContentFile(base64.b64decode(imgstr), name=f'cropped.{ext}')
+        except Exception as e:
+            print(f"Error processing crop data: {e}")
+    return original_file
+
+
 @hybrid_csrf_protect
 def v2_section1_personal_info(request, application_id):
     """Section 1 - Personal Information"""
@@ -1256,49 +1073,95 @@ def v2_section1_personal_info(request, application_id):
     is_applicant_access = False
     is_preview = request.GET.get('preview') == 'true'
     
-    if token:
-        # Validate token for applicant access
-        if token == str(application.unique_link):
-            is_applicant_access = True
-            # No additional authentication needed for token access
-        else:
-            messages.error(request, "Invalid access token.")
-            return redirect('applications_list')
+    # Validate access: valid token OR authenticated as the correct applicant
+    if token and token == str(application.unique_link):
+        is_applicant_access = True
+    elif request.user.is_authenticated and application.applicant and application.applicant.user == request.user:
+        is_applicant_access = True
     elif not is_preview:
-        # Regular broker access - check authentication
+        # Regular broker/staff access - check authentication
         if not request.user.is_authenticated:
             return redirect('login')
+        # (Implicitly allows access if authenticated and not applicant, assuming broker permission checked elsewhere or allowed)
     
     # Get or create PersonalInfoData
     personal_info, created = PersonalInfoData.objects.get_or_create(
         application=application
     )
     
-    # Pre-fill with applicant profile data if this is a newly created personal_info
-    if created and application.applicant:
+    # Pre-fill with applicant profile data
+    if application.applicant:
         from .services import ApplicationDataService
         prefill_data = ApplicationDataService.get_prefill_data_for_applicant(application.applicant)
         
         # Map prefill data to PersonalInfoData fields
         field_mapping = {
             'first_name': 'first_name',
+            'middle_name': 'middle_name',
             'last_name': 'last_name', 
+            'suffix': 'suffix',
             'email': 'email',
-            'phone_number': 'phone_cell',  # Note: profile has phone_number, form has phone_cell
+            'phone_cell': 'phone_cell',
             'date_of_birth': 'date_of_birth',
-            'street_address_1': 'current_address',
-            'emergency_contact_name': 'reference1_name',
-            'emergency_contact_phone': 'reference1_phone',
+            'street_address_1': 'street_address_1',
+            'street_address_2': 'street_address_2',
+            'city': 'city',
+            'state': 'state',
+            'zip_code': 'zip_code',
+            'current_address_years': 'current_address_years',
+            'current_address_months': 'current_address_months',
+            'housing_status': 'housing_status',
+            'current_monthly_rent': 'current_monthly_rent',
+            'is_rental_property': 'is_rental_property',
+            'landlord_name': 'landlord_name',
+            'landlord_phone': 'landlord_phone',
+            'landlord_email': 'landlord_email',
+            'reason_for_moving': 'reason_for_moving',
+            'desired_move_in_date': 'desired_move_in_date',
+            'has_pets': 'has_pets',
         }
         
-        # Apply prefill data to personal_info instance
+        # Apply prefill data to personal_info instance ONLY if the field is currently empty
         for profile_field, app_field in field_mapping.items():
             if profile_field in prefill_data and prefill_data[profile_field]:
-                setattr(personal_info, app_field, prefill_data[profile_field])
+                if not getattr(personal_info, app_field):
+                    setattr(personal_info, app_field, prefill_data[profile_field])
         
-        # Save if any data was filled
-        if any(getattr(personal_info, field) for field in field_mapping.values()):
-            personal_info.save()
+        # Always save to ensure consistency (idempotent if no changes)
+        personal_info.save()
+
+        # Clone Previous Addresses if they don't exist yet
+        if not personal_info.previous_addresses.exists() and 'previous_addresses' in prefill_data:
+            for i, addr_data in enumerate(prefill_data['previous_addresses'], 1):
+                PreviousAddress.objects.create(
+                    personal_info=personal_info,
+                    street_address_1=addr_data.get('street_address_1'),
+                    street_address_2=addr_data.get('street_address_2'),
+                    city=addr_data.get('city'),
+                    state=addr_data.get('state'),
+                    zip_code=addr_data.get('zip_code'),
+                    housing_status=addr_data.get('housing_status'),
+                    years=addr_data.get('years', 0),
+                    months=addr_data.get('months', 0),
+                    monthly_rent=addr_data.get('monthly_rent'),
+                    landlord_name=addr_data.get('landlord_name'),
+                    landlord_phone=addr_data.get('landlord_phone'),
+                    landlord_email=addr_data.get('landlord_email'),
+                    order=i
+                )
+        
+        # Clone Pets if they don't exist yet
+        if not personal_info.pets.exists() and 'pets' in prefill_data:
+            for pet_data in prefill_data['pets']:
+                Pet.objects.create(
+                    personal_info=personal_info,
+                    name=pet_data.get('name'),
+                    pet_type=pet_data.get('pet_type'),
+                    quantity=pet_data.get('quantity', 1),
+                    description=pet_data.get('description'),
+                )
+                # Note: We're not cloning photos by URL here because it requires re-uploading
+                # In a real sync, we might copy Cloudinary assets. For now, we clone the metadata.
     
     # Get application section
     section = ApplicationSection.objects.get(
@@ -1313,6 +1176,58 @@ def v2_section1_personal_info(request, application_id):
             with transaction.atomic():
                 # Save personal info
                 personal_info = form.save()
+                
+                # Handle Previous Addresses
+                # Remove existing ones to rebuild (simplest sync strategy for now)
+                personal_info.previous_addresses.all().delete()
+                
+                for i in range(1, 5):  # Max 4 addresses as per frontend logic
+                    street1 = request.POST.get(f'prev_street_address_1_{i}')
+                    if street1:
+                        housing_status = request.POST.get(f'prev_housing_status_{i}', '').lower()
+                        PreviousAddress.objects.create(
+                            personal_info=personal_info,
+                            street_address_1=street1,
+                            street_address_2=request.POST.get(f'prev_street_address_2_{i}', ''),
+                            city=request.POST.get(f'prev_city_{i}', ''),
+                            state=request.POST.get(f'prev_state_{i}', ''),
+                            zip_code=request.POST.get(f'prev_zip_code_{i}', ''),
+                            years=int(request.POST.get(f'prev_address_years_{i}', 0) or 0),
+                            months=int(request.POST.get(f'prev_address_months_{i}', 0) or 0),
+                            monthly_rent=request.POST.get(f'prev_monthly_rent_{i}') or None,
+                            housing_status=housing_status if housing_status in ['rent', 'own', 'other'] else 'own',
+                            landlord_name=request.POST.get(f'prev_landlord_name_{i}', ''),
+                            landlord_phone=request.POST.get(f'prev_landlord_phone_{i}', ''),
+                            landlord_email=request.POST.get(f'prev_landlord_email_{i}', ''),
+                            order=i
+                        )
+                
+                # Handle Pets
+                personal_info.pets.all().delete()
+                has_pets = request.POST.get('has_pets') == 'on'
+                if has_pets:
+                    for i in range(1, 6):
+                        pet_type = request.POST.get(f'pet_type_{i}')
+                        pet_name = request.POST.get(f'pet_name_{i}')
+                        if pet_type:
+                            pet = Pet.objects.create(
+                                personal_info=personal_info,
+                                name=pet_name or None,
+                                pet_type=pet_type,
+                                quantity=1,
+                                description=request.POST.get(f'pet_description_{i}') or None
+                            )
+                            # Handle Pet Photos
+                            for photo_num in range(1, 4):
+                                photo_field = f'pet_photo_{i}_{photo_num}'
+                                crop_data_field = f'crop_data_pet_{i}_{photo_num}'
+                                if photo_field in request.FILES:
+                                    crop_data = request.POST.get(crop_data_field, '')
+                                    image_file = process_cropped_image(crop_data, request.FILES[photo_field])
+                                    PetPhoto.objects.create(
+                                        pet=pet,
+                                        image=image_file
+                                    )
                 
                 # Update section status
                 section.status = SectionStatus.COMPLETED
@@ -1373,9 +1288,36 @@ def v2_section1_personal_info(request, application_id):
             section.save()
     
     # Get previous addresses
-    previous_addresses = PreviousAddress.objects.filter(
+    previous_addresses_qs = PreviousAddress.objects.filter(
         personal_info=personal_info
     ).order_by('order')
+    
+    previous_addresses_list = []
+    for addr in previous_addresses_qs:
+        previous_addresses_list.append({
+            'street_address_1': addr.street_address_1 or '',
+            'street_address_2': addr.street_address_2 or '',
+            'city': addr.city or '',
+            'state': addr.state or '',
+            'zip_code': addr.zip_code or '',
+            'years': addr.years or 0,
+            'months': addr.months or 0,
+            'monthly_rent': str(addr.monthly_rent) if addr.monthly_rent else '',
+            'housing_status': addr.housing_status or 'own',
+            'landlord_name': addr.landlord_name or '',
+            'landlord_phone': addr.landlord_phone or '',
+            'landlord_email': addr.landlord_email or '',
+        })
+    
+    # Get Pets data
+    pets_list = []
+    for pet in personal_info.pets.all():
+        pets_list.append({
+            'name': pet.name or '',
+            'pet_type': pet.pet_type,
+            'description': pet.description or '',
+            'photos': [photo.image.url for photo in pet.photos.all()]
+        })
     
     # Check if this is a preview request
     is_preview = request.GET.get('preview') == 'true'
@@ -1384,7 +1326,8 @@ def v2_section1_personal_info(request, application_id):
         'application': application,
         'form': form,
         'section': section,
-        'previous_addresses': previous_addresses,
+        'previous_addresses_data': previous_addresses_list,
+        'pets_data': pets_list,
         'current_section': 1,
         'section_title': 'Personal Information',
         'progress_percent': 20,  # 1/5 sections
@@ -1480,9 +1423,13 @@ def v2_application_overview(request, application_id):
         else:
             messages.error(request, "Invalid access token.")
             return redirect('applications_list')
-    else:
-        # No token - redirect to broker management interface
-        return broker_application_management(request, application_id)
+    
+    # Check if this is an authenticated applicant viewing their own application
+    if request.user.is_authenticated and application.applicant and application.applicant.user == request.user:
+        return applicant_application_interface(request, application_id)
+    
+    # No token and not the applicant - redirect to broker management interface
+    return broker_application_management(request, application_id)
 
 
 def applicant_application_interface(request, application_id):
@@ -1490,9 +1437,12 @@ def applicant_application_interface(request, application_id):
     application = get_object_or_404(Application, id=application_id)
     token = request.GET.get('token')
     
-    # Validate token for applicant access
-    if not token or token != str(application.unique_link):
-        messages.error(request, "Invalid or missing access token.")
+    # Validate access: either valid token OR authenticated as the correct applicant
+    is_valid_token = token and token == str(application.unique_link)
+    is_authenticated_applicant = request.user.is_authenticated and application.applicant and application.applicant.user == request.user
+    
+    if not (is_valid_token or is_authenticated_applicant):
+        messages.error(request, "You do not have permission to access this application.")
         return redirect('applications_list')
     
     # Handle file upload from applicants
@@ -1746,15 +1696,13 @@ def v2_section2_income(request, application_id):
     is_applicant_access = False
     is_preview = request.GET.get('preview') == 'true'
     
-    if token:
-        # Validate token for applicant access
-        if token == str(application.unique_link):
-            is_applicant_access = True
-        else:
-            messages.error(request, "Invalid access token.")
-            return redirect('applications_list')
+    # Validate access: valid token OR authenticated as the correct applicant
+    if token and token == str(application.unique_link):
+        is_applicant_access = True
+    elif request.user.is_authenticated and application.applicant and application.applicant.user == request.user:
+        is_applicant_access = True
     elif not is_preview:
-        # Regular broker access - check authentication
+        # Regular broker/staff access - check authentication
         if not request.user.is_authenticated:
             return redirect('login')
     
@@ -1780,30 +1728,86 @@ def v2_section2_income(request, application_id):
         
         # Map employment data from applicant profile
         field_mapping = {
+            'employment_type': 'employment_type',
             'company_name': 'company_name',
             'position': 'position', 
             'annual_income': 'annual_income',
-            'employment_status': 'employment_type',
+            'supervisor_name': 'supervisor_name',
+            'supervisor_email': 'supervisor_email',
+            'supervisor_phone': 'supervisor_phone',
+            'currently_employed': 'currently_employed',
+            'start_date': 'start_date',
+            'end_date': 'end_date',
+            'school_name': 'school_name',
+            'year_of_graduation': 'year_of_graduation',
+            'school_address': 'school_address',
+            'school_phone': 'school_phone',
         }
+        
+        # Mapping photo ID details
+        id_field_mapping = {
+            'id_type': 'id_type',
+            'id_number': 'id_number',
+            'id_state': 'id_state',
+            'id_front_image': 'id_front_image',
+            'id_back_image': 'id_back_image',
+        }
+        field_mapping.update(id_field_mapping)
         
         # Apply prefill data to income_data instance
         for profile_field, app_field in field_mapping.items():
             if profile_field in prefill_data and prefill_data[profile_field]:
                 value = prefill_data[profile_field]
                 
-                # Convert annual to monthly income
-                if profile_field == 'annual_income' and value:
-                    try:
-                        value = float(value) / 12  # Convert annual to monthly
-                    except (ValueError, TypeError):
-                        value = None
-                
                 if value:
                     setattr(income_data, app_field, value)
         
         # Save if any data was filled
-        if any(getattr(income_data, field) for field in field_mapping.values() if field):
+        if (any(getattr(income_data, field) for field in field_mapping.values() if field)) or created:
             income_data.save()
+            
+            # Map sub-records from profile to application related models
+            from .models import AdditionalEmployment, AdditionalIncome, AssetInfo
+            
+            # Copy Jobs
+            for job in application.applicant.jobs.all():
+                AdditionalEmployment.objects.get_or_create(
+                    income_data=income_data,
+                    company_name=job.company_name,
+                    position=job.position,
+                    defaults={
+                        'annual_income': job.annual_income or 0,
+                        'supervisor_name': job.supervisor_name,
+                        'supervisor_email': job.supervisor_email,
+                        'supervisor_phone': job.supervisor_phone,
+                        'currently_employed': job.currently_employed,
+                        'start_date': job.employment_start_date,
+                        'end_date': job.employment_end_date,
+                        'employment_type': job.job_type
+                    }
+                )
+            
+            # Copy Income Sources
+            for source in application.applicant.income_sources.all():
+                AdditionalIncome.objects.get_or_create(
+                    income_data=income_data,
+                    income_source=source.income_source,
+                    defaults={
+                        'annual_income': source.average_annual_income or 0,
+                        'source_type': source.source_type
+                    }
+                )
+                
+            # Copy Assets
+            for asset in application.applicant.assets.all():
+                AssetInfo.objects.get_or_create(
+                    income_data=income_data,
+                    asset_name=asset.asset_name,
+                    defaults={
+                        'account_balance': asset.account_balance or 0,
+                        'asset_type': asset.asset_type
+                    }
+                )
     
     # Get application section
     try:
@@ -1826,6 +1830,11 @@ def v2_section2_income(request, application_id):
             with transaction.atomic():
                 # Save income data
                 income_data = form.save()
+                
+                # Handle dynamic sub-records (additional jobs, income, assets)
+                process_app_dynamic_jobs(request, income_data)
+                process_app_dynamic_income_sources(request, income_data)
+                process_app_dynamic_assets(request, income_data)
                 
                 # Update section status
                 section.status = SectionStatus.COMPLETED
@@ -1881,10 +1890,18 @@ def v2_section2_income(request, application_id):
             section.started_at = timezone.now()
             section.save()
     
+    # Get dynamic sub-records for context/pre-fill
+    additional_employment = income_data.additional_employment.all()
+    additional_income = income_data.additional_income.all()
+    assets = income_data.assets.all()
+    
     context = {
         'application': application,
         'form': form,
         'section': section,
+        'additional_employment': additional_employment,
+        'additional_income': additional_income,
+        'assets': assets,
         'current_section': 2,
         'section_title': 'Income & Employment',
         'progress_percent': 40,  # 2/5 sections
@@ -1902,34 +1919,243 @@ def v2_section2_income(request, application_id):
     return render(request, template, context)
 
 
+def process_app_dynamic_jobs(request, income_data):
+    """Process additional jobs for an application Section 2"""
+    from .models import AdditionalEmployment
+    # Clear existing to avoid duplicates on re-save
+    income_data.additional_employment.all().delete()
+    
+    # Same naming convention as Step 3 for "Exact Mirror"
+    for key, value in request.POST.items():
+        if (key.startswith('job_company_') or key.startswith('employed_job_company_')) and value.strip():
+            prefix = 'job_company_' if key.startswith('job_company_') else 'employed_job_company_'
+            index = key.replace(prefix, '')
+            
+            p = 'job_' if prefix == 'job_company_' else 'employed_job_'
+            
+            company = request.POST.get(f'{p}company_{index}', '').strip()
+            position = request.POST.get(f'{p}position_{index}', '').strip()
+            income = request.POST.get(f'{p}income_{index}', '')
+            supervisor = request.POST.get(f'{p}supervisor_{index}', '').strip()
+            supervisor_email = request.POST.get(f'{p}supervisor_email_{index}', '').strip()
+            supervisor_phone = request.POST.get(f'{p}supervisor_phone_{index}', '').strip()
+            currently_employed = request.POST.get(f'{p}current_{index}') == 'on'
+            start_date = request.POST.get(f'{p}start_{index}', '')
+            end_date = request.POST.get(f'{p}end_{index}', '')
+            
+            if company and position:
+                AdditionalEmployment.objects.create(
+                    income_data=income_data,
+                    company_name=company,
+                    position=position,
+                    annual_income=float(income) if income else 0,
+                    supervisor_name=supervisor,
+                    supervisor_email=supervisor_email,
+                    supervisor_phone=supervisor_phone,
+                    currently_employed=currently_employed,
+                    start_date=start_date or None,
+                    end_date=end_date if not currently_employed and end_date else None,
+                    employment_type='student' if prefix == 'job_company_' else 'employed'
+                )
+
+def process_app_dynamic_income_sources(request, income_data):
+    """Process additional income sources for an application Section 2"""
+    from .models import AdditionalIncome
+    income_data.additional_income.all().delete()
+    
+    prefixes = ['income_source_', 'employed_income_source_', 'other_income_source_']
+    for pref in prefixes:
+        for key, value in request.POST.items():
+            if key.startswith(pref) and value.strip():
+                index = key.replace(pref, '')
+                
+                # Determine amount field prefix
+                amt_pref = pref.replace('source_', 'amount_')
+                
+                source = request.POST.get(f'{pref}{index}', '').strip()
+                amount = request.POST.get(f'{amt_pref}{index}', '')
+                
+                source_type = 'other'
+                if 'student' in pref or pref == 'income_source_': source_type = 'student'
+                if 'employed' in pref: source_type = 'employed'
+                
+                if source and amount:
+                    AdditionalIncome.objects.create(
+                        income_data=income_data,
+                        income_source=source,
+                        annual_income=float(amount),
+                        source_type=source_type
+                    )
+
+def process_app_dynamic_assets(request, income_data):
+    """Process assets for an application Section 2"""
+    from .models import AssetInfo
+    income_data.assets.all().delete()
+    
+    prefixes = ['asset_name_', 'employed_asset_name_', 'other_asset_name_']
+    for pref in prefixes:
+        for key, value in request.POST.items():
+            if key.startswith(pref) and value.strip():
+                index = key.replace(pref, '')
+                
+                bal_pref = pref.replace('name_', 'balance_')
+                
+                name = request.POST.get(f'{pref}{index}', '').strip()
+                balance = request.POST.get(f'{bal_pref}{index}', '')
+                
+                asset_type = 'other'
+                if 'student' in pref or pref == 'asset_name_': asset_type = 'student'
+                if 'employed' in pref: asset_type = 'employed'
+                
+                if name and balance:
+                    AssetInfo.objects.create(
+                        income_data=income_data,
+                        asset_name=name,
+                        account_balance=float(balance),
+                        asset_type=asset_type
+                    )
+
+
+@hybrid_csrf_protect
 @hybrid_csrf_protect
 def v2_section3_legal(request, application_id):
-    """Section 3 - Legal (placeholder)"""
+    """Section 3 - Legal Documents with E-signatures"""
     application = get_object_or_404(Application, id=application_id)
     
-    # Check if this is token-based access (for applicants via UUID link)
+    # Check access
     token = request.GET.get('token')
     is_applicant_access = False
     is_preview = request.GET.get('preview') == 'true'
     
-    if token:
-        # Validate token for applicant access
-        if token == str(application.unique_link):
-            is_applicant_access = True
-        else:
-            messages.error(request, "Invalid access token.")
-            return redirect('applications_list')
+    if token and token == str(application.unique_link):
+        is_applicant_access = True
+    elif request.user.is_authenticated and application.applicant and application.applicant.user == request.user:
+        is_applicant_access = True
     elif not is_preview:
-        # Regular broker access - check authentication
         if not request.user.is_authenticated:
             return redirect('login')
+
+    # Get or create LegalDocuments record
+    legal_docs, created = LegalDocuments.objects.get_or_create(
+        application=application
+    )
     
-    messages.info(request, "Section 3 - Legal coming soon!")
+    # Get application section
+    section, _ = ApplicationSection.objects.get_or_create(
+        application=application,
+        section_number=3,
+        defaults={'status': SectionStatus.IN_PROGRESS}
+    )
+    
+    if request.method == 'POST':
+        # Check if they want to save and continue
+        if 'save_continue' in request.POST:
+            # All required signatures must be present to complete the section
+            # For now, we require both NY Discrimination and NY Brokers forms
+            if legal_docs.discrimination_form_signed and legal_docs.brokers_form_signed:
+                with transaction.atomic():
+                    section.status = SectionStatus.COMPLETED
+                    section.completed_at = timezone.now()
+                    section.save()
+                    
+                    application.section_statuses[3] = SectionStatus.COMPLETED
+                    application.current_section = 4
+                    application.section_statuses[4] = SectionStatus.IN_PROGRESS
+                    application.save()
+                    
+                    # Update next section
+                    next_section, _ = ApplicationSection.objects.get_or_create(
+                        application=application,
+                        section_number=4,
+                        defaults={'status': SectionStatus.IN_PROGRESS, 'started_at': timezone.now()}
+                    )
+                    next_section.status = SectionStatus.IN_PROGRESS
+                    next_section.started_at = timezone.now()
+                    next_section.save()
+                    
+                    log_activity(application, "Section 3 (Legal) completed")
+                    messages.success(request, "Legal documents signed successfully!")
+                    
+                    if is_applicant_access:
+                        return redirect(f"{reverse('v2_section4_review', args=[application.id])}?token={token}")
+                    else:
+                        return redirect('v2_section4_review', application_id=application.id)
+            else:
+                messages.error(request, "Please sign all required documents before continuing.")
+        
+        elif 'save_exit' in request.POST:
+            if is_applicant_access:
+                return redirect(f"{reverse('v2_application_overview', args=[application.id])}?token={token}")
+            else:
+                return redirect('application_detail', application_id=application.id)
+
+    # Intro text for Section 3
+    intro_text = "The following forms are for the property you are applying for. Please review each form and sign at the bottom where indicated."
+    
+    context = {
+        'application': application,
+        'legal_docs': legal_docs,
+        'section': section,
+        'current_section': 3,
+        'section_title': 'Legal',
+        'intro_text': intro_text,
+        'progress_percent': 60,  # 3/5 sections
+        'is_preview': is_preview,
+        'token': token,
+        'is_applicant_access': is_applicant_access,
+    }
     
     if is_applicant_access:
-        return redirect(f"{reverse('v2_application_overview', args=[application.id])}?token={token}")
+        template = 'applications/v2/applicant_section3_legal.html'
     else:
-        return redirect('application_detail', application_id=application.id)
+        template = 'applications/v2/section3_legal.html'
+    
+    return render(request, template, context)
+
+
+@hybrid_csrf_protect
+@require_http_methods(["POST"])
+def v2_sign_document(request, application_id):
+    """AJAX endpoint to record an e-signature"""
+    application = get_object_or_404(Application, id=application_id)
+    legal_docs = get_object_or_404(LegalDocuments, application=application)
+    
+    doc_type = request.POST.get('doc_type')
+    signature_name = request.POST.get('signature')
+    
+    if not doc_type or not signature_name:
+        return JsonResponse({'success': False, 'error': 'Missing document type or signature name'}, status=400)
+    
+    # Get client IP
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+        
+    if doc_type == 'NY_DISCRIMINATION':
+        legal_docs.discrimination_form_signed = True
+        legal_docs.discrimination_form_signature = signature_name
+        legal_docs.discrimination_form_signed_at = timezone.now()
+        legal_docs.discrimination_form_ip = ip
+        legal_docs.save()
+        
+    elif doc_type == 'NY_BROKERS':
+        legal_docs.brokers_form_signed = True
+        legal_docs.brokers_form_signature = signature_name
+        legal_docs.brokers_form_signed_at = timezone.now()
+        legal_docs.brokers_form_ip = ip
+        legal_docs.save()
+    else:
+        return JsonResponse({'success': False, 'error': 'Invalid document type'}, status=400)
+        
+    log_activity(application, f"Document signed: {doc_type} by {signature_name}")
+    
+    return JsonResponse({
+        'success': True,
+        'signed_at': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'ip': ip
+    })
 
 
 @hybrid_csrf_protect
@@ -1942,15 +2168,13 @@ def v2_section4_review(request, application_id):
     is_applicant_access = False
     is_preview = request.GET.get('preview') == 'true'
     
-    if token:
-        # Validate token for applicant access
-        if token == str(application.unique_link):
-            is_applicant_access = True
-        else:
-            messages.error(request, "Invalid access token.")
-            return redirect('applications_list')
+    # Validate access: valid token OR authenticated as the correct applicant
+    if token and token == str(application.unique_link):
+        is_applicant_access = True
+    elif request.user.is_authenticated and application.applicant and application.applicant.user == request.user:
+        is_applicant_access = True
     elif not is_preview:
-        # Regular broker access - check authentication
+        # Regular broker/staff access - check authentication
         if not request.user.is_authenticated:
             return redirect('login')
     
@@ -2123,15 +2347,13 @@ def v2_section5_payment(request, application_id):
     token = request.GET.get('token')
     is_applicant_access = False
     
-    if token:
-        # Validate token for applicant access
-        if token == str(application.unique_link):
-            is_applicant_access = True
-        else:
-            messages.error(request, "Invalid access token.")
-            return redirect('applications_list')
+    # Validate access: valid token OR authenticated as the correct applicant
+    if token and token == str(application.unique_link):
+        is_applicant_access = True
+    elif request.user.is_authenticated and application.applicant and application.applicant.user == request.user:
+        is_applicant_access = True
     else:
-        # Regular broker access - check authentication
+        # Regular broker/staff access - check authentication
         if not request.user.is_authenticated:
             return redirect('login')
     
@@ -2226,126 +2448,6 @@ def v2_section5_payment(request, application_id):
     
     template = 'applications/v2/section5_payment.html'
     return render(request, template, context)
-
-
-def handle_temp_application_creation(request):
-    """Create a temporary application for preview purposes"""
-    try:
-        # Create new applicant if needed
-        applicant = None
-        applicant_type = request.POST.get('applicant_type')
-        
-        if applicant_type == 'existing':
-            applicant_id = request.POST.get('applicant')
-            if applicant_id:
-                try:
-                    applicant = Applicant.objects.get(id=applicant_id)
-                except Applicant.DoesNotExist:
-                    pass
-                    
-        elif applicant_type == 'new':
-            # Create new applicant with minimal info
-            email = request.POST.get('new_applicant_email')
-            phone = request.POST.get('new_applicant_phone')
-            first_name = request.POST.get('new_applicant_first_name', '')
-            last_name = request.POST.get('new_applicant_last_name', '')
-            
-            if email:
-                # Check if applicant already exists
-                existing_applicant = Applicant.objects.filter(email=email).first()
-                if existing_applicant:
-                    applicant = existing_applicant
-                else:
-                    from datetime import date
-                    applicant = Applicant.objects.create(
-                        email=email,
-                        phone_number=phone or '',
-                        first_name=first_name,
-                        last_name=last_name,
-                        date_of_birth=date(1990, 1, 1),  # Temporary date for preview
-                        street_address_1='Temporary Address',  # Required field
-                        city='New York',  # Required field
-                        zip_code='10001'  # Required field
-                    )
-        
-        # Get property information
-        apartment = None
-        property_type = request.POST.get('property_type')
-        
-        if property_type == 'existing':
-            apartment_id = request.POST.get('apartment')
-            if apartment_id:
-                try:
-                    apartment = Apartment.objects.get(id=apartment_id)
-                except Apartment.DoesNotExist:
-                    pass
-        
-        # Create temporary application
-        application = Application.objects.create(
-            apartment=apartment,
-            applicant=applicant,
-            broker=request.user,
-            application_version='v2',
-            current_section=1,
-            status='draft'  # Mark as draft
-        )
-        
-        # Set manual property fields if needed
-        if property_type == 'manual':
-            application.manual_building_name = request.POST.get('manual_building_name', '')
-            application.manual_building_address = request.POST.get('manual_building_address', '')
-            application.manual_unit_number = request.POST.get('manual_unit_number', '')
-        
-        # Set customization options
-        required_documents = request.POST.getlist('required_documents')
-        application.required_documents = required_documents
-        
-        application_fee = request.POST.get('application_fee', '50.00')
-        try:
-            application.application_fee_amount = float(application_fee)
-        except (ValueError, TypeError):
-            application.application_fee_amount = 50.00
-        
-        application.save()
-        
-        # Initialize V2 section status
-        section_statuses = {
-            1: SectionStatus.NOT_STARTED,
-            2: SectionStatus.NOT_STARTED,
-            3: SectionStatus.NOT_STARTED,
-            4: SectionStatus.NOT_STARTED,
-            5: SectionStatus.NOT_STARTED,
-        }
-        application.section_statuses = section_statuses
-        application.save()
-        
-        # Create ApplicationSection records
-        section_names = {
-            1: 'Personal Information',
-            2: 'Income',
-            3: 'Legal',
-            4: 'Review',
-            5: 'Payment'
-        }
-        
-        for section_num, section_name in section_names.items():
-            ApplicationSection.objects.create(
-                application=application,
-                section_number=section_num,
-                status=SectionStatus.NOT_STARTED
-            )
-        
-        return JsonResponse({
-            'success': True,
-            'application_id': application.id,
-            'message': 'Temporary application created for preview'
-        })
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        })
 
 
 @login_required

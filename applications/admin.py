@@ -68,13 +68,13 @@ class PersonalInfoDataAdmin(admin.ModelAdmin):
             'fields': ('first_name', 'middle_name', 'last_name', 'suffix')
         }),
         ('Contact Information', {
-            'fields': ('email', 'phone_cell', 'can_receive_sms')
+            'fields': ('email', 'phone_cell')
         }),
         ('Personal Details', {
             'fields': ('date_of_birth', 'ssn')
         }),
         ('Current Address', {
-            'fields': ('current_address', 'apt_unit_number', 'address_duration', 'is_rental_property')
+            'fields': ('street_address_1', 'street_address_2', 'city', 'state', 'zip_code', 'current_address_years', 'current_address_months', 'is_rental_property')
         }),
         ('Landlord Info', {
             'fields': ('landlord_name', 'landlord_phone', 'landlord_email'),
@@ -87,8 +87,8 @@ class PersonalInfoDataAdmin(admin.ModelAdmin):
             'fields': ('reference1_name', 'reference1_phone', 'reference2_name', 'reference2_phone')
         }),
         ('Additional Info', {
-            'fields': ('referral_source', 'has_pets', 'leasing_agent', 'has_filed_bankruptcy', 
-                      'has_criminal_conviction', 'about_yourself')
+            'fields': ('referral_source', 'has_pets', 'has_filed_bankruptcy', 
+                      'has_criminal_conviction')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
@@ -109,9 +109,9 @@ class AssetInfoInline(admin.TabularInline):
     extra = 0
 
 class IncomeDataAdmin(admin.ModelAdmin):
-    list_display = ('application', 'employment_type', 'company_name', 'position', 'annual_income')
+    list_display = ('application', 'employment_type', 'employer', 'job_title', 'annual_income')
     list_filter = ('employment_type', 'currently_employed', 'has_multiple_jobs')
-    search_fields = ('company_name', 'position')
+    search_fields = ('employer', 'job_title')
     readonly_fields = ('created_at', 'updated_at')
     inlines = [AdditionalEmploymentInline, AdditionalIncomeInline, AssetInfoInline]
     
@@ -120,7 +120,7 @@ class IncomeDataAdmin(admin.ModelAdmin):
             'fields': ('employment_type',)
         }),
         ('Primary Employment', {
-            'fields': ('company_name', 'position', 'annual_income', 'supervisor_name', 
+            'fields': ('employer', 'job_title', 'annual_income', 'employment_length', 'supervisor_name', 
                       'supervisor_email', 'supervisor_phone', 'currently_employed', 'start_date', 'end_date')
         }),
         ('Additional Income Flags', {

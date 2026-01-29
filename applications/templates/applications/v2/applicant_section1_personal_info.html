@@ -6,374 +6,695 @@
     <div class="row">
         <!-- Main Content -->
         <div class="col-lg-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Application - Personal Information</h4>
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0">Section 1: Personal Information</h5>
                 </div>
-                <div class="card-body">
-                    
-                    <!-- Progress Bar -->
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">Application Progress</label>
-                        <div class="progress" style="height: 20px;">
-                            <div class="progress-bar bg-success" role="progressbar" style="width: 20%;" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100">Step 1 of 5</div>
-                        </div>
-                    </div>
+                <div class="card-body p-4">
+                    <p class="text-muted mb-4">Please provide your personal details exactly as they appear on your legal documents. Fields marked with <span class="text-danger">*</span> are required.</p>
 
-                    <!-- Section Navigation -->
-                    <div class="d-flex justify-content-between mb-4 text-center">
-                        <div class="flex-fill">
-                            <span class="badge bg-primary rounded-pill mb-1">1</span>
-                            <br><small class="fw-bold">Personal</small>
-                        </div>
-                        <div class="flex-fill text-muted">
-                            <span class="badge bg-secondary rounded-pill mb-1">2</span>
-                            <br><small>Income</small>
-                        </div>
-                        <div class="flex-fill text-muted">
-                            <span class="badge bg-secondary rounded-pill mb-1">3</span>
-                            <br><small>Legal</small>
-                        </div>
-                        <div class="flex-fill text-muted">
-                            <span class="badge bg-secondary rounded-pill mb-1">4</span>
-                            <br><small>Review</small>
-                        </div>
-                        <div class="flex-fill text-muted">
-                            <span class="badge bg-secondary rounded-pill mb-1">5</span>
-                            <br><small>Payment</small>
-                        </div>
-                    </div>
-
-                    <form method="post" enctype="multipart/form-data">
+                    <form method="post" id="personal-info-form">
                         {% csrf_token %}
-
-                        <!-- Personal Information -->
-                        <h5 class="mb-3 border-bottom pb-2">Personal Information</h5>
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
+                        
+                        <!-- Personal Identity -->
+                        <h6 class="fw-bold mb-3 text-primary border-bottom pb-2">Personal Identity</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name <span class="text-danger">*</span></label>
                                 {{ form.first_name }}
                                 {% if form.first_name.errors %}
                                     <div class="text-danger small">{{ form.first_name.errors }}</div>
                                 {% endif %}
                             </div>
-                            <div class="col-md-6">
-                                <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
+                            <div class="col-md-3">
+                                <label for="{{ form.middle_name.id_for_label }}" class="form-label">Middle Name</label>
+                                {{ form.middle_name }}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name <span class="text-danger">*</span></label>
                                 {{ form.last_name }}
                                 {% if form.last_name.errors %}
                                     <div class="text-danger small">{{ form.last_name.errors }}</div>
                                 {% endif %}
                             </div>
+                            <div class="col-md-1">
+                                <label for="{{ form.suffix.id_for_label }}" class="form-label">Suffix</label>
+                                {{ form.suffix }}
+                            </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="{{ form.date_of_birth.id_for_label }}" class="form-label">Date of Birth</label>
-                            {{ form.date_of_birth }}
-                            {% if form.date_of_birth.errors %}
-                                <div class="text-danger small">{{ form.date_of_birth.errors }}</div>
-                            {% endif %}
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.date_of_birth.id_for_label }}" class="form-label">Date of Birth <span class="text-danger">*</span></label>
+                                {{ form.date_of_birth }}
+                                {% if form.date_of_birth.errors %}
+                                    <div class="text-danger small">{{ form.date_of_birth.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.ssn.id_for_label }}" class="form-label">Social Security Number <span class="text-danger">*</span></label>
+                                {{ form.ssn }}
+                                <div class="form-text small">Required for background screening. Your data is encrypted.</div>
+                                {% if form.ssn.errors %}
+                                    <div class="text-danger small">{{ form.ssn.errors }}</div>
+                                {% endif %}
+                            </div>
                         </div>
 
                         <!-- Contact Information -->
-                        <h5 class="mb-3 border-bottom pb-2 mt-4">Contact Information</h5>
-                        <div class="row g-3 mb-3">
+                        <h6 class="fw-bold mb-3 text-primary border-bottom pb-2 mt-4">Contact Information</h6>
+                        <div class="row g-3 mb-4">
                             <div class="col-md-6">
-                                <label for="{{ form.email.id_for_label }}" class="form-label">Email Address</label>
+                                <label for="{{ form.email.id_for_label }}" class="form-label">Email Address <span class="text-danger">*</span></label>
                                 {{ form.email }}
                                 {% if form.email.errors %}
                                     <div class="text-danger small">{{ form.email.errors }}</div>
                                 {% endif %}
                             </div>
                             <div class="col-md-6">
-                                <label for="{{ form.phone_number.id_for_label }}" class="form-label">Phone Number</label>
-                                {{ form.phone_number }}
-                                {% if form.phone_number.errors %}
-                                    <div class="text-danger small">{{ form.phone_number.errors }}</div>
+                                <label for="{{ form.phone_cell.id_for_label }}" class="form-label">Cell Phone Number <span class="text-danger">*</span></label>
+                                {{ form.phone_cell }}
+                                {% if form.phone_cell.errors %}
+                                    <div class="text-danger small">{{ form.phone_cell.errors }}</div>
                                 {% endif %}
                             </div>
                         </div>
 
-                        <!-- Current Address -->
-                        <h5 class="mb-3 border-bottom pb-2 mt-4">Current Address</h5>
+                        <!-- Current Residence -->
+                        <h6 class="fw-bold mb-3 text-primary border-bottom pb-2 mt-4">Current Residence</h6>
                         <div class="mb-3">
-                            <label for="{{ form.street_address_1.id_for_label }}" class="form-label">Street Address 1</label>
+                            <label for="{{ form.street_address_1.id_for_label }}" class="form-label">Street Address 1 <span class="text-danger">*</span></label>
                             {{ form.street_address_1 }}
-                            {% if form.street_address_1.errors %}
-                                <div class="text-danger small">{{ form.street_address_1.errors }}</div>
-                            {% endif %}
                         </div>
                         <div class="mb-3">
-                            <label for="{{ form.street_address_2.id_for_label }}" class="form-label">Street Address 2 (Optional)</label>
+                            <label for="{{ form.street_address_2.id_for_label }}" class="form-label">Apt/Unit Number</label>
                             {{ form.street_address_2 }}
                         </div>
-                        <div class="row g-3 mb-3">
+                        <div class="row g-3 mb-4">
                             <div class="col-md-6">
-                                <label for="{{ form.city.id_for_label }}" class="form-label">City</label>
+                                <label for="{{ form.city.id_for_label }}" class="form-label">City <span class="text-danger">*</span></label>
                                 {{ form.city }}
-                                {% if form.city.errors %}
-                                    <div class="text-danger small">{{ form.city.errors }}</div>
-                                {% endif %}
                             </div>
                             <div class="col-md-3">
-                                <label for="{{ form.state.id_for_label }}" class="form-label">State</label>
+                                <label for="{{ form.state.id_for_label }}" class="form-label">State <span class="text-danger">*</span></label>
                                 {{ form.state }}
-                                {% if form.state.errors %}
-                                    <div class="text-danger small">{{ form.state.errors }}</div>
-                                {% endif %}
                             </div>
                             <div class="col-md-3">
-                                <label for="{{ form.zip_code.id_for_label }}" class="form-label">Zip Code</label>
+                                <label for="{{ form.zip_code.id_for_label }}" class="form-label">Zip Code <span class="text-danger">*</span></label>
                                 {{ form.zip_code }}
-                                {% if form.zip_code.errors %}
-                                    <div class="text-danger small">{{ form.zip_code.errors }}</div>
-                                {% endif %}
                             </div>
                         </div>
 
-                        <!-- Housing Status -->
-                        <h5 class="mb-3 border-bottom pb-2 mt-4">Housing Status</h5>
-                        <div class="mb-3">
-                            <label for="{{ form.housing_status.id_for_label }}" class="form-label">Current Housing Status</label>
-                            {{ form.housing_status }}
-                            {% if form.housing_status.errors %}
-                                <div class="text-danger small">{{ form.housing_status.errors }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="{{ form.monthly_rent.id_for_label }}" class="form-label">Current Monthly Rent</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                {{ form.monthly_rent }}
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Duration at Current Address <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    {{ form.current_address_years }}
+                                    <span class="input-group-text">Years</span>
+                                    {{ form.current_address_months }}
+                                    <span class="input-group-text">Months</span>
+                                </div>
                             </div>
-                            {% if form.monthly_rent.errors %}
-                                <div class="text-danger small">{{ form.monthly_rent.errors }}</div>
-                            {% endif %}
+                            <div class="col-md-6">
+                                <label for="{{ form.housing_status.id_for_label }}" class="form-label">Housing Status <span class="text-danger">*</span></label>
+                                {{ form.housing_status }}
+                            </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="{{ form.reason_for_moving.id_for_label }}" class="form-label">Reason for Moving</label>
-                            {{ form.reason_for_moving }}
-                            {% if form.reason_for_moving.errors %}
-                                <div class="text-danger small">{{ form.reason_for_moving.errors }}</div>
-                            {% endif %}
-                        </div>
-
-                        <!-- Landlord Information (Conditional) -->
-                        <div id="landlord-info" class="d-none">
-                            <h5 class="mb-3 border-bottom pb-2 mt-4">Landlord Information</h5>
+                        <!-- Landlord Fields (Toggled by JS) -->
+                        <div id="landlord-section" class="mb-4">
+                            <h6 class="fw-bold mb-3 text-primary border-bottom pb-2 mt-4">Landlord Information</h6>
                             <div class="row g-3 mb-3">
-                                <div class="col-md-6">
-                                    <label for="{{ form.landlord_name.id_for_label }}" class="form-label">Landlord Name</label>
-                                    {{ form.landlord_name }}
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="{{ form.landlord_phone.id_for_label }}" class="form-label">Landlord Phone</label>
-                                    {{ form.landlord_phone }}
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="{{ form.landlord_email.id_for_label }}" class="form-label">Landlord Email</label>
-                                {{ form.landlord_email }}
-                            </div>
-                        </div>
-
-                        <!-- Previous Addresses -->
-                        <h5 class="mb-3 border-bottom pb-2 mt-4">Previous Addresses (Last 5 Years)</h5>
-                        <div id="previous-addresses">
-                            {{ previous_address_formset.management_form }}
-                            {% for address_form in previous_address_formset %}
-                                <div class="card mb-3 bg-light previous-address-form">
-                                    <div class="card-body">
-                                        <h6 class="card-title">Previous Address {{ forloop.counter }}</h6>
-                                        <div class="mb-2">
-                                            <label class="form-label">Street Address</label>
-                                            {{ address_form.street_address }}
-                                        </div>
-                                        <div class="row g-2 mb-2">
-                                            <div class="col-md-6">
-                                                <label class="form-label">City</label>
-                                                {{ address_form.city }}
-                                            </div>
-                                            <div class="col-md-3">
-                                                <label class="form-label">State</label>
-                                                {{ address_form.state }}
-                                            </div>
-                                            <div class="col-md-3">
-                                                <label class="form-label">Zip Code</label>
-                                                {{ address_form.zip_code }}
-                                            </div>
-                                        </div>
-                                        <div class="row g-2">
-                                            <div class="col-md-6">
-                                                <label class="form-label">Move In Date</label>
-                                                {{ address_form.move_in_date }}
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Move Out Date</label>
-                                                {{ address_form.move_out_date }}
-                                            </div>
-                                        </div>
-                                        <div class="mt-2 text-end">
-                                            {% if previous_address_formset.can_delete %}
-                                                <div class="form-check d-inline-block">
-                                                    {{ address_form.DELETE }}
-                                                    <label class="form-check-label text-danger">Delete</label>
-                                                </div>
-                                            {% endif %}
-                                        </div>
+                                <div class="col-md-12">
+                                    <label for="{{ form.current_monthly_rent.id_for_label }}" class="form-label">Monthly Rent <span id="rent-asterisk" class="text-danger d-none">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        {{ form.current_monthly_rent }}
                                     </div>
                                 </div>
-                            {% endfor %}
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4">
+                                    <label for="{{ form.landlord_name.id_for_label }}" class="form-label">Landlord Name <span class="landlord-asterisk text-danger d-none">*</span></label>
+                                    {{ form.landlord_name }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="{{ form.landlord_phone.id_for_label }}" class="form-label">Landlord Phone <span class="landlord-asterisk text-danger d-none">*</span></label>
+                                    {{ form.landlord_phone }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="{{ form.landlord_email.id_for_label }}" class="form-label">Landlord Email <span class="landlord-asterisk text-danger d-none">*</span></label>
+                                    {{ form.landlord_email }}
+                                </div>
+                            </div>
                         </div>
-                        <button type="button" id="add-address" class="btn btn-outline-secondary btn-sm mb-3">
-                            <i class="fas fa-plus"></i> Add Another Address
-                        </button>
 
-                        <!-- Form Actions -->
-                        <div class="d-flex justify-content-between mt-4 pt-3 border-top">
-                            <a href="{% url 'application_list' %}" class="btn btn-outline-secondary">Cancel</a>
-                            <button type="submit" class="btn btn-primary px-4">Save & Continue <i class="fas fa-arrow-right ms-1"></i></button>
+                        <!-- Previous Addresses Section -->
+                        <div class="previous-addresses-section mt-5">
+                            <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                                <h6 class="fw-bold mb-0 text-primary">Previous Addresses</h6>
+                                <button type="button" id="add-previous-address-btn" class="btn btn-sm btn-outline-primary shadow-sm">
+                                    <i class="bi bi-plus-circle me-1"></i> Add Previous Address
+                                </button>
+                            </div>
+                            
+                            <div id="previous-addresses-container">
+                                <!-- Dynamic address forms will be injected here via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Pets Section -->
+                        <div class="pets-section mt-5 mb-5">
+                            <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                                <h6 class="fw-bold mb-0 text-primary">Pets Information</h6>
+                                <button type="button" id="add-pet-btn" class="btn btn-sm btn-outline-primary shadow-sm {% if not form.has_pets.value %}d-none{% endif %}">
+                                    <i class="bi bi-plus-circle me-1"></i> Add Another Pet
+                                </button>
+                            </div>
+                            
+                            <div class="form-check mb-4">
+                                {{ form.has_pets }}
+                                <label class="form-check-label fw-bold" for="{{ form.has_pets.id_for_label }}">
+                                    I have pets
+                                </label>
+                            </div>
+
+                            <div id="pets-section-container" class="{% if not form.has_pets.value %}d-none{% endif %}">
+                                <div id="pets-list-container">
+                                    <!-- Dynamic pet forms will be injected here via JS -->
+                                </div>
+                                <div id="pets-max-message" class="alert alert-info py-2 small d-none">
+                                    <i class="bi bi-info-circle me-2"></i> Maximum of 5 pets reached.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- References -->
+                        <h6 class="fw-bold mb-3 text-primary border-bottom pb-2 mt-4">Professional References</h6>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.reference1_name.id_for_label }}" class="form-label">Reference #1 Name <span class="text-danger">*</span></label>
+                                {{ form.reference1_name }}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.reference1_phone.id_for_label }}" class="form-label">Reference #1 Phone <span class="text-danger">*</span></label>
+                                {{ form.reference1_phone }}
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.reference2_name.id_for_label }}" class="form-label">Reference #2 Name</label>
+                                {{ form.reference2_name }}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.reference2_phone.id_for_label }}" class="form-label">Reference #2 Phone</label>
+                                {{ form.reference2_phone }}
+                            </div>
+                        </div>
+
+                        <!-- Declarations -->
+                        <h6 class="fw-bold mb-3 text-primary border-bottom pb-2 mt-4">Declarations</h6>
+                        <div class="mb-4">
+                            <div class="form-check mb-2">
+                                {{ form.has_filed_bankruptcy }}
+                                <label class="form-check-label" for="{{ form.has_filed_bankruptcy.id_for_label }}">
+                                    I have filed for bankruptcy in the last 7 years
+                                </label>
+                            </div>
+                            <div id="bankruptcy-explanation" class="mb-3">
+                                <label for="{{ form.bankruptcy_explanation.id_for_label }}" class="form-label small text-muted">Bankruptcy Explanation</label>
+                                {{ form.bankruptcy_explanation }}
+                            </div>
+
+                            <div class="form-check mb-2">
+                                {{ form.has_criminal_conviction }}
+                                <label class="form-check-label" for="{{ form.has_criminal_conviction.id_for_label }}">
+                                    I have a criminal conviction
+                                </label>
+                            </div>
+                            <div id="conviction-explanation" class="mb-3">
+                                <label for="{{ form.conviction_explanation.id_for_label }}" class="form-label small text-muted">Conviction Explanation</label>
+                                {{ form.conviction_explanation }}
+                            </div>
+                        </div>
+
+                        <!-- Additional Information -->
+                        <h6 class="fw-bold mb-3 text-primary border-bottom pb-2 mt-4">Additional Information</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-12">
+                                <label for="{{ form.referral_source.id_for_label }}" class="form-label">Referral Source <span class="text-danger">*</span></label>
+                                {{ form.referral_source }}
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-5 pt-3 border-top">
+                            <button type="submit" name="save_continue" class="btn btn-primary px-5 shadow-sm">
+                                Save and Continue <i class="bi bi-arrow-right ms-2"></i>
+                            </button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
 
-        <!-- Sidebar: Property Summary -->
+        <!-- Sidebar -->
         <div class="col-lg-4">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-dark text-white">
-                    <h5 class="mb-0">Property Summary</h5>
+            <div class="card shadow-sm border-0 mb-4 sticky-top" style="top: 20px;">
+                <div class="card-header bg-dark text-white py-3">
+                    <h6 class="mb-0">Application Progress</h6>
                 </div>
-                {% if application.apartment.image_url %}
-                    <img src="{{ application.apartment.image_url }}" class="card-img-top" alt="Apartment Image" style="height: 200px; object-fit: cover;">
-                {% else %}
-                    <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 200px;">
-                        <span>No Image Available</span>
-                    </div>
-                {% endif %}
                 <div class="card-body">
-                    <h5 class="card-title">{{ application.apartment.building.name }}</h5>
-                    <p class="card-text text-muted">{{ application.apartment.building.address }}</p>
-                    <hr>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Unit:</span>
-                        <span class="fw-bold">{{ application.apartment.unit_number }}</span>
+                    <div class="list-group list-group-flush small">
+                        <div class="list-group-item d-flex align-items-center bg-primary bg-opacity-10 rounded mb-2 border-0 py-3">
+                            <span class="badge rounded-pill bg-primary me-3">1</span>
+                            <span class="fw-bold">Personal Information</span>
+                            <i class="bi bi-chevron-right ms-auto text-primary"></i>
+                        </div>
+                        <div class="list-group-item d-flex align-items-center text-muted mb-2 border-0 py-3 opacity-50">
+                            <span class="badge rounded-pill bg-secondary bg-opacity-25 text-dark me-3">2</span>
+                            <span>Income & Employment</span>
+                        </div>
+                        <div class="list-group-item d-flex align-items-center text-muted mb-2 border-0 py-3 opacity-50">
+                            <span class="badge rounded-pill bg-secondary bg-opacity-25 text-dark me-3">3</span>
+                            <span>Legal History</span>
+                        </div>
+                        <div class="list-group-item d-flex align-items-center text-muted border-0 py-3 opacity-50">
+                            <span class="badge rounded-pill bg-secondary bg-opacity-25 text-dark me-3">4</span>
+                            <span>Review & Submit</span>
+                        </div>
                     </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Rent:</span>
-                        <span class="fw-bold">${{ application.apartment.rent }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Bedrooms:</span>
-                        <span class="fw-bold">{{ application.apartment.bedrooms }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <span>Bathrooms:</span>
-                        <span class="fw-bold">{{ application.apartment.bathrooms }}</span>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Application Status Sidebar -->
-            <div class="card shadow-sm">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0">Application Status</h5>
-                </div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Personal Info
-                            {% if application.personal_info_data %}
-                                <span class="badge bg-success rounded-pill"><i class="fas fa-check"></i></span>
-                            {% else %}
-                                <span class="badge bg-primary rounded-pill">Current</span>
-                            {% endif %}
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Income
-                            {% if application.income_data %}
-                                <span class="badge bg-success rounded-pill"><i class="fas fa-check"></i></span>
-                            {% else %}
-                                <span class="badge bg-secondary rounded-pill"><i class="fas fa-clock"></i></span>
-                            {% endif %}
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Legal
-                            {% if application.legal_documents %}
-                                <span class="badge bg-success rounded-pill"><i class="fas fa-check"></i></span>
-                            {% else %}
-                                <span class="badge bg-secondary rounded-pill"><i class="fas fa-clock"></i></span>
-                            {% endif %}
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Review
-                            {% if application.review_completed %}
-                                <span class="badge bg-success rounded-pill"><i class="fas fa-check"></i></span>
-                            {% else %}
-                                <span class="badge bg-secondary rounded-pill"><i class="fas fa-clock"></i></span>
-                            {% endif %}
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Payment
-                            {% if application.application_payment %}
-                                <span class="badge bg-success rounded-pill"><i class="fas fa-check"></i></span>
-                            {% else %}
-                                <span class="badge bg-secondary rounded-pill"><i class="fas fa-clock"></i></span>
-                            {% endif %}
-                        </li>
-                    </ul>
+                    <hr class="my-4">
+
+                    <div class="apartment-summary">
+                        <h6 class="fw-bold mb-3 small uppercase text-muted">Apartment Summary</h6>
+                        <h6 class="fw-bold mb-1">{{ application.apartment.building.name }}</h6>
+                        <p class="small text-muted mb-3">{{ application.apartment.unit_number }} - {{ application.apartment.bedrooms }} Bed / {{ application.apartment.bathrooms }} Bath</p>
+                        <div class="d-flex justify-content-between small">
+                            <span>Monthly Rent</span>
+                            <span class="fw-bold text-primary">${{ application.apartment.rent }}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
+<script src="{% static 'js/forms.js' %}"></script>
+{{ previous_addresses_data|json_script:"previous-addresses-data" }}
+{{ pets_data|json_script:"pets-data" }}
+<style>
+    /* Fix Select2 height to match Bootstrap 5 form-control */
+    .select2-container .select2-selection--single {
+        height: 38px !important;
+        padding: 5px 0 !important;
+        border: 1px solid #ced4da !important;
+        border-radius: 0.375rem !important;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 26px !important;
+        padding-left: 12px !important;
+        color: #212529 !important;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 36px !important;
+    }
+    
+    /* Image placeholder styling */
+    .image-placeholder {
+        transition: all 0.2s ease;
+    }
+    .image-placeholder:hover {
+        background-color: #e9ecef !important;
+        border-color: #adb5bd !important;
+    }
+</style>
+<!-- Cropper.js -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<script src="{% static 'js/image-cropper.js' %}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const housingStatusSelect = document.getElementById('{{ form.housing_status.id_for_label }}');
-        const landlordInfoDiv = document.getElementById('landlord-info');
-
-        function toggleLandlordInfo() {
-            if (housingStatusSelect.value === 'Rent') {
-                landlordInfoDiv.classList.remove('d-none');
+        const housingStatus = document.getElementById('{{ form.housing_status.id_for_label }}');
+        const landlordSection = document.getElementById('landlord-section');
+        
+        function toggleLandlord() {
+            const isRent = housingStatus.value === 'Rent';
+            const rentAsterisk = document.getElementById('rent-asterisk');
+            const landlordAsterisks = document.querySelectorAll('.landlord-asterisk');
+            
+            if (isRent) {
+                landlordSection.classList.remove('d-none');
+                if (rentAsterisk) rentAsterisk.classList.remove('d-none');
+                landlordAsterisks.forEach(a => a.classList.remove('d-none'));
             } else {
-                landlordInfoDiv.classList.add('d-none');
+                landlordSection.classList.add('d-none');
+                if (rentAsterisk) rentAsterisk.classList.add('d-none');
+                landlordAsterisks.forEach(a => a.classList.add('d-none'));
+            }
+        }
+        
+        if (housingStatus) {
+            $(housingStatus).on('change', toggleLandlord);
+            toggleLandlord();
+        }
+
+        // --- Previous Addresses Logic ---
+        let previousAddressCount = 0;
+        const maxAddresses = 4;
+        const container = document.getElementById('previous-addresses-container');
+        const addBtn = document.getElementById('add-previous-address-btn');
+
+        function createPreviousAddressForm(index, data = {}) {
+            return `
+                <div class="previous-address-card card mb-4 border-0 shadow-sm bg-light" data-index="${index}" id="previous_address_${index}">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                        <span class="small fw-bold text-muted uppercase">Previous Address ${index}</span>
+                        <button type="button" class="btn btn-link btn-sm text-danger p-0" onclick="removePreviousAddress(${index})">
+                            <i class="bi bi-trash"></i> Remove
+                        </button>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="mb-3">
+                            <label class="form-label">Street Address 1 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="prev_street_address_1_${index}" value="${data.street_address_1 || ''}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Street Address 2 / Apt No.</label>
+                            <input type="text" class="form-control" name="prev_street_address_2_${index}" value="${data.street_address_2 || ''}">
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">City <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="prev_city_${index}" value="${data.city || ''}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">State <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="prev_state_${index}" value="${data.state || ''}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Zip Code <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="prev_zip_code_${index}" value="${data.zip_code || ''}">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Duration at Previous Address <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" name="prev_address_years_${index}" value="${data.years || 0}" min="0">
+                                    <span class="input-group-text">Years</span>
+                                    <input type="number" class="form-control" name="prev_address_months_${index}" value="${data.months || 0}" min="0" max="11">
+                                    <span class="input-group-text">Months</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Housing Status <span class="text-danger">*</span></label>
+                                <select class="form-select" name="prev_housing_status_${index}" id="prev_housing_status_${index}" onchange="togglePrevLandlord(${index})">
+                                    <option value="">Select Status</option>
+                                    <option value="Rent" ${data.housing_status === 'rent' || data.housing_status === 'Rent' ? 'selected' : ''}>Rent</option>
+                                    <option value="Own" ${data.housing_status === 'own' || data.housing_status === 'Own' ? 'selected' : ''}>Own</option>
+                                    <option value="Other" ${data.housing_status === 'Other' ? 'selected' : ''}>Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Landlord Fields (Toggled by JS) -->
+                        <div id="prev_landlord_info_${index}" class="${data.housing_status === 'rent' || data.housing_status === 'Rent' ? '' : 'd-none'}">
+                            <h6 class="fw-bold mb-3 text-primary border-bottom pb-2 mt-4">Landlord Information</h6>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-12">
+                                    <label class="form-label">Monthly Rent <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" step="0.01" class="form-control" name="prev_monthly_rent_${index}" value="${data.monthly_rent || ''}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Landlord Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="prev_landlord_name_${index}" value="${data.landlord_name || ''}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Landlord Phone <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control phone-input" name="prev_landlord_phone_${index}" value="${data.landlord_phone || ''}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Landlord Email <span class="text-danger">*</span></label>
+                                    <input type="email" class="form-control" name="prev_landlord_email_${index}" value="${data.landlord_email || ''}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" name="prev_address_order_${index}" value="${index}">
+                </div>
+            `;
+        }
+
+        window.togglePrevLandlord = function(index) {
+            const select = document.getElementById(`prev_housing_status_${index}`);
+            const info = document.getElementById(`prev_landlord_info_${index}`);
+            if (select && info) {
+                if (select.value === 'Rent') info.classList.remove('d-none');
+                else info.classList.add('d-none');
+            }
+        };
+
+        window.removePreviousAddress = function(index) {
+            const el = document.getElementById(`previous_address_${index}`);
+            if (el) el.remove();
+            previousAddressCount--;
+            if (addBtn) addBtn.style.display = 'inline-block';
+        };
+
+        function addPreviousAddress(data = {}) {
+            if (previousAddressCount < maxAddresses) {
+                previousAddressCount++;
+                const formHtml = createPreviousAddressForm(previousAddressCount, data);
+                container.insertAdjacentHTML('beforeend', formHtml);
+                
+                // Initialize phone formatting if available
+                if (window.setupPhoneNumberFormatting) {
+                    window.setupPhoneNumberFormatting(`.phone-input`);
+                }
+                
+                // Initialize Select2 for the new dropdown
+                if (window.jQuery && jQuery().select2) {
+                    $(`#prev_housing_status_${previousAddressCount}`).select2({
+                        minimumResultsForSearch: Infinity,
+                        placeholder: "Select Status",
+                        width: '100%'
+                    });
+                }
+                
+                if (previousAddressCount >= maxAddresses && addBtn) {
+                    addBtn.style.display = 'none';
+                }
             }
         }
 
-        housingStatusSelect.addEventListener('change', toggleLandlordInfo);
-        toggleLandlordInfo(); // Initial check
+        if (addBtn) {
+            addBtn.addEventListener('click', () => addPreviousAddress());
+        }
 
-        // Dynamic Formset for Previous Addresses
-        const addAddressBtn = document.getElementById('add-address');
-        const previousAddressesDiv = document.getElementById('previous-addresses');
-        const totalFormsInput = document.getElementById('id_previous_addresses-TOTAL_FORMS');
+        // Load existing addresses from profile
+        const prefillDataElement = document.getElementById('previous-addresses-data');
+        if (prefillDataElement) {
+            const prefillData = JSON.parse(prefillDataElement.textContent);
+            prefillData.forEach(data => addPreviousAddress(data));
+        }
+        
+        // --- Pets Logic ---
+        const hasPetsCheckbox = document.getElementById('{{ form.has_pets.id_for_label }}');
+        const petsSection = document.getElementById('pets-section-container');
+        const petsListContainer = document.getElementById('pets-list-container');
+        const addPetBtn = document.getElementById('add-pet-btn');
+        const petMaxMsg = document.getElementById('pets-max-message');
+        let petCount = 0;
+        const maxPets = 5;
 
-        addAddressBtn.addEventListener('click', function() {
-            const forms = previousAddressesDiv.getElementsByClassName('previous-address-form');
-            const formCount = forms.length;
-            const newForm = forms[0].cloneNode(true);
-            
-            // Update form index
-            const regex = new RegExp(`previous_addresses-(\\d+)-`, 'g');
-            newForm.innerHTML = newForm.innerHTML.replace(regex, `previous_addresses-${formCount}-`);
-            
-            // Clear input values
-            const inputs = newForm.querySelectorAll('input, select');
-            inputs.forEach(input => {
-                if (input.type !== 'hidden') {
-                    input.value = '';
+        function togglePetsSection() {
+            if (hasPetsCheckbox.checked) {
+                petsSection.classList.remove('d-none');
+                if (addPetBtn) addPetBtn.classList.remove('d-none');
+                if (petCount === 0) addPet(); // Add first pet if none exist
+            } else {
+                petsSection.classList.add('d-none');
+                if (addPetBtn) addPetBtn.classList.add('d-none');
+            }
+        }
+
+        if (hasPetsCheckbox) {
+            hasPetsCheckbox.addEventListener('change', togglePetsSection);
+        }
+
+        function createPetForm(index, data = {}) {
+            const petTypes = ['Dog', 'Cat', 'Bird', 'Rabbit', 'Reptile', 'Other'];
+            const typeOptions = petTypes.map(type => 
+                `<option value="${type}" ${data.pet_type === type ? 'selected' : ''}>${type}</option>`
+            ).join('');
+
+            return `
+                <div class="pet-card card mb-4 border-0 shadow-sm bg-light" data-index="${index}" id="pet_${index}">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                        <span class="small fw-bold text-muted uppercase"><i class="bi bi-paw me-1"></i> Pet ${index}</span>
+                        <button type="button" class="btn btn-link btn-sm text-danger p-0" onclick="removePet(${index})">
+                            <i class="bi bi-trash"></i> Remove
+                        </button>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Pet Name</label>
+                                <input type="text" class="form-control" name="pet_name_${index}" value="${data.name || ''}" placeholder="e.g. Buddy">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Pet Type <span class="text-danger">*</span></label>
+                                <select class="form-select pet-type-select" name="pet_type_${index}" id="pet_type_${index}">
+                                    <option value="">Select Pet Type</option>
+                                    ${typeOptions}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Pet Photos (up to 3)</label>
+                            <div class="row g-2">
+                                ${[1, 2, 3].map(num => `
+                                    <div class="col-md-4">
+                                        <div class="bg-white p-2 border rounded text-center">
+                                            <div id="pet_photo_preview_${index}_${num}" class="mb-2 position-relative d-inline-block mx-auto" style="width: 160px; height: 120px;">
+                                                <div class="image-placeholder bg-light border-2 border-dashed rounded d-flex align-items-center justify-content-center h-100" style="cursor: pointer;" onclick="document.getElementById('id_pet_photo_${index}_${num}').click()">
+                                                    <i class="bi bi-camera text-muted h4 mb-0"></i>
+                                                </div>
+                                            </div>
+                                            <input type="file" name="pet_photo_${index}_${num}" id="id_pet_photo_${index}_${num}" class="d-none pet-photo-input" accept="image/*">
+                                            <input type="hidden" name="crop_data_pet_${index}_${num}" id="id_crop_pet_${index}_${num}">
+                                            <div class="small text-muted mb-1">Photo ${num}</div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <div class="mb-0">
+                            <label class="form-label">Pet Description</label>
+                            <textarea class="form-control" name="pet_description_${index}" rows="2" placeholder="e.g. Golden Retriever, 45 lbs, vaccinated">${data.description || ''}</textarea>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.addPet = function(data = {}) {
+            if (petCount < maxPets) {
+                petCount++;
+                const petHtml = createPetForm(petCount, data);
+                petsListContainer.insertAdjacentHTML('beforeend', petHtml);
+
+                // Initialize photo croppers for this pet
+                for (let num = 1; num <= 3; num++) {
+                    const cropper = window.setupImageCropper(
+                        `#id_pet_photo_${petCount}_${num}`,
+                        `#pet_photo_preview_${petCount}_${num}`,
+                        `#id_crop_pet_${petCount}_${num}`,
+                        { 
+                            aspectRatio: 1.33, // 4:3 for pet photos
+                            isPetPhoto: true,
+                            modalTitle: `Crop Pet ${petCount} - Photo ${num}`
+                        }
+                    );
+                    
+                    // If prefill data has photos, load the existing one
+                    if (data.photos && data.photos[num-1]) {
+                        cropper.loadExistingImage(data.photos[num-1]);
+                    }
                 }
-            });
 
-            // Update title
-            newForm.querySelector('.card-title').textContent = `Previous Address ${formCount + 1}`;
+                // Initialize Select2 for pet type
+                if (window.jQuery && jQuery().select2) {
+                    $(`#pet_type_${petCount}`).select2({
+                        minimumResultsForSearch: Infinity,
+                        placeholder: "Select Pet Type",
+                        width: '100%'
+                    });
+                }
 
-            previousAddressesDiv.appendChild(newForm);
-            totalFormsInput.value = formCount + 1;
-        });
+                if (petCount >= maxPets) {
+                    if (addPetBtn) addPetBtn.classList.add('d-none');
+                    if (petMaxMsg) petMaxMsg.classList.remove('d-none');
+                }
+            }
+        };
+
+        window.removePet = function(index) {
+            const petEl = document.getElementById(`pet_${index}`);
+            if (petEl) petEl.remove();
+            petCount--;
+            
+            // Re-order and re-index remaining pets
+            const remainingPets = petsListContainer.querySelectorAll('.pet-card');
+            petCount = 0;
+            petsListContainer.innerHTML = '';
+            
+            // Re-add them to ensure proper indexing
+            // NOTE: In a more complex SPA we'd just update IDs, but here re-creating is safer
+            // unless the user has unsaved changes. For Section 1 parity, this matches current-residence re-creation.
+            // Simplified: we'll just decrement count and let user add more.
+            
+            if (petCount < maxPets) {
+                if (addPetBtn) addPetBtn.classList.remove('d-none');
+                if (petMaxMsg) petMaxMsg.classList.add('d-none');
+            }
+        };
+
+        if (addPetBtn) {
+            addPetBtn.addEventListener('click', () => addPet());
+        }
+
+        // Load existing pets from prefill data
+        const petsPrefillElement = document.getElementById('pets-data');
+        if (petsPrefillElement) {
+            const petsData = JSON.parse(petsPrefillElement.textContent);
+            if (petsData.length > 0) {
+                petsData.forEach(pet => addPet(pet));
+            }
+        }
+        const hasBankruptcy = document.getElementById('{{ form.has_filed_bankruptcy.id_for_label }}');
+        const bankruptcyExplanation = document.getElementById('bankruptcy-explanation');
+        
+        function toggleBankruptcy() {
+            if (hasBankruptcy && hasBankruptcy.checked) {
+                bankruptcyExplanation.style.display = 'block';
+            } else {
+                bankruptcyExplanation.style.display = 'none';
+            }
+        }
+        
+        if (hasBankruptcy) {
+            hasBankruptcy.addEventListener('change', toggleBankruptcy);
+            toggleBankruptcy();
+        }
+        
+        const hasConviction = document.getElementById('{{ form.has_criminal_conviction.id_for_label }}');
+        const convictionExplanation = document.getElementById('conviction-explanation');
+        
+        function toggleConviction() {
+            if (hasConviction && hasConviction.checked) {
+                convictionExplanation.style.display = 'block';
+            } else {
+                convictionExplanation.style.display = 'none';
+            }
+        }
+        
+        if (hasConviction) {
+            hasConviction.addEventListener('change', toggleConviction);
+            toggleConviction();
+        }
     });
 </script>
 {% endblock %}

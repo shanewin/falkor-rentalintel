@@ -296,6 +296,14 @@ class Apartment(models.Model):
             count += self.building.images.count()
         return count
 
+    @property
+    def image_url(self):
+        """Standard property for templates to access main image URL"""
+        first_img = self.all_images
+        if first_img:
+            return first_img[0].large_url()
+        return None
+
 
 
 

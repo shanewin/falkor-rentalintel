@@ -383,23 +383,35 @@ def broker_dashboard(request):
     from django.utils import timezone
     
     # Get buildings assigned to this broker
-    assigned_buildings = request.user.buildings.all().prefetch_related('apartments', 'apartments__images')
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+    assigned_buildings = request.user.buildings.all().prefetch_related(
+        'apartments', 
+        'apartments__images',
+        'images'
+    )
     
-    # Get all apartments from assigned buildings
-    assigned_apartments = Apartment.objects.filter(
+    # Filtering for apartments
+    apt_q = request.GET.get('apt_q', '')
+    assigned_apartments_qs = Apartment.objects.filter(
         building__in=assigned_buildings
     ).select_related('building').prefetch_related('images', 'building__images')
+    
+    if apt_q:
+        assigned_apartments_qs = assigned_apartments_qs.filter(
+            Q(unit_number__icontains=apt_q) |
+            Q(building__street_address_1__icontains=apt_q) |
+            Q(building__name__icontains=apt_q)
+        )
+    
+    assigned_apartments_list = list(assigned_apartments_qs)
     
     # FIX: Calculate smart matches efficiently with a single query instead of O(N*M) loop
     from applicants.models import Applicant
     from django.db.models import Count, Q
     
-    # Build a dictionary of match counts in ONE query
-    apartment_match_counts = {}
-    
-    if assigned_apartments:
+    if assigned_apartments_list:
         # For each apartment, count matching applicants efficiently
-        for apartment in assigned_apartments:
+        for apartment in assigned_apartments_list:
             # Simple count query - much faster than calling matching function for every applicant
             match_count = Applicant.objects.filter(
                 Q(max_rent_budget__gte=apartment.rent_price) | Q(max_rent_budget__isnull=True),
@@ -411,19 +423,56 @@ def broker_dashboard(request):
             ).count()
             
             apartment.smart_matches_count = match_count
-    else:
-        # No apartments, set count to 0
-        for apartment in assigned_apartments:
-            apartment.smart_matches_count = 0
+            
+            # Get Photo - Use model's combined list (Apartment -> Building fallback)
+            images = apartment.all_images
+            photo = images[0] if images else None
+            
+            if photo:
+                try:
+                    # Prefer the's custom_url method if it exists (handles Cloudinary correctly)
+                    if hasattr(photo, 'custom_url'):
+                        apartment.first_photo_url = photo.custom_url(300, 200)
+                    else:
+                        # Fallback to direct URL property
+                        apartment.first_photo_url = photo.image.url if hasattr(photo.image, 'url') else None
+                except:
+                    apartment.first_photo_url = None
+            else:
+                apartment.first_photo_url = None
+            
+        # Sort by smart_matches_count (highest first) as requested
+        assigned_apartments_list.sort(key=lambda x: getattr(x, 'smart_matches_count', 0), reverse=True)
+    
+    # Pagination for apartments
+    apt_paginator = Paginator(assigned_apartments_list, 5) # 5 apartments per page
+    apt_page_num = request.GET.get('apt_page')
+    try:
+        apartments_page = apt_paginator.page(apt_page_num)
+    except PageNotAnInteger:
+        apartments_page = apt_paginator.page(1)
+    except EmptyPage:
+        apartments_page = apt_paginator.page(apt_paginator.num_pages)
     
     # Get broker's assigned applicants with profile completion
     from applicants.apartment_matching import get_apartment_matches_for_applicant
     from applicants.smart_insights import SmartInsights
-    assigned_applicants = Applicant.objects.filter(assigned_broker=request.user).prefetch_related('photos')
+    
+    # Filtering for applicants
+    q = request.GET.get('q', '')
+    assigned_applicants_qs = Applicant.objects.filter(assigned_broker=request.user)
+    
+    if q:
+        assigned_applicants_qs = assigned_applicants_qs.filter(
+            Q(first_name__icontains=q) | 
+            Q(last_name__icontains=q) | 
+            Q(_email__icontains=q)
+        )
+    
+    assigned_applicants_list = list(assigned_applicants_qs.prefetch_related('photos'))
     
     # Calculate profile completion and matches for each applicant
-    # Calculate profile completion and matches for each applicant
-    for applicant in assigned_applicants:
+    for applicant in assigned_applicants_list:
         # Calculate Smart Insights
         insights = SmartInsights.analyze_applicant(applicant)
         applicant.smart_insights_score = insights['overall_score']
@@ -438,18 +487,29 @@ def broker_dashboard(request):
         else:
             applicant.smart_insights_color = 'danger'
 
-        # Get Photo
+        # Get Photo - Use model property (which uses Cloudinary logic internally)
         photo = applicant.photos.first()
-        applicant.first_photo_url = photo.thumbnail_url() if photo else None
+        if photo:
+            try:
+                # Use thumbnail_url property if it exists/is callable
+                val = getattr(photo, 'thumbnail_url', None)
+                if callable(val):
+                    applicant.first_photo_url = val()
+                else:
+                    applicant.first_photo_url = val or (photo.image.url if hasattr(photo, 'image') and hasattr(photo.image, 'url') else None)
+            except:
+                applicant.first_photo_url = None
+        else:
+            applicant.first_photo_url = None
 
-        # Calculate profile completion - match logic used in applicant dashboard
+        # Calculate profile completion
         completion_status = applicant.get_field_completion_status()
-        applicant.profile_completion = completion_status['overall']['overall_completion_percentage']
+        applicant.profile_completion = completion_status['overall_completion_percentage']
         
-        # Check if can calculate matches
+        # Check if can match
         applicant.can_match = bool(applicant.max_rent_budget and applicant.desired_move_in_date)
         
-        # Get match count if profile allows
+        # Get match count
         if applicant.can_match:
             try:
                 matches = get_apartment_matches_for_applicant(applicant)
@@ -461,11 +521,24 @@ def broker_dashboard(request):
         else:
             applicant.match_count = 0
             applicant.top_matches = []
+            
+    # Sort by Smart Insights Score (highest first) as requested
+    assigned_applicants_list.sort(key=lambda x: x.smart_insights_score, reverse=True)
     
-    # Get applications for broker's apartments only
-    broker_apartment_ids = assigned_apartments.values_list('id', flat=True)
+    # Pagination
+    paginator = Paginator(assigned_applicants_list, 5) # 5 applicants per page
+    page = request.GET.get('page')
+    try:
+        applicants_page = paginator.page(page)
+    except PageNotAnInteger:
+        applicants_page = paginator.page(1)
+    except EmptyPage:
+        applicants_page = paginator.page(paginator.num_pages)
+    
+    # Get applications for this broker
+    # Restrict to only applications assigned to this broker to prevent seeing other brokers' work
     recent_applications = Application.objects.filter(
-        apartment_id__in=broker_apartment_ids
+        broker=request.user
     ).select_related('applicant', 'apartment', 'apartment__building').order_by('-created_at')[:10]
     
     # Calculate broker metrics
@@ -484,27 +557,29 @@ def broker_dashboard(request):
         status__in=['NEW', 'PENDING', 'IN_PROGRESS']
     ).count()
     
-    # Calculate potential commission (if profile has commission rate)
+    # Calculate potential commission
     potential_commission = 0
     if broker_profile and broker_profile.standard_commission_rate:
-        for apt in assigned_apartments:
+        for apt in assigned_apartments_list:
             if apt.rent_price:
-                # Assuming first month's rent as commission base
                 potential_commission += float(apt.rent_price * broker_profile.standard_commission_rate / 100)
     
     context = {
         'user': request.user,
         'broker_profile': broker_profile,
         'assigned_buildings': assigned_buildings,
-        'assigned_apartments': assigned_apartments,
-        'assigned_applicants': assigned_applicants,  # ADD THIS
+        'assigned_apartments': assigned_apartments_list,
+        'apartments_page': apartments_page,
+        'apt_q': apt_q,
+        'assigned_applicants': assigned_applicants_list,
+        'applicants_page': applicants_page,
+        'q': q,
         'recent_applications': recent_applications,
         'total_applications': total_applications,
         'monthly_applications': monthly_applications,
         'pending_applications': pending_applications,
         'potential_commission': potential_commission,
     }
-    # Use the original template for consistent styling with applicant dashboard
     template = 'users/dashboards/broker_dashboard.html'
     return render(request, template, context)
 
@@ -533,11 +608,11 @@ def applicant_dashboard(request):
                 applicant.user = request.user
                 applicant.save()
         
-        # Only show applications that are ready for applicant action (not NEW/draft status)
+        # Only show applications that are ready for applicant action
         applications = Application.objects.filter(
             applicant=applicant
         ).exclude(
-            status__in=['draft', 'NEW']  # Hide drafts and NEW applications from applicants
+            status__in=['draft']  # Show NEW applications, only hide internal drafts if any
         ).order_by('-created_at')
         
         # Get profile completion status - using the new weighted, context-aware logic
@@ -627,7 +702,7 @@ def staff_dashboard(request):
 def send_secure_invitation_email(user, role, request=None):
     """Send invitation email with secure token link instead of password"""
     try:
-        subject = f"Welcome to Doorway - Your {role.title()} Account"
+        subject = f"Welcome to {settings.SITE_NAME} - Your {role.title()} Account"
         
         # Generate secure invitation link
         invitation_link = generate_invitation_link(user, request)
@@ -687,7 +762,7 @@ def set_password_view(request, uidb64, token):
             # Log them in
             login(request, user)
             
-            messages.success(request, 'Password set successfully! Welcome to DoorWay.')
+            messages.success(request, f'Password set successfully! Welcome to {settings.SITE_NAME}.')
             return redirect_by_role(user)
     
     return render(request, 'users/set_password.html', {

@@ -35,6 +35,20 @@
         vertical-align: middle;
         display: inline-block;
     }
+
+    /* Milestone Hover Effects */
+    .milestone-link {
+        transition: all 0.2s ease-in-out;
+        display: block;
+    }
+    .milestone-link:hover .rounded-circle {
+        transform: scale(1.1);
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .milestone-link:hover small {
+        color: #000 !important;
+        text-decoration: underline;
+    }
 </style>
 {% endblock %}
 
@@ -77,7 +91,7 @@
             <div class="row text-center">
                 {% for step_num, step_data in completion_status.steps.items %}
                 <div class="col-4">
-                    <a href="{% url 'profile_step'|add:step_num|default:'profile_step1' %}" class="text-decoration-none">
+                    <a href="{% if step_num == 1 %}{% url 'profile_step1' %}{% elif step_num == 2 %}{% url 'profile_step2' %}{% else %}{% url 'profile_step3' %}{% endif %}" class="text-decoration-none milestone-link">
                         <div class="d-flex flex-column align-items-center">
                             <div class="rounded-circle {% if current_step == step_num %}bg-dark text-white border border-secondary{% elif step_data.pct == 100 %}bg-success text-white{% else %}bg-light text-muted{% endif %} d-flex align-items-center justify-content-center mb-2 position-relative" style="width: 44px; height: 44px; transition: all 0.3s ease;">
                                 {% if step_data.pct == 100 %}
@@ -237,21 +251,23 @@ function setupEmploymentStatusFields() {
 }
 
 function setupCurrentlyEmployedFields() {
-    // Handle employment section checkbox
-    const currentlyEmployedCheckbox = document.querySelector('.currently-employed-checkbox');
+    // Handle employment section radio buttons
+    const yesRadio = document.getElementById('id_currently_employed_yes');
+    const noRadio = document.getElementById('id_currently_employed_no');
     const endDateField = document.getElementById('end-date-field');
     
-    if (currentlyEmployedCheckbox && endDateField) {
-        function toggleEndDateField() {
-            if (currentlyEmployedCheckbox.checked) {
+    if (yesRadio && noRadio && endDateField) {
+        const toggleEndDateField = () => {
+            if (yesRadio.checked) {
                 endDateField.style.display = 'none';
             } else {
                 endDateField.style.display = 'block';
             }
-        }
+        };
         
         toggleEndDateField();
-        currentlyEmployedCheckbox.addEventListener('change', toggleEndDateField);
+        yesRadio.addEventListener('change', toggleEndDateField);
+        noRadio.addEventListener('change', toggleEndDateField);
     }
 }
 

@@ -1,127 +1,748 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load apartment_extras %}
+
+{% block extra_css %}
+<style>
+    /* 1. Enhanced Stepper */
+    .stepper-wrapper {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        position: relative;
+    }
+    .stepper-wrapper::before {
+        content: '';
+        position: absolute;
+        top: 16px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #e9ecef;
+        z-index: 1;
+    }
+    .stepper-item {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+    }
+    .stepper-circle {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #fff;
+        border: 2px solid #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: #adb5bd;
+        margin-bottom: 8px;
+        transition: var(--transition);
+    }
+    .stepper-item.completed .stepper-circle {
+        background: var(--brand-black);
+        border-color: var(--brand-black);
+        color: #fff;
+    }
+    .stepper-item.active .stepper-circle {
+        background: var(--brand-yellow);
+        border-color: var(--brand-yellow);
+        color: var(--brand-black);
+        box-shadow: 0 0 0 4px rgba(255, 214, 10, 0.2);
+    }
+    .stepper-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #adb5bd;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .stepper-item.active .stepper-label {
+        color: var(--brand-black);
+    }
+    .stepper-item.completed .stepper-label {
+        color: var(--brand-black);
+    }
+
+    /* 2. Option Cards */
+    .option-card {
+        cursor: pointer;
+        transition: var(--transition);
+        border: 2px solid transparent;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+    .option-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-md) !important;
+    }
+    .option-card.active {
+        border-color: var(--brand-yellow);
+        background-color: #fffef8;
+    }
+    .option-card.active::after {
+        content: '\f058';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        color: var(--brand-yellow);
+        font-size: 1.2rem;
+    }
+    .option-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        background: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        color: var(--brand-black);
+        margin-bottom: 1rem;
+        transition: var(--transition);
+    }
+    .option-card.active .option-icon {
+        background: var(--brand-yellow);
+    }
+
+    /* 3. Dropdown Polished */
+    .dropdown-container-custom {
+        position: relative;
+    }
+
+    .custom-dropdown-btn {
+        width: 100%;
+        padding: 1rem 1.25rem;
+        background: #fff;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        transition: var(--transition);
+        text-align: left;
+    }
+    .custom-dropdown-btn:hover { border-color: #dee2e6; }
+    .custom-dropdown-btn:focus { border-color: var(--brand-yellow); outline: none; box-shadow: var(--form-focus-shadow); }
+    
+    .dropdown-panel {
+        position: absolute;
+        bottom: calc(100% + 8px); /* Open UP */
+        left: 0;
+        right: 0;
+        z-index: 1050;
+        background: #fff;
+        border: 1px solid rgba(0,0,0,0.12);
+        border-radius: 12px;
+        box-shadow: 0 -10px 40px rgba(0,0,0,0.12); /* Shadow UP */
+        display: none;
+        overflow: hidden;
+        flex-direction: column;
+        max-height: 350px;
+        animation: slideUp 0.2s ease-out;
+    }
+    
+    .dropdown-list-container {
+        overflow-y: auto;
+        flex: 1;
+        max-height: 300px; /* Fallback */
+    }
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .dropdown-panel.show { display: flex; }
+    
+    .dropdown-group-header {
+        padding: 10px 16px;
+        background: #f8f9fa;
+        font-size: 0.7rem;
+        font-weight: 800;
+        color: #adb5bd;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border-bottom: 1px solid #eee;
+    }
+    .dropdown-item-custom {
+        padding: 12px 16px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #f8f9fa;
+        transition: var(--transition);
+    }
+    .dropdown-item-custom:hover { background: #fffef0; }
+    .dropdown-item-custom.selected { background: #fffef0; border-left: 4px solid var(--brand-yellow); }
+    
+    .apt-info { display: flex; flex-direction: column; }
+    .apt-name { font-weight: 600; color: var(--brand-black); }
+    .apt-details { font-size: 0.8rem; color: #6c757d; }
+
+    .badge-saved { background-color: #e7f5ff; color: #1971c2; font-size: 0.7rem; }
+    .badge-match { background-color: #ebfbee; color: #2f9e44; font-size: 0.7rem; }
+
+    /* 4. Utilities */
+    .form-section-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #adb5bd;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+    }
+    .form-section-label::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: #e9ecef;
+        margin-left: 1rem;
+    }
+    
+    /* 5. Preview Card */
+    .apartment-preview-card {
+        background: #fff;
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        margin-top: 1.5rem;
+        overflow: hidden;
+        display: none; /* Hidden by default */
+        animation: slideUp 0.3s ease-out;
+    }
+    .preview-header {
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+    }
+    .preview-image-container {
+        width: 80px;
+        height: 80px;
+        border-radius: 10px;
+        overflow: hidden;
+        background-color: #e9ecef;
+        flex-shrink: 0;
+    }
+    .preview-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .preview-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #e9ecef;
+        color: #adb5bd;
+        font-size: 1.5rem;
+    }
+    .preview-name {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--brand-black);
+        margin-bottom: 0.25rem;
+    }
+    .preview-detail {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    .insight-badge {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 0.5rem 0.75rem;
+        text-align: center;
+        min-width: 80px;
+        box-shadow: var(--shadow-sm);
+    }
+    .insight-score {
+        display: block;
+        font-size: 1.1rem;
+        font-weight: 800;
+        line-height: 1;
+        margin-bottom: 2px;
+    }
+    .insight-label {
+        font-size: 0.6rem;
+        color: #adb5bd;
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        line-height: 1.1;
+    }
+    .preview-body {
+        padding: 1.5rem;
+    }
+    .info-label {
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #adb5bd;
+        margin-bottom: 0.25rem;
+    }
+    
+    @keyframes shake {
+      10%, 90% { transform: translate3d(-1px, 0, 0); }
+      20%, 80% { transform: translate3d(2px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+      40%, 60% { transform: translate3d(4px, 0, 0); }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Create Application - Step 2</h4>
+<div class="container py-4" style="min-height: 70vh; padding-bottom: 80px;">
+    <!-- Header -->
+    <div class="row mb-5">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="d-flex justify-content-between align-items-end">
+                <div>
+                    <span class="badge bg-warning text-dark mb-2 px-3 py-2 rounded-pill fw-bold">Step 2 of 4</span>
+                    <h1 class="display-6 fw-bold mb-1">Select Property</h1>
+                    <p class="text-muted lead">Property selection for <strong>{{ applicant.first_name }} {{ applicant.last_name }}</strong></p>
                 </div>
-                <div class="card-body">
-                    
-                    <!-- Progress Bar -->
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">Creation Progress</label>
-                        <div class="progress" style="height: 20px;">
-                            <div class="progress-bar bg-success" role="progressbar" style="width: 50%;" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100">Step 2 of 4</div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'broker_create_step1' %}" class="btn btn-link text-decoration-none text-muted">
+                        <i class="fas fa-arrow-left me-2"></i>Back
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stepper -->
+    <div class="row mb-5">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="stepper-wrapper">
+                <div class="stepper-item completed">
+                    <div class="stepper-circle">1</div>
+                    <div class="stepper-label">Applicant</div>
+                </div>
+                <div class="stepper-item active">
+                    <div class="stepper-circle">2</div>
+                    <div class="stepper-label">Property</div>
+                </div>
+                <div class="stepper-item">
+                    <div class="stepper-circle">3</div>
+                    <div class="stepper-label">Settings</div>
+                </div>
+                <div class="stepper-item">
+                    <div class="stepper-circle">4</div>
+                    <div class="stepper-label">Review</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <form method="post" id="propertyForm" class="needs-validation" novalidate>
+                {% csrf_token %}
+
+                <!-- Selection Method (Superuser Only) -->
+                {% if user.is_superuser %}
+                <div class="mb-5">
+                    <div class="form-section-label">Source</div>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label class="option-card card p-4 shadow-sm active" for="existing_property">
+                                <input class="d-none" type="radio" name="property_type" id="existing_property" value="existing" checked required>
+                                <div class="option-icon">
+                                    <i class="fas fa-building-circle-check"></i>
+                                </div>
+                                <h5 class="fw-bold mb-1">Database Property</h5>
+                                <p class="text-muted small mb-0">Select from available listings within the Falkor network.</p>
+                            </label>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="option-card card p-4 shadow-sm" for="manual_property">
+                                <input class="d-none" type="radio" name="property_type" id="manual_property" value="manual" required>
+                                <div class="option-icon">
+                                    <i class="fas fa-keyboard"></i>
+                                </div>
+                                <h5 class="fw-bold mb-1">Manual Entry</h5>
+                                <p class="text-muted small mb-0">Add custom property details for off-market or external units.</p>
+                            </label>
                         </div>
                     </div>
+                </div>
+                {% else %}
+                    <!-- Implicit existing property selection for standard brokers -->
+                    <input type="hidden" name="property_type" id="property_type_hidden" value="existing">
+                {% endif %}
 
-                    <div class="alert alert-info mb-4">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Select an existing applicant or create a new one for this application.
+                <!-- Existing Property Selection -->
+                <div id="existing_property_section" class="mb-5">
+                    <div class="form-section-label">Unit Selection</div>
+                    <div class="dropdown-container-custom">
+                        <button type="button" class="custom-dropdown-btn" id="propertyDropdownBtn">
+                            <i class="fas fa-map-marker-alt me-3 text-muted"></i>
+                            <span id="selectedPropertyLabel" class="flex-grow-1">Choose an apartment...</span>
+                            <i class="fas fa-chevron-down ms-2 text-muted small"></i>
+                        </button>
+                        
+                        <input type="hidden" name="apartment" id="apartment_id_hidden" value="{{ session_data.apartment_id|default:'' }}">
+                        
+                        <div class="dropdown-panel" id="propertyDropdownPanel">
+                            <div class="dropdown-search-wrapper">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-transparent border-end-0"><i class="fas fa-search text-muted"></i></span>
+                                    <input type="text" class="form-control border-start-0 py-2" id="propertySearchInput" placeholder="Filter by building name, unit, or address...">
+                                </div>
+                            </div>
+                            
+                            <div class="dropdown-list-container" id="propertyList">
+                                <!-- Saved -->
+                                {% if saved_apartments %}
+                                <div class="dropdown-group-header">Saved by Applicant</div>
+                                {% for apt in saved_apartments %}
+                                    <div class="dropdown-item-custom" 
+                                         data-id="{{ apt.id }}" 
+                                         data-search="{{ apt.building.name }} {{ apt.unit_number }} {{ apt.building.address }}"
+                                         data-image="{% if apt.images.exists %}{{ apt.images.first.thumbnail_url }}{% endif %}"
+                                         data-fallback="{{ apt.id|get_fallback_image }}"
+                                         data-rent="${{ apt.rent_price|floatformat:0 }}"
+                                         data-name="{{ apt.building.name }} - Unit {{ apt.unit_number }}"
+                                         data-address="{{ apt.building.street_address_1 }}, {{ apt.building.city }}, {{ apt.building.state }}"
+                                         data-beds="{{ apt.bedrooms|floatformat:0 }}"
+                                         data-baths="{{ apt.bathrooms|floatformat:0 }}"
+                                         data-status="{{ apt.get_status_display }}"
+                                         data-score="Saved"
+                                         data-amenities="{% for amen in apt.amenities.all|slice:':3' %}{{ amen.name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                                    <div class="apt-info">
+                                        <span class="apt-name">{{ apt.building.name }} - Unit {{ apt.unit_number }}</span>
+                                        <span class="apt-details">{{ apt.bedrooms|floatformat:0 }}BR / {{ apt.bathrooms|floatformat:0 }}BA • ${{ apt.rent_price|floatformat:0 }}</span>
+                                    </div>
+                                    <span class="badge badge-saved rounded-pill px-2 py-1">Saved</span>
+                                </div>
+                                {% endfor %}
+                                {% endif %}
+                                
+                                <!-- Matches -->
+                                {% if smart_matches %}
+                                <div class="dropdown-group-header">Match Recommendations</div>
+                                {% for apt in smart_matches %}
+                                    <div class="dropdown-item-custom" 
+                                         data-id="{{ apt.id }}" 
+                                         data-search="{{ apt.building.name }} {{ apt.unit_number }} {{ apt.building.address }}"
+                                         data-image="{% if apt.images.exists %}{{ apt.images.first.thumbnail_url }}{% endif %}"
+                                         data-fallback="{{ apt.id|get_fallback_image }}"
+                                         data-rent="${{ apt.rent_price|floatformat:0 }}"
+                                         data-name="{{ apt.building.name }} - Unit {{ apt.unit_number }}"
+                                         data-address="{{ apt.building.street_address_1 }}, {{ apt.building.city }}, {{ apt.building.state }}"
+                                         data-beds="{{ apt.bedrooms|floatformat:0 }}"
+                                         data-baths="{{ apt.bathrooms|floatformat:0 }}"
+                                         data-status="{{ apt.get_status_display }}"
+                                         data-score="{{ apt.match_percentage }}%"
+                                         data-amenities="{% for amen in apt.amenities.all|slice:':3' %}{{ amen.name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                                    <div class="apt-info">
+                                        <span class="apt-name">{{ apt.building.name }} - Unit {{ apt.unit_number }}</span>
+                                        <span class="apt-details">{{ apt.bedrooms|floatformat:0 }}BR / {{ apt.bathrooms|floatformat:0 }}BA • ${{ apt.rent_price|floatformat:0 }}</span>
+                                    </div>
+                                    <span class="badge badge-match rounded-pill px-2 py-1">{{ apt.match_percentage }}% Match</span>
+                                </div>
+                                {% endfor %}
+                                {% endif %}
+                                
+                                <!-- All Others -->
+                                <div class="dropdown-group-header">All Available Listings</div>
+                                {% for apt in other_apartments %}
+                                    <div class="dropdown-item-custom" 
+                                         data-id="{{ apt.id }}" 
+                                         data-search="{{ apt.building.name }} {{ apt.unit_number }} {{ apt.building.address }}"
+                                         data-image="{% if apt.images.exists %}{{ apt.images.first.thumbnail_url }}{% endif %}"
+                                         data-fallback="{{ apt.id|get_fallback_image }}"
+                                         data-rent="${{ apt.rent_price|floatformat:0 }}"
+                                         data-name="{{ apt.building.name }} - Unit {{ apt.unit_number }}"
+                                         data-address="{{ apt.building.street_address_1 }}, {{ apt.building.city }}, {{ apt.building.state }}"
+                                         data-beds="{{ apt.bedrooms|floatformat:0 }}"
+                                         data-baths="{{ apt.bathrooms|floatformat:0 }}"
+                                         data-status="{{ apt.get_status_display }}"
+                                         data-score="-"
+                                         data-amenities="{% for amen in apt.amenities.all|slice:':3' %}{{ amen.name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                                    <div class="apt-info">
+                                        <span class="apt-name">{{ apt.building.name }} - Unit {{ apt.unit_number }}</span>
+                                        <span class="apt-details">{{ apt.bedrooms|floatformat:0 }}BR / {{ apt.bathrooms|floatformat:0 }}BA • ${{ apt.rent_price|floatformat:0 }}</span>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-2 small text-muted">
+                        <i class="fas fa-lightbulb me-1 text-warning"></i>
+                        Tip: Search by building name, unit, or address.
                     </div>
 
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <!-- Apartment Preview Card -->
+                    <div id="apartmentPreviewCard" class="apartment-preview-card">
+                        <div class="preview-header">
+                            <div id="previewImageContainer" class="preview-image-container">
+                                <!-- Image injected via JS -->
                             </div>
-                        {% endfor %}
-                    {% endif %}
-
-                    <form method="post">
-                        {% csrf_token %}
-
-                        <!-- Applicant Selection -->
-                        <h5 class="mb-3 border-bottom pb-2">Applicant Selection</h5>
-                        <div class="mb-3">
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="radio" name="applicant_option" id="existing_applicant" value="existing" checked>
-                                <label class="form-check-label" for="existing_applicant">
-                                    Select Existing Applicant
-                                </label>
+                            <div class="flex-grow-1">
+                                <div id="previewName" class="preview-name"></div>
+                                <div id="previewAddress" class="preview-detail"></div>
                             </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="applicant_option" id="new_applicant" value="new">
-                                <label class="form-check-label" for="new_applicant">
-                                    Create New Applicant
-                                </label>
+                            <div class="insight-badge">
+                                <span id="previewScore" class="insight-score text-success"></span>
+                                <div class="insight-label">Match<br>Score</div>
                             </div>
                         </div>
-
-                        <!-- Existing Applicant Section -->
-                        <div id="existing-applicant-section" class="mb-4">
-                            <label for="{{ form.applicant.id_for_label }}" class="form-label">Search Applicant</label>
-                            {{ form.applicant }}
-                            {% if form.applicant.errors %}
-                                <div class="text-danger small">{{ form.applicant.errors }}</div>
-                            {% endif %}
-                            <div class="form-text">Search by name or email.</div>
-                        </div>
-
-                        <!-- New Applicant Section -->
-                        <div id="new-applicant-section" class="d-none mb-4">
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <h6 class="card-title mb-3">New Applicant Details</h6>
-                                    <div class="row g-3 mb-3">
-                                        <div class="col-md-6">
-                                            <label for="{{ form.new_first_name.id_for_label }}" class="form-label">First Name</label>
-                                            {{ form.new_first_name }}
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="{{ form.new_last_name.id_for_label }}" class="form-label">Last Name</label>
-                                            {{ form.new_last_name }}
-                                        </div>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="{{ form.new_email.id_for_label }}" class="form-label">Email Address</label>
-                                        {{ form.new_email }}
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="{{ form.new_phone.id_for_label }}" class="form-label">Phone Number</label>
-                                        {{ form.new_phone }}
-                                    </div>
+                        <div class="preview-body">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <div class="info-label mb-1">RENT PRICE</div>
+                                    <div id="previewRent" class="fw-bold small text-dark fs-6"></div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="info-label mb-1">LAYOUT</div>
+                                    <div id="previewLayout" class="fw-bold small text-dark"></div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="info-label mb-1">STATUS</div>
+                                    <div id="previewStatus" class="fw-bold small text-dark text-uppercase"></div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="info-label mb-1">AMENITIES</div>
+                                    <div id="previewAmenities" class="fw-bold small text-dark text-truncate"></div>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Form Actions -->
-                        <div class="d-flex justify-content-between mt-4 pt-3 border-top">
-                            <a href="#" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i> Back</a>
-                            <button type="submit" class="btn btn-primary px-4">Next Step <i class="fas fa-arrow-right ms-1"></i></button>
-                        </div>
-                    </form>
+                    </div>
                 </div>
-            </div>
+
+                <!-- Manual Property Entry -->
+                {% if user.is_superuser %}
+                <div id="manual_property_section" class="d-none mb-5">
+                    <div class="form-section-label">Manual Property Specifications</div>
+                    <div class="card border-0 shadow-sm bg-light p-4">
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <label class="form-label small fw-bold">BUILDING NAME</label>
+                                <input type="text" class="form-control" name="manual_building_name" id="manual_building_name" 
+                                       value="{{ session_data.manual_building_name|default:'' }}" placeholder="e.g. The Grand View">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">UNIT #</label>
+                                <input type="text" class="form-control" name="manual_unit_number" id="manual_unit_number" 
+                                       value="{{ session_data.manual_unit_number|default:'' }}" placeholder="e.g. 4B">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-bold">STREET ADDRESS</label>
+                                <input type="text" class="form-control" name="manual_building_address" id="manual_building_address" 
+                                       value="{{ session_data.manual_building_address|default:'' }}" placeholder="Full physical address">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Action Button -->
+                <div class="d-grid mt-4">
+                    <button type="submit" class="btn btn-warning btn-lg py-3 fw-bold shadow-sm">
+                        Confirm Property & Continue <i class="fas fa-arrow-right ms-2 mt-1"></i>
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const existingRadio = document.getElementById('existing_applicant');
-        const newRadio = document.getElementById('new_applicant');
-        const existingSection = document.getElementById('existing-applicant-section');
-        const newSection = document.getElementById('new-applicant-section');
+document.addEventListener('DOMContentLoaded', function() {
+    const existingRadio = document.getElementById('existing_property');
+    const manualRadio = document.getElementById('manual_property');
+    const propertyTypeHidden = document.getElementById('property_type_hidden');
+    
+    const existingSection = document.getElementById('existing_property_section');
+    const manualSection = document.getElementById('manual_property_section');
+    const optionCards = document.querySelectorAll('.option-card');
+    
+    function toggleSections() {
+        // Case 1: Superuser with toggles
+        if (existingRadio && existingRadio.checked) {
+            existingSection.classList.remove('d-none');
+            if (manualSection) manualSection.classList.add('d-none');
+            if (optionCards[0]) optionCards[0].classList.add('active');
+            if (optionCards[1]) optionCards[1].classList.remove('active');
+        } else if (manualRadio && manualRadio.checked) {
+            existingSection.classList.add('d-none');
+            manualSection.classList.remove('d-none');
+            if (optionCards[1]) optionCards[1].classList.add('active');
+            if (optionCards[0]) optionCards[0].classList.remove('active');
+        } 
+        // Case 2: Standard Broker (No toggles, just implicit 'existing')
+        else if (propertyTypeHidden && propertyTypeHidden.value === 'existing') {
+            existingSection.classList.remove('d-none');
+            if (manualSection) manualSection.classList.add('d-none');
+        }
+    }
+    
+    if (existingRadio) existingRadio.addEventListener('change', toggleSections);
+    if (manualRadio) manualRadio.addEventListener('change', toggleSections);
+    toggleSections();
 
-        function toggleSections() {
-            if (existingRadio.checked) {
-                existingSection.classList.remove('d-none');
-                newSection.classList.add('d-none');
-            } else {
-                existingSection.classList.add('d-none');
-                newSection.classList.remove('d-none');
-            }
+    // CUSTOM DROPDOWN LOGIC
+    const dropdownBtn = document.getElementById('propertyDropdownBtn');
+    const dropdownPanel = document.getElementById('propertyDropdownPanel');
+    const searchInput = document.getElementById('propertySearchInput');
+    const propertyItems = document.querySelectorAll('.dropdown-item-custom');
+    const hiddenInput = document.getElementById('apartment_id_hidden');
+    const selectedLabel = document.getElementById('selectedPropertyLabel');
+    
+    // Preview Card Elements
+    const previewCard = document.getElementById('apartmentPreviewCard');
+    const previewImageContainer = document.getElementById('previewImageContainer');
+    const previewName = document.getElementById('previewName');
+    const previewAddress = document.getElementById('previewAddress');
+    const previewScore = document.getElementById('previewScore');
+    const previewRent = document.getElementById('previewRent');
+    const previewLayout = document.getElementById('previewLayout');
+    const previewStatus = document.getElementById('previewStatus');
+    const previewAmenities = document.getElementById('previewAmenities');
+
+    dropdownBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const isOpen = dropdownPanel.classList.contains('show');
+        dropdownPanel.classList.toggle('show');
+        
+        const icon = dropdownBtn.querySelector('.fa-chevron-down');
+        if (icon) {
+            icon.style.transform = dropdownPanel.classList.contains('show') ? 'rotate(180deg)' : 'rotate(0deg)';
+            icon.style.transition = 'transform 0.2s ease';
         }
 
-        existingRadio.addEventListener('change', toggleSections);
-        newRadio.addEventListener('change', toggleSections);
-        toggleSections(); // Initial check
+        if (!isOpen) setTimeout(() => searchInput.focus(), 50);
     });
+
+    document.addEventListener('click', function(e) {
+        if (!dropdownBtn.contains(e.target) && !dropdownPanel.contains(e.target)) {
+            dropdownPanel.classList.remove('show');
+        }
+    });
+
+    searchInput.addEventListener('input', function() {
+        const term = this.value.toLowerCase();
+        propertyItems.forEach(item => {
+            const text = item.dataset.search.toLowerCase();
+            item.style.display = text.includes(term) ? 'flex' : 'none';
+        });
+        
+        // Groups visibility
+        document.querySelectorAll('.dropdown-group-header').forEach(header => {
+            let next = header.nextElementSibling;
+            let hasVisible = false;
+            while (next && !next.classList.contains('dropdown-group-header')) {
+                if (next.style.display !== 'none') { hasVisible = true; break; }
+                next = next.nextElementSibling;
+            }
+            header.style.display = hasVisible ? 'block' : 'none';
+        });
+    });
+
+    propertyItems.forEach(item => {
+        item.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const text = this.querySelector('.apt-name').textContent;
+            
+            hiddenInput.value = id;
+            selectedLabel.innerHTML = `<strong>${text}</strong>`;
+            
+            // Populate Preview Card
+            const data = this.dataset;
+            previewName.textContent = data.name;
+            previewAddress.textContent = data.address;
+            previewRent.textContent = data.rent;
+            previewLayout.textContent = `${data.beds} Bed, ${data.baths} Bath`;
+            previewStatus.textContent = data.status;
+            previewScore.textContent = data.score;
+            previewAmenities.textContent = data.amenities || 'None listed';
+            
+            // Image handling (ensure no 404s if empty)
+            const fallbackUrl = data.fallback;
+            const primaryUrl = (data.image && data.image.trim() !== "") ? data.image : fallbackUrl;
+            
+            const img = new Image();
+            img.src = primaryUrl;
+            img.onload = () => {
+                 previewImageContainer.innerHTML = `<img src="${primaryUrl}" class="preview-image" alt="Apartment">`;
+            };
+            img.onerror = () => {
+                 // Try fallback if primary failed
+                 if (primaryUrl !== fallbackUrl) {
+                     previewImageContainer.innerHTML = `<img src="${fallbackUrl}" class="preview-image" alt="Apartment">`;
+                 } else {
+                     previewImageContainer.innerHTML = `<div class="preview-placeholder"><i class="fas fa-building"></i></div>`;
+                 }
+            };
+            
+            // Show card
+            previewCard.style.display = 'block';
+            
+            propertyItems.forEach(i => i.classList.remove('selected'));
+            this.classList.add('selected');
+            
+            dropdownPanel.classList.remove('show');
+            dropdownBtn.classList.remove('border-danger');
+        });
+        
+        if (item.dataset.id === hiddenInput.value) {
+            item.classList.add('selected');
+            selectedLabel.innerHTML = `<strong>${item.querySelector('.apt-name').textContent}</strong>`;
+        }
+    });
+    
+    searchInput.addEventListener('click', e => e.stopPropagation());
+
+    // Validation
+    const form = document.getElementById('propertyForm');
+    form.addEventListener('submit', function(e) {
+        // Determine current mode
+        const isExistingMode = (existingRadio && existingRadio.checked) || (propertyTypeHidden && propertyTypeHidden.value === 'existing');
+        
+        if (isExistingMode && !hiddenInput.value) {
+            e.preventDefault();
+            dropdownBtn.classList.add('border-danger', 'is-invalid');
+            dropdownBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            dropdownBtn.style.animation = 'none';
+            void dropdownBtn.offsetWidth;
+            dropdownBtn.style.animation = 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both';
+        }
+        
+        form.classList.add('was-validated');
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            dropdownPanel.classList.remove('show');
+        }
+    });
+});
 </script>
+
+<style>
+@keyframes shake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+  40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+</style>
 {% endblock %}

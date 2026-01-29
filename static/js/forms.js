@@ -1,5 +1,5 @@
 /**
- * Form handling utilities for DoorWay application
+ * Form handling utilities for Falkor application
  */
 
 document.addEventListener('DOMContentLoaded', function() {

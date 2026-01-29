@@ -37,6 +37,20 @@
         vertical-align: middle;
         display: inline-block;
     }
+
+    /* Milestone Hover Effects */
+    .milestone-link {
+        transition: all 0.2s ease-in-out;
+        display: block;
+    }
+    .milestone-link:hover .rounded-circle {
+        transform: scale(1.1);
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .milestone-link:hover small {
+        color: #000 !important;
+        text-decoration: underline;
+    }
 </style>
 {% endblock %}
 
@@ -79,7 +93,7 @@
             <div class="row text-center">
                 {% for step_num, step_data in completion_status.steps.items %}
                 <div class="col-4">
-                    <a href="{% url 'profile_step'|add:step_num|default:'profile_step1' %}" class="text-decoration-none">
+                    <a href="{% if step_num == 1 %}{% url 'profile_step1' %}{% elif step_num == 2 %}{% url 'profile_step2' %}{% else %}{% url 'profile_step3' %}{% endif %}" class="text-decoration-none milestone-link">
                         <div class="d-flex flex-column align-items-center">
                             <div class="rounded-circle {% if current_step == step_num %}bg-dark text-white border border-secondary{% elif step_data.pct == 100 %}bg-success text-white{% else %}bg-light text-muted{% endif %} d-flex align-items-center justify-content-center mb-2 position-relative" style="width: 44px; height: 44px; transition: all 0.3s ease;">
                                 {% if step_data.pct == 100 %}
@@ -665,11 +679,13 @@ function setupPreviousAddresses() {
                         <div class="col-md-8"></div>
                     </div>
                     
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" id="prev_is_rental_${index}" name="prev_is_rental_${index}" ${data.housing_status === 'rent' ? 'checked' : ''}>
-                        <label class="form-check-label" for="prev_is_rental_${index}">
-                            Was this a rental?
-                        </label>
+                    <div class="id-type-checkboxes">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input id-type-checkbox" type="checkbox" id="prev_is_rental_${index}" name="prev_is_rental_${index}" ${data.housing_status === 'rent' ? 'checked' : ''} style="width: 1.25em; height: 1.25em; accent-color: #ffcc00;">
+                            <label class="form-check-label" for="prev_is_rental_${index}" style="margin-left: 8px; padding-top: 2px;">
+                                Was this a rental?
+                            </label>
+                        </div>
                     </div>
                     <input type="hidden" name="prev_housing_status_${index}" value="${data.housing_status || 'own'}">
                     

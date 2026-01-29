@@ -31,7 +31,7 @@ def send_application_link_email(application, request=None):
             'completion_url': full_url,
             'broker': application.broker,
             'property_display': get_property_display(application),
-            'site_name': getattr(settings, 'SITE_NAME', 'DoorWay'),
+            'site_name': getattr(settings, 'SITE_NAME', 'Falkor'),
         }
         
         # Render email templates
@@ -44,7 +44,7 @@ def send_application_link_email(application, request=None):
             subject=subject,
             message=text_message,
             html_message=html_message,
-            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@doorway.com'),
+            from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[application.applicant.email],
             fail_silently=False,
         )
@@ -81,7 +81,7 @@ def send_application_reminder_email(application, request=None):
             'completion_url': full_url,
             'broker': application.broker,
             'property_display': get_property_display(application),
-            'site_name': getattr(settings, 'SITE_NAME', 'DoorWay'),
+            'site_name': getattr(settings, 'SITE_NAME', 'Falkor'),
         }
         
         subject = render_to_string('applications/emails/application_reminder_subject.txt', context).strip()
@@ -92,7 +92,7 @@ def send_application_reminder_email(application, request=None):
             subject=subject,
             message=text_message,
             html_message=html_message,
-            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@doorway.com'),
+            from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[application.applicant.email],
             fail_silently=False,
         )

@@ -1,0 +1,155 @@
+<!-- Building Amenities Section -->
+<div class="mb-5">
+    <div class="d-flex align-items-center mb-3">
+        <h5 class="mb-0 me-3">Building Amenities</h5>
+        <small class="text-muted">
+            <i class="fas fa-info-circle"></i> 
+            Set priorities for building-wide amenities. Only select amenities that matter to you.
+        </small>
+    </div>
+    
+    <!-- Priority Legend -->
+    <div class="priority-legend mb-4 p-3 bg-light rounded">
+        <div class="row text-center">
+            <div class="col-md-3">
+                <div class="legend-item">
+                    <div class="legend-color unset-legend"></div>
+                    <small><strong>Don't Care</strong><br>Not important</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="legend-item">
+                    <div class="legend-color nice-to-have-legend"></div>
+                    <small><strong>Nice to Have</strong><br>Mild preference</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="legend-item">
+                    <div class="legend-color very-important-legend"></div>
+                    <small><strong>Important</strong><br>Strong preference</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="legend-item">
+                    <div class="legend-color must-have-legend"></div>
+                    <small><strong>Must Have</strong><br>Deal-breaker if missing</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Search Bar for Building Amenities -->
+    <div class="mb-3">
+        <div class="input-group">
+            <span class="input-group-text bg-white border-end-0">
+                <i class="fas fa-search text-muted"></i>
+            </span>
+            <input type="text" 
+                   class="form-control border-start-0 amenity-search" 
+                   placeholder="Search building amenities..." 
+                   data-target="building-amenities">
+        </div>
+    </div>
+
+    <div class="amenities-scroll-container shadow-sm border rounded">
+        <div class="amenities-grid p-3" id="building-amenities">
+            {% for amenity in all_building_amenities %}
+            <div class="amenity-slider-item unset" data-amenity-id="{{ amenity.id }}" data-amenity-type="building">
+                <div class="amenity-info">
+                    <div class="d-flex align-items-center">
+                        <i class="fa-solid {{ amenity.icon }} me-2 text-warning"></i>
+                        <span class="amenity-name">{{ amenity.name }}</span>
+                    </div>
+                    <span class="priority-label text-muted"></span>
+                </div>
+                <div class="slider-container mt-2">
+                    <input type="range" 
+                           min="0" 
+                           max="3" 
+                           value="0" 
+                           step="1" 
+                           class="amenity-slider unset" 
+                           name="building_amenity_{{ amenity.id }}"
+                           data-amenity-id="{{ amenity.id }}"
+                           data-amenity-type="building"
+                           data-amenity-name="{{ amenity.name }}"
+                           data-existing-value="0">
+                    <div class="slider-labels">
+                        <span class="slider-label-left">Don't Care</span>
+                        <span class="slider-label-right">Must Have</span>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-muted">No building amenities available</p>
+            {% endfor %}
+        </div>
+        <div class="no-results p-4 text-center text-muted d-none" id="no-results-building">
+            <i class="fas fa-search mb-2 d-block opacity-50 fa-2x"></i>
+            No amenities matches your search.
+        </div>
+    </div>
+</div>
+
+<!-- Apartment Amenities Section -->
+<div class="mb-5">
+    <div class="d-flex align-items-center mb-3">
+        <h5 class="mb-0 me-3">Apartment Features</h5>
+        <small class="text-muted">
+            <i class="fas fa-info-circle"></i> 
+            Set priorities for apartment-specific features. Only select features that matter to you.
+        </small>
+    </div>
+    
+    <!-- Search Bar for Apartment Amenities -->
+    <div class="mb-3">
+        <div class="input-group">
+            <span class="input-group-text bg-white border-end-0">
+                <i class="fas fa-search text-muted"></i>
+            </span>
+            <input type="text" 
+                   class="form-control border-start-0 amenity-search" 
+                   placeholder="Search apartment features..." 
+                   data-target="apartment-amenities">
+        </div>
+    </div>
+
+    <div class="amenities-scroll-container shadow-sm border rounded">
+        <div class="amenities-grid p-3" id="apartment-amenities">
+            {% for amenity in all_apartment_amenities %}
+            <div class="amenity-slider-item unset" data-amenity-id="{{ amenity.id }}" data-amenity-type="apartment">
+                <div class="amenity-info">
+                    <div class="d-flex align-items-center">
+                        <i class="fa-solid {{ amenity.icon }} me-2 text-warning"></i>
+                        <span class="amenity-name">{{ amenity.name }}</span>
+                    </div>
+                    <span class="priority-label text-muted"></span>
+                </div>
+                <div class="slider-container mt-2">
+                    <input type="range" 
+                           min="0" 
+                           max="3" 
+                           value="0" 
+                           step="1" 
+                           class="amenity-slider unset" 
+                           name="apartment_amenity_{{ amenity.id }}"
+                           data-amenity-id="{{ amenity.id }}"
+                           data-amenity-type="apartment"
+                           data-amenity-name="{{ amenity.name }}"
+                           data-existing-value="0">
+                    <div class="slider-labels">
+                        <span class="slider-label-left">Don't Care</span>
+                        <span class="slider-label-right">Must Have</span>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-muted">No apartment amenities available</p>
+            {% endfor %}
+        </div>
+        <div class="no-results p-4 text-center text-muted d-none" id="no-results-apartment">
+            <i class="fas fa-search mb-2 d-block opacity-50 fa-2x"></i>
+            No features match your search.
+        </div>
+    </div>
+</div>

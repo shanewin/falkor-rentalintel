@@ -137,13 +137,13 @@ class EmailVerificationService:
             
             # Compose subject based on purpose
             if purpose == "registration":
-                subject = f"Verify Your DoorWay Account - {otp_code}"
+                subject = f"Verify Your {settings.SITE_NAME} Account - {otp_code}"
             elif purpose == "password_reset":
                 subject = f"Password Reset Code - {otp_code}"
             elif purpose == "email_change":
                 subject = f"Confirm Email Change - {otp_code}"
             else:
-                subject = f"Your DoorWay Verification Code - {otp_code}"
+                subject = f"Your {settings.SITE_NAME} Verification Code - {otp_code}"
             
             # Send email
             send_mail(

@@ -119,9 +119,9 @@
 /* Smart Insights Algorithm Highlights */
 .smart-insight-field {
     background-color: rgba(var(--bs-info-rgb), 0.1) !important;
-    border-radius: 4px;
-    padding: 2px 5px;
-    transition: background-color 0.3s ease;
+    /* border-radius: 4px; */
+    /* padding: 2px 5px; */
+    /* transition: background-color 0.3s ease; */
 }
 
 .smart-insight-field:hover {

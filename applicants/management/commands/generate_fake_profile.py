@@ -156,7 +156,7 @@ class Command(BaseCommand):
         
         # Calculate completion
         status = applicant.get_field_completion_status()
-        completion = status['overall']['overall_completion_percentage']
+        completion = status['overall_completion_percentage']
         
         self.stdout.write(self.style.SUCCESS(
             f'\n✓ Generated profile for {applicant.first_name} {applicant.last_name}'

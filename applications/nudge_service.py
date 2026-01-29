@@ -73,7 +73,7 @@ This is a reminder from your broker, {user.first_name} {user.last_name}{',' + co
 Click here to continue: {link}
 
 Best regards,
-DoorWay Team
+{settings.SITE_NAME} Team
 """
 
         try:
@@ -103,7 +103,7 @@ DoorWay Team
         message = custom_message
         if not message:
             context_str = f" for {application.get_address_display()}" if application else ""
-            message = f"DoorWay: Hi {applicant.first_name}, reminder from {user.first_name}{context_str}. Please check your email for details."
+            message = f"{settings.SITE_NAME}: Hi {applicant.first_name}, reminder from {user.first_name}{context_str}. Please check your email for details."
 
         success, result = sms_backend.send_sms(applicant.phone_number, message)
         

@@ -345,6 +345,7 @@ class ApplicantBasicInfoForm(forms.ModelForm):
                 'rows': 3,
                 'placeholder': 'Tell us a bit about why you are moving'
             }),
+            'evicted_before': forms.RadioSelect(choices=[(True, 'Yes'), (False, 'No')], attrs={'class': 'form-check-input'}),
         }
 
 
@@ -649,21 +650,21 @@ class ApplicantBasicInfoForm(forms.ModelForm):
                         </label>
                         <div class="id-type-checkboxes">
                             <div class="form-check mb-3">
-                                <input class="form-check-input id-type-checkbox" type="checkbox" value="passport" id="id_passport" style="width: 1.25em; height: 1.25em;">
-                                <label class="form-check-label fs-5 ms-2" for="id_passport" style="padding-top: 2px;">
+                                <input class="form-check-input id-type-checkbox" type="checkbox" value="passport" id="id_passport" style="width: 1.25em; height: 1.25em; accent-color: #ffcc00;">
+                                <label class="form-check-label" for="id_passport" style="margin-left: 8px; padding-top: 2px;">
                                     <i class="fas fa-passport"></i> Passport
                                 </label>
                             </div>
                             <div class="form-check mb-3">
-                                <input class="form-check-input id-type-checkbox" type="checkbox" value="driver_license" id="id_driver_license" style="width: 1.25em; height: 1.25em;">
-                                <label class="form-check-label fs-5 ms-2" for="id_driver_license" style="padding-top: 2px;">
+                                <input class="form-check-input id-type-checkbox" type="checkbox" value="driver_license" id="id_driver_license" style="width: 1.25em; height: 1.25em; accent-color: #ffcc00;">
+                                <label class="form-check-label" for="id_driver_license" style="margin-left: 8px; padding-top: 2px;">
                                     <i class="fas fa-id-card"></i> Driver's License
                                 </label>
                             </div>
                             <div class="form-check mb-3">
-                                <input class="form-check-input id-type-checkbox" type="checkbox" value="state_id" id="id_state_id" style="width: 1.25em; height: 1.25em;">
-                                <label class="form-check-label fs-5 ms-2" for="id_state_id" style="padding-top: 2px;">
-                                    <i class="fas fa-id-badge"></i> State ID
+                                <input class="form-check-input id-type-checkbox" type="checkbox" value="state_id" id="id_state_id" style="width: 1.25em; height: 1.25em; accent-color: #ffcc00;">
+                                <label class="form-check-label" for="id_state_id" style="margin-left: 8px; padding-top: 2px;">
+                                    <i class="fas fa-id-card-alt"></i> State ID
                                 </label>
                             </div>
                         </div>
@@ -896,11 +897,13 @@ class ApplicantBasicInfoForm(forms.ModelForm):
                         ),
                         Div(
                             HTML('''
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="checkbox" id="is_rental_checkbox" name="is_rental_checkbox">
-                                <label class="form-check-label" for="is_rental_checkbox">
-                                    Is this a Rental?
-                                </label>
+                            <div class="id-type-checkboxes">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input id-type-checkbox" type="checkbox" id="is_rental_checkbox" name="is_rental_checkbox" {% if form.instance.housing_status == 'rent' %}checked{% endif %} style="width: 1.25em; height: 1.25em; accent-color: #ffcc00;">
+                                    <label class="form-check-label" for="is_rental_checkbox" style="margin-left: 8px; padding-top: 2px;">
+                                        Is this a Rental?
+                                    </label>
+                                </div>
                             </div>
                             '''),
                             Field('housing_status', type="hidden"),
@@ -1023,7 +1026,7 @@ class ApplicantHousingForm(forms.ModelForm):
         model = Applicant
         fields = [
             'desired_move_in_date', 'min_bedrooms', 'max_bedrooms', 'min_bathrooms', 'max_bathrooms',
-            'max_rent_budget', 'open_to_roommates',
+            'max_rent_budget', 'open_to_roommates', 'has_pets',
             'amenities',
         ]
         widgets = {
@@ -1032,6 +1035,8 @@ class ApplicantHousingForm(forms.ModelForm):
                 'class': 'form-control currency-input',
                 'placeholder': '2500.00'
             }),
+            'open_to_roommates': forms.RadioSelect(choices=[(True, 'Yes'), (False, 'No')], attrs={'class': 'form-check-input'}),
+            'has_pets': forms.RadioSelect(choices=[(True, 'Yes'), (False, 'No')], attrs={'class': 'form-check-input'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -1098,13 +1103,6 @@ class ApplicantHousingForm(forms.ModelForm):
         if 'reason_for_moving' in self.fields:
             self.fields['reason_for_moving'].label = 'Reason for Moving'
 
-    def clean_max_rent_budget(self):
-        # Remove commas from currency formatting
-        raw_value = self.data.get('max_rent_budget')
-        if raw_value:
-            return raw_value.replace(',', '')
-        return self.cleaned_data.get('max_rent_budget')
-
         # Crispy Forms setup
         self.helper = FormHelper()
         self.helper.form_tag = False
@@ -1115,283 +1113,85 @@ class ApplicantHousingForm(forms.ModelForm):
             Fieldset(
                 'Housing Needs',
                 Row(
-                    Column(Field('desired_move_in_date', wrapper_class='smart-match-critical'), css_class='col-md-6 mb-4'),
-                    Column(Field('max_rent_budget', template='applicants/currency_field.html', wrapper_class='smart-match-critical'), css_class='col-md-6 mb-4'),
+                    Column('desired_move_in_date', css_class='col-md-6'),
+                    Column(Field('max_rent_budget', template='applicants/currency_field.html', wrapper_class='smart-match-critical'), css_class='col-md-6'),
+                ),
+                Row(
+                    Column(Field('min_bedrooms', wrapper_class='strategic-match'), css_class='col-md-3'),
+                    Column(Field('max_bedrooms', wrapper_class='strategic-match'), css_class='col-md-3'),
+                    Column(Field('min_bathrooms', wrapper_class='strategic-match'), css_class='col-md-3'),
+                    Column(Field('max_bathrooms', wrapper_class='strategic-match'), css_class='col-md-3'),
                 ),
                 HTML('''
-                <div class="row mb-4">
-                    <div class="col-md-6 mb-4">
-                        <label class="form-label strategic-match">Number of Bedrooms</label>
-                        <div class="d-flex align-items-center">
-                            <span class="me-2">FROM:</span>
-                            <div class="me-3" style="flex: 1;">
-                                {{ form.min_bedrooms }}
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Are you open to having roommates?</label>
+                        <div class="d-flex gap-3 mt-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="open_to_roommates" id="id_roommates_yes" value="True" {% if form.open_to_roommates.value == True %}checked{% endif %}>
+                                <label class="form-check-label" for="id_roommates_yes">Yes</label>
                             </div>
-                            <span class="me-2">TO:</span>
-                            <div style="flex: 1;">
-                                {{ form.max_bedrooms }}
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="open_to_roommates" id="id_roommates_no" value="False" {% if form.open_to_roommates.value == False %}checked{% endif %}>
+                                <label class="form-check-label" for="id_roommates_no">No</label>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-6 d-flex align-items-end mb-4">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="open_to_roommates" id="{{ form.open_to_roommates.id_for_label }}" style="width: 1.5em; height: 1.5em; transform: scale(1.2);" {% if form.open_to_roommates.value %}checked{% endif %}>
-                            <label class="form-check-label ms-3" for="{{ form.open_to_roommates.id_for_label }}" style="font-size: 1.1rem; font-weight: 500; padding-top: 4px;">
-                                Open to Roommates?
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                <div class="row mb-4">
-                    <div class="col-md-6 mb-4">
-                        <label class="form-label strategic-match">Number of Bathrooms</label>
-                        <div class="d-flex align-items-center">
-                            <span class="me-2">FROM:</span>
-                            <div class="me-3" style="flex: 1;">
-                                {{ form.min_bathrooms }}
+                    <div class="col-md-6">
+                        <label class="form-label">Do you have any pets?</label>
+                        <div class="d-flex gap-3 mt-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="has_pets" id="id_has_pets_yes" value="True" {% if form.has_pets.value == True %}checked{% endif %}>
+                                <label class="form-check-label" for="id_has_pets_yes">Yes</label>
                             </div>
-                            <span class="me-2">TO:</span>
-                            <div style="flex: 1;">
-                                {{ form.max_bathrooms }}
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="has_pets" id="id_has_pets_no" value="False" {% if form.has_pets.value == False %}checked{% endif %}>
+                                <label class="form-check-label" for="id_has_pets_no">No</label>
                             </div>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Pets Section -->
-                <div class="row mb-2">
-                    <div class="col-md-12">
-                        <div class="form-check mb-2">
-                            <input class="form-check-input pets-checkbox" type="checkbox" id="has_pets" name="has_pets" style="width: 1.5em; height: 1.5em; transform: scale(1.2);">
-                            <label class="form-check-label ms-3 strategic-match" for="has_pets" style="font-size: 1.1rem; font-weight: 500; padding-top: 4px;">
-                                Pets?
-                            </label>
-                        </div>
-                        
-                        <!-- Pet Details Container (initially hidden) -->
-                        <div id="pets-container" class="mt-4" style="display: none;">
-                            <div class="mb-4">
-                                <button type="button" id="add-pet-btn" class="btn btn-sm" style="background-color: #ffcc00; color: #000000; border: 1px solid #ffcc00;">
-                                    <i class="fas fa-plus"></i> Add Pet
-                                </button>
-                            </div>
-                            <div id="pets-list-container">
-                                <!-- Dynamic pet forms will be added here -->
-                                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                            </div>
-                        </div>
+                '''),
+                HTML('''
+                <div id="pets-container" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold text-secondary mb-0">Pet Information</h6>
+                        <button type="button" id="add-pet-btn" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-plus"></i> Add Another Pet
+                        </button>
+                    </div>
+                    <div id="pets-list-container">
+                        <!-- Dynamic pet forms will be added here -->
                     </div>
                 </div>
                 '''),
             ),
             
             Fieldset(
-                'HOUSING PREFERENCES',
-                HTML('''
-                <div class="mb-4">
-                    <h6 class="mb-3 strategic-match badge-target">Neighborhood Preferences</h6>
-                    <p class="text-muted small mb-3">
-                        <i class="fas fa-info-circle"></i> Select your preferred neighborhoods and drag them to rank by priority. 
-                        Your #1 choice will have the highest priority in our apartment matching algorithm.
-                    </p>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="text-secondary small mb-2">Available Neighborhoods</h6>
-                            <div id="available-neighborhoods" class="neighborhood-list border rounded p-3" style="max-height: 300px; overflow-y: auto;">
-                                {% for neighborhood in all_neighborhoods %}
-                                <div class="neighborhood-item available" data-neighborhood-id="{{ neighborhood.id }}" draggable="true">
-                                    <span class="neighborhood-name">{{ neighborhood.name }}</span>
-                                    <i class="fas fa-plus text-success float-end"></i>
-                                </div>
-                                {% empty %}
-                                <p class="text-danger">No neighborhoods found!</p>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <h6 class="text-secondary small mb-2">Your Ranked Preferences</h6>
-                            <div id="selected-neighborhoods" class="neighborhood-list border rounded p-3" style="min-height: 300px;">
-                                <div class="text-muted text-center py-4" id="empty-message">
-                                    <i class="fas fa-hand-pointer mb-2"></i><br>
-                                    Click neighborhoods from the left to add them here, then drag to reorder by preference.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Hidden inputs to store the ranked preferences -->
-                    <div id="neighborhood-preferences-inputs"></div>
-                </div>
-                '''),
-                HTML('''
-                <!-- Building Amenities Section -->
-                <div class="mb-5">
-                    <div class="d-flex align-items-center mb-3">
-                        <h5 class="mb-0 me-3">Building Amenities</h5>
-                        <small class="text-muted">
-                            <i class="fas fa-info-circle"></i> 
-                            Set priorities for building-wide amenities. Only select amenities that matter to you.
-                        </small>
-                    </div>
-                    
-                    <!-- Priority Legend -->
-                    <div class="priority-legend mb-4 p-3 bg-light rounded">
-                        <div class="row text-center">
-                            <div class="col-md-3">
-                                <div class="legend-item">
-                                    <div class="legend-color unset-legend"></div>
-                                    <small><strong>Don't Care</strong><br>Not important</small>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="legend-item">
-                                    <div class="legend-color nice-to-have-legend"></div>
-                                    <small><strong>Nice to Have</strong><br>Mild preference</small>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="legend-item">
-                                    <div class="legend-color very-important-legend"></div>
-                                    <small><strong>Important</strong><br>Strong preference</small>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="legend-item">
-                                    <div class="legend-color must-have-legend"></div>
-                                    <small><strong>Must Have</strong><br>Deal-breaker if missing</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Search Bar for Building Amenities -->
-                    <div class="mb-3">
-                        <div class="input-group">
-                            <span class="input-group-text bg-white border-end-0">
-                                <i class="fas fa-search text-muted"></i>
-                            </span>
-                            <input type="text" 
-                                   class="form-control border-start-0 amenity-search" 
-                                   placeholder="Search building amenities..." 
-                                   data-target="building-amenities">
-                        </div>
-                    </div>
-
-                    <div class="amenities-scroll-container shadow-sm border rounded">
-                        <div class="amenities-grid p-3" id="building-amenities">
-                            {% for amenity in all_building_amenities %}
-                            <div class="amenity-slider-item unset" data-amenity-id="{{ amenity.id }}" data-amenity-type="building">
-                                <div class="amenity-info">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fa-solid {{ amenity.icon }} me-2 text-warning"></i>
-                                        <span class="amenity-name">{{ amenity.name }}</span>
-                                    </div>
-                                    <span class="priority-label text-muted"></span>
-                                </div>
-                                <div class="slider-container mt-2">
-                                    <input type="range" 
-                                           min="0" 
-                                           max="3" 
-                                           value="0" 
-                                           step="1" 
-                                           class="amenity-slider unset" 
-                                           name="building_amenity_{{ amenity.id }}"
-                                           data-amenity-id="{{ amenity.id }}"
-                                           data-amenity-type="building"
-                                           data-amenity-name="{{ amenity.name }}"
-                                           data-existing-value="0">
-                                    <div class="slider-labels">
-                                        <span class="slider-label-left">Don't Care</span>
-                                        <span class="slider-label-right">Must Have</span>
-                                    </div>
-                                </div>
-                            </div>
-                            {% empty %}
-                            <p class="text-muted">No building amenities available</p>
-                            {% endfor %}
-                        </div>
-                        <div class="no-results p-4 text-center text-muted d-none" id="no-results-building">
-                            <i class="fas fa-search mb-2 d-block opacity-50 fa-2x"></i>
-                            No amenities matches your search.
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Apartment Amenities Section -->
-                <div class="mb-5">
-                    <div class="d-flex align-items-center mb-3">
-                        <h5 class="mb-0 me-3">Apartment Features</h5>
-                        <small class="text-muted">
-                            <i class="fas fa-info-circle"></i> 
-                            Set priorities for apartment-specific features. Only select features that matter to you.
-                        </small>
-                    </div>
-                    
-                    <!-- Search Bar for Apartment Amenities -->
-                    <div class="mb-3">
-                        <div class="input-group">
-                            <span class="input-group-text bg-white border-end-0">
-                                <i class="fas fa-search text-muted"></i>
-                            </span>
-                            <input type="text" 
-                                   class="form-control border-start-0 amenity-search" 
-                                   placeholder="Search apartment features..." 
-                                   data-target="apartment-amenities">
-                        </div>
-                    </div>
-
-                    <div class="amenities-scroll-container shadow-sm border rounded">
-                        <div class="amenities-grid p-3" id="apartment-amenities">
-                            {% for amenity in all_apartment_amenities %}
-                            <div class="amenity-slider-item unset" data-amenity-id="{{ amenity.id }}" data-amenity-type="apartment">
-                                <div class="amenity-info">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fa-solid {{ amenity.icon }} me-2 text-warning"></i>
-                                        <span class="amenity-name">{{ amenity.name }}</span>
-                                    </div>
-                                    <span class="priority-label text-muted"></span>
-                                </div>
-                                <div class="slider-container mt-2">
-                                    <input type="range" 
-                                           min="0" 
-                                           max="3" 
-                                           value="0" 
-                                           step="1" 
-                                           class="amenity-slider unset" 
-                                           name="apartment_amenity_{{ amenity.id }}"
-                                           data-amenity-id="{{ amenity.id }}"
-                                           data-amenity-type="apartment"
-                                           data-amenity-name="{{ amenity.name }}"
-                                           data-existing-value="0">
-                                    <div class="slider-labels">
-                                        <span class="slider-label-left">Don't Care</span>
-                                        <span class="slider-label-right">Must Have</span>
-                                    </div>
-                                </div>
-                            </div>
-                            {% empty %}
-                            <p class="text-muted">No apartment amenities available</p>
-                            {% endfor %}
-                        </div>
-                        <div class="no-results p-4 text-center text-muted d-none" id="no-results-apartment">
-                            <i class="fas fa-search mb-2 d-block opacity-50 fa-2x"></i>
-                            No features match your search.
-                        </div>
-                    </div>
-                </div>
-                '''),
+                'Neighborhood Preferences',
+                HTML('{% include "applicants/neighborhood_preferences.html" %}'),
+            ),
+            
+            Fieldset(
+                'Apartment & Building Amenities',
+                HTML('{% include "applicants/amenity_preferences.html" %}'),
             ),
             
             # Navigation Buttons
             Div(
                 HTML('<a href="{% url \'profile_step1\' %}" class="btn btn-doorway-secondary btn-lg me-3">← Previous</a>'),
-                Submit('housing_submit', 'Save & Continue', css_class='btn btn-doorway-primary btn-lg me-3'),
-                HTML('<a href="{% url \'profile_step3\' %}" class="btn btn-outline-secondary btn-lg">Skip</a>'),
+                Submit('housing_submit', 'Next Step: Employment →', css_class='btn btn-doorway-primary btn-lg'),
                 css_class='text-center mt-4'
             )
         )
+
+    def clean_max_rent_budget(self):
+        # Remove commas from currency formatting
+        raw_value = self.data.get('max_rent_budget')
+        if raw_value:
+            return raw_value.replace(',', '')
+        return self.cleaned_data.get('max_rent_budget')
+
 
     def clean(self):
         """Cross-field validation for bedroom/bathroom ranges, move-in date, and rate limiting"""
@@ -1551,19 +1351,6 @@ class ApplicantEmploymentForm(forms.ModelForm):
         if 'currently_employed' in self.fields:
             self.fields['currently_employed'].label = 'I am currently employed at this job'
 
-    def clean_annual_income(self):
-        # Remove commas from currency formatting
-        raw_value = self.data.get('annual_income')
-        if raw_value:
-            return raw_value.replace(',', '')
-        return self.cleaned_data.get('annual_income')
-
-    def clean_monthly_income(self):
-        # Remove commas from currency formatting
-        raw_value = self.data.get('monthly_income')
-        if raw_value:
-            return raw_value.replace(',', '')
-        return self.cleaned_data.get('monthly_income')
         self.fields['employment_status'].label = 'Which best describes you?'
         self.fields['employment_status'].required = False
         self.fields['employment_status'].choices = [
@@ -1604,11 +1391,16 @@ class ApplicantEmploymentForm(forms.ModelForm):
                 HTML('''
                 <div class="row mb-3">
                     <div class="col-md-12">
-                        <div class="form-check">
-                            {{ form.currently_employed }}
-                            <label class="form-check-label ms-2" for="{{ form.currently_employed.id_for_label }}" style="font-size: 1.1rem; font-weight: 500;">
-                                I am currently employed here
-                            </label>
+                        <label class="form-label">Are you currently employed here?</label>
+                        <div class="d-flex gap-3 mt-2">
+                            <div class="form-check">
+                                <input class="form-check-input currently-employed-checkbox" type="radio" name="currently_employed" id="id_currently_employed_yes" value="True" {% if form.currently_employed.value == True %}checked{% endif %}>
+                                <label class="form-check-label" for="id_currently_employed_yes">Yes</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input currently-employed-checkbox" type="radio" name="currently_employed" id="id_currently_employed_no" value="False" {% if form.currently_employed.value == False %}checked{% endif %}>
+                                <label class="form-check-label" for="id_currently_employed_no">No</label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1754,6 +1546,20 @@ class ApplicantEmploymentForm(forms.ModelForm):
             )
         )
 
+    def clean_annual_income(self):
+        # Remove commas from currency formatting
+        raw_value = self.data.get('annual_income')
+        if raw_value:
+            return raw_value.replace(',', '')
+        return self.cleaned_data.get('annual_income')
+
+    def clean_monthly_income(self):
+        # Remove commas from currency formatting
+        raw_value = self.data.get('monthly_income')
+        if raw_value:
+            return raw_value.replace(',', '')
+        return self.cleaned_data.get('monthly_income')
+
     def clean(self):
         """Cross-field validation for employment dates and rate limiting"""
         cleaned_data = super().clean()
@@ -1894,23 +1700,28 @@ class ApplicantForm(forms.ModelForm):
                     Column('state', css_class='col-md-3'),
                     Column('zip_code', css_class='col-md-4'),
                 ),
-                HTML('''
-                <div class="form-check mb-3">
-                    <input class="form-check-input" type="checkbox" id="is_rental_checkbox" name="is_rental_checkbox">
-                    <label class="form-check-label" for="is_rental_checkbox">
-                        Is this a Rental?
-                    </label>
-                </div>
-                '''),
-                Field('housing_status', type="hidden"),
                 Div(
-                    Row(
-                        Column(Field('current_landlord_name', placeholder="Landlord's Name"), css_class='col-md-4'),
-                        Column(Field('current_landlord_phone', placeholder="(555) 555-5555"), css_class='col-md-4'),
-                        Column(Field('current_landlord_email', placeholder="Landlord's Email"), css_class='col-md-4'),
+                    HTML('''
+                    <div class="id-type-checkboxes">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input id-type-checkbox" type="checkbox" id="is_rental_checkbox" name="is_rental_checkbox" {% if form.instance.housing_status == 'rent' %}checked{% endif %} style="width: 1.25em; height: 1.25em; accent-color: #ffcc00;">
+                            <label class="form-check-label" for="is_rental_checkbox" style="margin-left: 8px; padding-top: 2px;">
+                                Is this a Rental?
+                            </label>
+                        </div>
+                    </div>
+                    '''),
+                    Field('housing_status', type="hidden"),
+                    Div(
+                        Row(
+                            Column(Field('current_landlord_name', placeholder="Landlord's Name"), css_class='col-md-4'),
+                            Column(Field('current_landlord_phone', placeholder="(555) 555-5555"), css_class='col-md-4'),
+                            Column(Field('current_landlord_email', placeholder="Landlord's Email"), css_class='col-md-4'),
+                        ),
+                        css_id='rental_landlord_fields',
+                        css_class='d-none'
                     ),
-                    css_id='landlord_fields',
-                    css_class='d-none'
+                    css_id='current_rental_container',
                 ),
                 HTML('''
                 <!-- Previous Address Section -->

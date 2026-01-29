@@ -127,15 +127,30 @@
             <!-- Amenities -->
             <div class="mb-4">
                 <h5 class="fw-bold mb-3">Amenities</h5>
+                
+                {% if apartment.building.amenities.exists %}
+                <h6 class="text-uppercase fw-bold text-muted mb-3 small">Building Amenities</h6>
+                <div class="d-flex flex-wrap gap-2 mb-4">
+                    {% for amenity in apartment.building.amenities.all %}
+                        <span class="badge bg-light text-dark border amenity-badge">
+                            <i class="fas {{ amenity.icon }} text-warning me-2"></i>{{ amenity.name }}
+                        </span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if apartment.amenities.exists %}
+                <h6 class="text-uppercase fw-bold text-muted mb-3 small">Unit Amenities</h6>
                 <div class="d-flex flex-wrap gap-2">
                     {% for amenity in apartment.amenities.all %}
                         <span class="badge bg-light text-dark border amenity-badge">
-                            <i class="fas {{ amenity.icon }} text-success me-2"></i>{{ amenity.name }}
+                            <i class="fas {{ amenity.icon }} text-warning me-2"></i>{{ amenity.name }}
                         </span>
                     {% empty %}
-                        <p class="text-muted">No specific amenities listed.</p>
+                        <p class="text-muted">No specific unit amenities listed.</p>
                     {% endfor %}
                 </div>
+                {% endif %}
             </div>
             
             <!-- Neighborhood & Lifestyle -->
@@ -610,7 +625,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 2. Travel Times Logic
     let currentMode = 'driving';
-    let destinations = JSON.parse(localStorage.getItem('doorway_destinations') || '[]');
+    let destinations = JSON.parse(localStorage.getItem('falkor_destinations') || '[]');
 
     const destinationsList = document.getElementById('destinations-list');
     const noDestMsg = document.getElementById('no-destinations');

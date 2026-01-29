@@ -1,0 +1,36 @@
+<div class="mb-4">
+    <h6 class="mb-3">Neighborhood Preferences</h6>
+    <p class="text-muted small mb-3">
+        <i class="fas fa-info-circle"></i> Select your preferred neighborhoods and drag them to rank by priority. 
+        Your #1 choice will have the highest priority in our apartment matching algorithm.
+    </p>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <h6 class="text-secondary small mb-2">Available Neighborhoods</h6>
+            <div id="available-neighborhoods" class="neighborhood-list border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                {% for neighborhood in form.neighborhood_choices %}
+                <div class="neighborhood-item available" data-neighborhood-id="{{ neighborhood.id }}" draggable="true">
+                    <span class="neighborhood-name">{{ neighborhood.name }}</span>
+                    <i class="fas fa-plus text-success float-end"></i>
+                </div>
+                {% empty %}
+                <p class="text-danger">No neighborhoods found!</p>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <h6 class="text-secondary small mb-2">Your Ranked Preferences</h6>
+            <div id="selected-neighborhoods" class="neighborhood-list border rounded p-3" style="min-height: 300px;">
+                <div class="text-muted text-center py-4" id="empty-message">
+                    <i class="fas fa-hand-pointer mb-2"></i><br>
+                    Click neighborhoods from the left to add them here, then drag to reorder by preference.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Hidden inputs to store the ranked preferences -->
+    <div id="neighborhood-preferences-inputs"></div>
+</div>

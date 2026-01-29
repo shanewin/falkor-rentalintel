@@ -1,141 +1,407 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load apartment_extras %}
+
+{% block extra_css %}
+<style>
+    /* 1. Enhanced Stepper */
+    .stepper-wrapper {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        position: relative;
+    }
+    .stepper-wrapper::before {
+        content: '';
+        position: absolute;
+        top: 16px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #e9ecef;
+        z-index: 1;
+    }
+    .stepper-item {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+    }
+    .stepper-circle {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #fff;
+        border: 2px solid #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: #adb5bd;
+        margin-bottom: 8px;
+        transition: var(--transition);
+    }
+    .stepper-item.completed .stepper-circle {
+        background: var(--brand-black);
+        border-color: var(--brand-black);
+        color: #fff;
+    }
+    .stepper-item.active .stepper-circle {
+        background: var(--brand-yellow);
+        border-color: var(--brand-yellow);
+        color: var(--brand-black);
+        box-shadow: 0 0 0 4px rgba(255, 214, 10, 0.2);
+    }
+    .stepper-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #adb5bd;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .stepper-item.active .stepper-label {
+        color: var(--brand-black);
+    }
+    .stepper-item.completed .stepper-label {
+        color: var(--brand-black);
+    }
+
+    /* 2. Summary Components */
+    .form-section-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #adb5bd;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+    }
+    .form-section-label::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: #e9ecef;
+        margin-left: 1rem;
+    }
+
+    /* Preview Card Styles (Unified from Step 1 & 2) */
+    .preview-card {
+        background: #fff;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.08);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        overflow: hidden;
+        height: 100%;
+    }
+    .preview-header {
+        background: #fcfcfc;
+        padding: 1.25rem;
+        border-bottom: 1px solid #f1f1f1;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    .preview-body {
+        padding: 1.25rem;
+    }
+    
+    /* Applicant Specific */
+    .preview-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        object-fit: cover;
+        background: var(--brand-yellow);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.25rem;
+        color: var(--brand-black);
+    }
+    .preview-name {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: 0.15rem;
+        color: var(--brand-black);
+    }
+    .preview-detail {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    
+    /* Property Specific */
+    .preview-image-container {
+        width: 80px;
+        height: 80px;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #e9ecef;
+        flex-shrink: 0;
+    }
+    .preview-image-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    /* Insights */
+    .insight-badge {
+        padding: 8px 12px;
+        border-radius: 10px;
+        background: #fff9db;
+        border: 1px solid #fee6a9;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: auto;
+    }
+    .insight-score {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #826a00;
+    }
+    .insight-label {
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #826a00;
+        line-height: 1;
+    }
+    .info-label {
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: #adb5bd;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-1">Create New Application - Step 3</h1>
-            <p class="text-muted mb-0">Configure application settings and requirements</p>
-        </div>
-        <div>
-            <a href="{% url 'broker_create_step2' %}" class="btn btn-outline-secondary me-2">
-                <i class="fas fa-arrow-left me-1"></i> Back
-            </a>
-            <a href="{% url 'applications_list' %}" class="btn btn-outline-danger">
-                <i class="fas fa-times me-1"></i> Cancel
-            </a>
-        </div>
-    </div>
-
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        {% endfor %}
-    {% endif %}
-
-    <!-- Progress Bar -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <h6 class="mb-3 text-muted text-uppercase small fw-bold">Application Creation Progress</h6>
-            <div class="progress mb-4" style="height: 10px;">
-                <div class="progress-bar bg-warning" role="progressbar" style="width: 75%" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"></div>
-            </div>
-            <div class="row text-center">
-                <div class="col-3">
-                    <div class="step text-success">
-                        <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 32px; height: 32px;">
-                            <i class="fas fa-check"></i>
-                        </div>
-                        <small class="text-success fw-bold">Property</small>
-                    </div>
+<div class="container py-4" style="min-height: 70vh; padding-bottom: 80px;">
+    <!-- Header -->
+    <div class="row mb-5">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="d-flex justify-content-between align-items-end">
+                <div>
+                    <span class="badge bg-warning text-dark mb-2 px-3 py-2 rounded-pill fw-bold">Step 3 of 3</span>
+                    <h1 class="display-6 fw-bold mb-1">Final Settings</h1>
+                    <p class="text-muted lead">Set fee requirements and customize application.</p>
                 </div>
-                <div class="col-3">
-                    <div class="step text-success">
-                        <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 32px; height: 32px;">
-                            <i class="fas fa-check"></i>
-                        </div>
-                        <small class="text-success fw-bold">Applicant</small>
-                    </div>
-                </div>
-                <div class="col-3">
-                    <div class="step text-warning">
-                        <div class="bg-warning text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 32px; height: 32px;">3</div>
-                        <small class="fw-bold">Settings</small>
-                    </div>
-                </div>
-                <div class="col-3">
-                    <div class="step text-muted">
-                        <div class="bg-light text-muted rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 32px; height: 32px;">4</div>
-                        <small>Review</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Previous Steps Summary -->
-    <div class="card shadow-sm mb-4 bg-light">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6 mb-3 mb-md-0">
-                    <h6 class="text-muted mb-2 text-uppercase small fw-bold">Selected Property</h6>
-                    {% if session_data.property_type == 'existing' %}
-                        <p class="mb-0"><i class="fas fa-building me-2 text-success"></i>Property from system</p>
-                    {% elif session_data.property_type == 'manual' %}
-                        <p class="mb-0">
-                            <i class="fas fa-edit me-2 text-warning"></i>
-                            {% if session_data.manual_building_name %}{{ session_data.manual_building_name }}{% endif %}
-                            {% if session_data.manual_unit_number %} - Unit {{ session_data.manual_unit_number }}{% endif %}
-                        </p>
-                    {% endif %}
-                </div>
-                <div class="col-md-6">
-                    <h6 class="text-muted mb-2 text-uppercase small fw-bold">Selected Applicant</h6>
-                    {% if session_data.applicant_type == 'existing' %}
-                        <p class="mb-0"><i class="fas fa-user me-2 text-success"></i>Existing applicant selected</p>
-                    {% elif session_data.applicant_type == 'new' %}
-                        <p class="mb-0">
-                            <i class="fas fa-user-plus me-2 text-info"></i>
-                            {% if session_data.new_applicant_first_name %}{{ session_data.new_applicant_first_name }}{% endif %}
-                            {% if session_data.new_applicant_last_name %} {{ session_data.new_applicant_last_name }}{% endif %}
-                        </p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Application Settings Form -->
-    <div class="card shadow-sm">
-        <div class="card-header bg-white">
-            <h5 class="mb-0">
-                <i class="fas fa-cogs me-2 text-primary"></i>Application Settings
-            </h5>
-        </div>
-        <div class="card-body">
-            <form method="post">
-                {% csrf_token %}
-                
-                <!-- Application Fee -->
-                <div class="mb-4">
-                    <label for="application_fee" class="form-label fw-bold">Application Fee</label>
-                    <p class="text-muted small mb-3">Set the fee amount that the applicant will pay to submit this application.</p>
-                    
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="input-group input-group-lg">
-                                <span class="input-group-text">$</span>
-                                <input type="number" class="form-control" name="application_fee" id="application_fee" 
-                                       value="{{ session_data.application_fee|default:'50.00' }}" 
-                                       min="0" max="500" step="0.01" placeholder="50.00">
-                            </div>
-                            <div class="form-text text-muted mt-2">
-                                <i class="fas fa-info-circle me-1"></i>Typical range: $25 - $150
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="d-flex justify-content-between pt-3 border-top">
-                    <a href="{% url 'broker_create_step2' %}" class="btn btn-outline-secondary btn-lg">
+                <div class="d-flex gap-2">
+                    <a href="{% url 'broker_create_step2' %}" class="btn btn-link text-decoration-none text-muted">
                         <i class="fas fa-arrow-left me-2"></i>Back
                     </a>
-                    <button type="submit" class="btn btn-warning btn-lg px-4 shadow-sm">
-                        Next: Review & Create <i class="fas fa-arrow-right ms-2"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stepper -->
+    <div class="row mb-5">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="stepper-wrapper">
+                <div class="stepper-item completed">
+                    <div class="stepper-circle">1</div>
+                    <div class="stepper-label">Applicant</div>
+                </div>
+                <div class="stepper-item completed">
+                    <div class="stepper-circle">2</div>
+                    <div class="stepper-label">Property</div>
+                </div>
+                <div class="stepper-item active">
+                    <div class="stepper-circle">3</div>
+                    <div class="stepper-label">Settings & Launch</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Selection Summary -->
+    <div class="row mb-5">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="form-section-label">Quick Summary</div>
+            <div class="row g-4">
+                <!-- Applicant Card -->
+                <div class="col-md-6">
+                    <div class="preview-card">
+                        <div class="preview-header">
+                            {% if applicant and applicant.photos.exists %}
+                                <img src="{{ applicant.photos.first.thumbnail_url }}" class="preview-avatar" alt="Applicant">
+                            {% else %}
+                                <div class="preview-avatar">
+                                    {% if applicant %}
+                                        {{ applicant.first_name|slice:":1" }}{{ applicant.last_name|slice:":1" }}
+                                    {% else %}
+                                        {{ session_data.new_applicant_first_name|slice:":1" }}{{ session_data.new_applicant_last_name|slice:":1" }}
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                            
+                            <div class="flex-grow-1 ms-3">
+                                <div class="preview-name">
+                                    {% if applicant %}
+                                        {{ applicant.first_name }} {{ applicant.last_name }}
+                                    {% else %}
+                                        {{ session_data.new_applicant_first_name }} {{ session_data.new_applicant_last_name }}
+                                    {% endif %}
+                                </div>
+                                <div class="preview-detail">
+                                    {% if applicant %}
+                                        {{ applicant.email }}
+                                    {% else %}
+                                        {{ session_data.new_applicant_email }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            {% if applicant %}
+                            <div class="insight-badge">
+                                <span class="insight-score">{{ applicant.smart_score|default:'--' }}</span>
+                                <div class="insight-label">Smart<br>Insight</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="preview-body">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <div class="info-label mb-1">PHONE NUMBER</div>
+                                    <div class="fw-bold small text-dark">
+                                        {% if applicant %}
+                                            {{ applicant.formatted_phone|default:"Not provided" }}
+                                        {% else %}
+                                            {{ session_data.new_applicant_phone|default:"Not provided" }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="info-label mb-1">EMPLOYMENT</div>
+                                    <div class="fw-bold small text-dark">
+                                        {% if applicant %}
+                                            {{ applicant.get_employment_status_display|default:"Not specified" }}
+                                        {% else %}
+                                            New Profile
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Property Card -->
+                <div class="col-md-6">
+                    <div class="preview-card">
+                        <div class="preview-header">
+                            <div class="preview-image-container">
+                                {% if apartment %}
+                                    {% if apartment.first_photo_url %}
+                                        <img src="{{ apartment.first_photo_url }}" onerror="this.src='{{ apartment.id|get_fallback_image }}'" alt="Property">
+                                    {% else %}
+                                        <img src="{{ apartment.id|get_fallback_image }}" alt="Property">
+                                    {% endif %}
+                                {% else %}
+                                    <img src="{% static 'img/defaults/apartment_placeholder.jpg' %}" alt="Manual Entry">
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <div class="preview-name">
+                                    {% if apartment %}
+                                        {{ apartment.building.name }} - Unit {{ apartment.unit_number }}
+                                    {% else %}
+                                        {{ session_data.manual_building_name }} - Unit {{ session_data.manual_unit_number }}
+                                    {% endif %}
+                                </div>
+                                <div class="preview-detail text-truncate" style="max-width: 200px;">
+                                    {% if apartment %}
+                                        {{ apartment.building.street_address_1 }}, {{ apartment.building.city }}
+                                    {% else %}
+                                        {{ session_data.manual_building_address }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="preview-body">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <div class="info-label mb-1">RENT PRICE</div>
+                                    <div class="fw-bold small text-success fs-6">
+                                        {% if apartment %}
+                                            ${{ apartment.rent_price|floatformat:0 }}
+                                        {% else %}
+                                            Manual Entry
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="info-label mb-1">LAYOUT</div>
+                                    <div class="fw-bold small text-dark">
+                                        {% if apartment %}
+                                            {{ apartment.bedrooms|floatformat:0 }}BR / {{ apartment.bathrooms|floatformat:0 }}BA
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="info-label mb-1">AMENITIES</div>
+                                    <div class="fw-bold small text-dark text-truncate">
+                                        {% if apartment %}
+                                            {% for amenity in apartment.amenities.all|slice:":3" %}
+                                                {{ amenity.name }}{% if not forloop.last %}, {% endif %}
+                                            {% empty %}
+                                                No amenities listed
+                                            {% endfor %}
+                                        {% else %}
+                                            Manual specification
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <form method="post" id="settingsForm">
+                {% csrf_token %}
+
+                <div class="form-section-label">Financials</div>
+                <div class="card border-0 shadow-sm p-4 mb-5">
+                    <div class="row align-items-center">
+                        <div class="col-md-7">
+                            <h5 class="fw-bold mb-1">Application Fee</h5>
+                            <p class="text-muted small mb-0">This amount will be charged to the applicant upon submission of the finalized application.</p>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="input-group input-group-lg shadow-sm rounded-3 overflow-hidden">
+                                <span class="input-group-text bg-white border-end-0">$</span>
+                                <input type="number" class="form-control border-start-0 py-3 fw-bold" name="application_fee" id="application_fee" 
+                                       value="{{ session_data.application_fee|default:'50.00' }}" 
+                                       min="0" max="500" step="0.01" placeholder="0.00">
+                            </div>
+                            <div class="form-text text-end mt-2 small">
+                                <i class="fas fa-info-circle me-1 text-muted"></i>Standard: $50.00
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fee Security Removed -->
+
+                <!-- Action Button -->
+                <div class="d-grid mt-5">
+                    <button type="submit" class="btn btn-warning btn-lg py-3 fw-bold shadow-sm">
+                        Create Application <i class="fas fa-paper-plane ms-2 mt-1"></i>
                     </button>
                 </div>
             </form>

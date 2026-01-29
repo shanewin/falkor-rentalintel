@@ -1,5 +1,6 @@
 {% extends 'applications/applicant_base.html' %}
 {% load static %}
+{% load apartment_extras %}
 
 {% block title %}Application for {% if application.apartment %}{{ application.apartment.building.name }}{% else %}{{ application.get_building_display }}{% endif %}{% endblock %}
 
@@ -26,73 +27,54 @@
             <!-- Image Carousel -->
             <div id="propertyCarousel" class="carousel slide" data-bs-ride="carousel">
                 <div class="carousel-inner">
-                    {% comment %}Track slide counter across both image sets{% endcomment %}
-                    {% if application.apartment.images.exists or application.apartment.building.images.exists %}
-                        {% comment %}Apartment images first{% endcomment %}
-                        {% for image in application.apartment.images.all %}
-                            <div class="carousel-item {% if forloop.first %}active{% endif %}">
-                                <div style="height: 400px; background-image: url('{{ image.large_url }}'); background-size: cover; background-position: center;">
-                                    {% if forloop.first %}
-                                        <div class="d-flex align-items-end h-100 p-4" style="background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);">
-                                            <div class="text-white">
-                                                <h1 class="fw-bold mb-1">{{ application.apartment.building.name }}</h1>
-                                                <p class="mb-0">
-                                                    <i class="fas fa-map-marker-alt me-2"></i>
-                                                    {{ application.apartment.building.street_address_1 }}, {{ application.apartment.building.city }}
-                                                    {% if application.apartment.building.neighborhood %}
-                                                        • {{ application.apartment.building.neighborhood.name }}
-                                                    {% endif %}
-                                                </p>
+                    {% with all_images=application.apartment.all_images fallback_img=application.apartment.id|get_fallback_image %}
+                        {% if all_images %}
+                            {% for image in all_images %}
+                                <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                                    <div class="position-relative" style="height: 400px; overflow: hidden;">
+                                        <img src="{{ image.large_url }}" class="d-block w-100 h-100 object-fit-cover" alt="Property Image"
+                                             onerror="this.src='{{ fallback_img }}';this.onerror=null;">
+                                        
+                                        {% if forloop.first %}
+                                            <div class="position-absolute bottom-0 start-0 w-100 p-4" style="background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);">
+                                                <div class="text-white">
+                                                    <h1 class="fw-bold mb-1">{{ application.apartment.building.name }}</h1>
+                                                    <p class="mb-0">
+                                                        <i class="fas fa-map-marker-alt me-2"></i>
+                                                        {{ application.apartment.building.street_address_1 }}, {{ application.apartment.building.city }}
+                                                        {% if application.apartment.building.neighborhood %}
+                                                            • {{ application.apartment.building.neighborhood.name }}
+                                                        {% endif %}
+                                                    </p>
+                                                </div>
                                             </div>
-                                        </div>
-                                    {% endif %}
+                                        {% endif %}
+                                    </div>
                                 </div>
-                            </div>
-                        {% endfor %}
-                        
-                        {% comment %}Building images second{% endcomment %}
-                        {% for image in application.apartment.building.images.all %}
-                            <div class="carousel-item {% if not application.apartment.images.exists and forloop.first %}active{% endif %}">
-                                <div style="height: 400px; background-image: url('{{ image.large_url }}'); background-size: cover; background-position: center;">
-                                    {% if not application.apartment.images.exists and forloop.first %}
-                                        <div class="d-flex align-items-end h-100 p-4" style="background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);">
-                                            <div class="text-white">
-                                                <h1 class="fw-bold mb-1">{{ application.apartment.building.name }}</h1>
-                                                <p class="mb-0">
-                                                    <i class="fas fa-map-marker-alt me-2"></i>
-                                                    {{ application.apartment.building.street_address_1 }}, {{ application.apartment.building.city }}
-                                                    {% if application.apartment.building.neighborhood %}
-                                                        • {{ application.apartment.building.neighborhood.name }}
-                                                    {% endif %}
-                                                </p>
-                                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="carousel-item active">
+                                <div style="height: 400px; background: linear-gradient(135deg, #000814 0%, #1a1a1a 100%);">
+                                    <div class="d-flex align-items-end h-100 p-4">
+                                        <div class="text-white">
+                                            <h1 class="fw-bold mb-1">{{ application.apartment.building.name }}</h1>
+                                            <p class="mb-0">
+                                                <i class="fas fa-map-marker-alt me-2 text-warning"></i>
+                                                {{ application.apartment.building.street_address_1 }}, {{ application.apartment.building.city }}
+                                                {% if application.apartment.building.neighborhood %}
+                                                    • {{ application.apartment.building.neighborhood.name }}
+                                                {% endif %}
+                                            </p>
                                         </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="carousel-item active">
-                            <div style="height: 400px; background: linear-gradient(135deg, #000814 0%, #1a1a1a 100%);">
-                                <div class="d-flex align-items-end h-100 p-4">
-                                    <div class="text-white">
-                                        <h1 class="fw-bold mb-1">{{ application.apartment.building.name }}</h1>
-                                        <p class="mb-0">
-                                            <i class="fas fa-map-marker-alt me-2"></i>
-                                            {{ application.apartment.building.street_address_1 }}, {{ application.apartment.building.city }}
-                                            {% if application.apartment.building.neighborhood %}
-                                                • {{ application.apartment.building.neighborhood.name }}
-                                            {% endif %}
-                                        </p>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    {% endif %}
+                        {% endif %}
+                    {% endwith %}
                 </div>
                 
                 {% comment %}Carousel controls - only show if there are multiple images{% endcomment %}
-                {% if application.apartment.images.count|add:application.apartment.building.images.count > 1 %}
+                {% if application.apartment.all_images|length > 1 %}
                     <button class="carousel-control-prev" type="button" data-bs-target="#propertyCarousel" data-bs-slide="prev">
                         <span class="carousel-control-prev-icon" aria-hidden="true"></span>
                         <span class="visually-hidden">Previous</span>
@@ -215,7 +197,7 @@
 
         <!-- Application Details -->
         <div class="card shadow-sm mb-4">
-            <div class="card-header bg-white">
+            <div class="card-header">
                 <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Application Information</h5>
             </div>
             <div class="card-body">
@@ -299,38 +281,51 @@
         {% if application.apartment %}
         <!-- Property Description -->
         <div class="card shadow-sm mb-4">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Property Description</h5>
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2 text-warning"></i>Property Overview</h5>
             </div>
             <div class="card-body">
                 {% if application.apartment.description %}
                 <div class="mb-3">
+                    <h6 class="text-uppercase small fw-bold text-muted mb-2">About the Apartment</h6>
                     <div class="property-description-text" id="propertyDescription" style="max-height: 150px; overflow: hidden; position: relative;">
                         {{ application.apartment.description|safe }}
                     </div>
+                </div>
+                {% endif %}
+
+                {% if application.apartment.building.description %}
+                <div class="mb-3">
+                    <h6 class="text-uppercase small fw-bold text-muted mb-2">About {{ application.apartment.building.name }}</h6>
+                    <div class="property-description-text" id="buildingDescription" style="max-height: 150px; overflow: hidden; position: relative;">
+                        {{ application.apartment.building.description|safe }}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if application.apartment.description or application.apartment.building.description %}
                     <button class="btn btn-link btn-sm p-0 mt-2 text-decoration-none" id="showMoreBtn" onclick="toggleDescription()">
                         <i class="fas fa-chevron-down me-1"></i>Show More
                     </button>
-                </div>
                 {% endif %}
                 
                 <!-- Lease Terms -->
                 <ul class="list-group list-group-flush">
                     {% if application.apartment.lease_term %}
                     <li class="list-group-item px-0">
-                        <i class="fas fa-calendar-alt me-2 text-muted"></i>
+                        <i class="fas fa-calendar-alt me-2 text-warning"></i>
                         {{ application.apartment.lease_term }} month lease
                     </li>
                     {% endif %}
                     {% if application.apartment.security_deposit %}
                     <li class="list-group-item px-0">
-                        <i class="fas fa-shield-alt me-2 text-muted"></i>
+                        <i class="fas fa-shield-alt me-2 text-warning"></i>
                         ${{ application.apartment.security_deposit|floatformat:0 }} security deposit
                     </li>
                     {% endif %}
                     {% if application.apartment.pet_fee %}
                     <li class="list-group-item px-0">
-                        <i class="fas fa-paw me-2 text-muted"></i>
+                        <i class="fas fa-paw me-2 text-warning"></i>
                         ${{ application.apartment.pet_fee|floatformat:0 }} pet fee
                     </li>
                     {% endif %}
@@ -338,32 +333,56 @@
             </div>
         </div>
 
-        <!-- Amenities -->
-        {% if application.apartment.building.amenities.exists or application.apartment.amenities.exists %}
+        <!-- Building Amenities -->
+        {% if application.apartment.building.amenities.exists %}
         <div class="card shadow-sm mb-4">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="fas fa-concierge-bell me-2"></i>Amenities</h5>
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-building me-2 text-warning"></i>Building Amenities</h5>
             </div>
             <div class="card-body">
                 <div class="row g-2">
-                    {% comment %}Building amenities{% endcomment %}
                     {% for amenity in application.apartment.building.amenities.all %}
-                    <div class="col-12">
-                        <div class="d-flex align-items-center p-2 rounded hover-bg-light">
-                            <i class="fas {{ amenity.icon|default:'fa-check' }} me-3 text-primary" style="width: 20px; text-align: center;"></i>
-                            <span>{{ amenity.name }}</span>
+                        {% with priority=application.applicant|get_amenity_priority:amenity %}
+                        <div class="col-12">
+                            <div class="d-flex align-items-center justify-content-between p-2 rounded hover-bg-light">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas {{ amenity.icon|default:'fa-check' }} me-3 text-warning" style="width: 20px; text-align: center;"></i>
+                                    <span>{{ amenity.name }}</span>
+                                </div>
+                                {% if priority > 1 %}
+                                    <span class="badge {{ priority|priority_class }}">{{ priority|priority_label }} Match</span>
+                                {% endif %}
+                            </div>
                         </div>
-                    </div>
+                        {% endwith %}
                     {% endfor %}
-                    
-                    {% comment %}Apartment/Unit amenities{% endcomment %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Apartment Amenities -->
+        {% if application.apartment.amenities.exists %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-home me-2 text-warning"></i>Apartment Amenities</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
                     {% for amenity in application.apartment.amenities.all %}
-                    <div class="col-12">
-                        <div class="d-flex align-items-center p-2 rounded hover-bg-light">
-                            <i class="fas {{ amenity.icon|default:'fa-check' }} me-3 text-primary" style="width: 20px; text-align: center;"></i>
-                            <span>{{ amenity.name }}</span>
+                        {% with priority=application.applicant|get_amenity_priority:amenity %}
+                        <div class="col-12">
+                            <div class="d-flex align-items-center justify-content-between p-2 rounded hover-bg-light">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas {{ amenity.icon|default:'fa-check' }} me-3 text-warning" style="width: 20px; text-align: center;"></i>
+                                    <span>{{ amenity.name }}</span>
+                                </div>
+                                {% if priority > 1 %}
+                                    <span class="badge {{ priority|priority_class }}">{{ priority|priority_label }} Match</span>
+                                {% endif %}
+                            </div>
                         </div>
-                    </div>
+                        {% endwith %}
                     {% endfor %}
                 </div>
             </div>
@@ -371,36 +390,36 @@
         {% endif %}
 
         <!-- Building Features -->
-        {% if application.apartment.building.year_built or application.apartment.building.total_units or application.apartment.building.parking_available %}
+        {% if application.apartment.building.walk_score or application.apartment.building.transit_score or application.apartment.building.pet_policy %}
         <div class="card shadow-sm mb-4">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="fas fa-building me-2"></i>Building Features</h5>
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-building me-2 text-warning"></i>Building Features</h5>
             </div>
             <div class="card-body">
                 <div class="row g-2">
-                    {% if application.apartment.building.year_built %}
+                    {% if application.apartment.building.walk_score %}
                     <div class="col-12">
                         <div class="d-flex align-items-center p-2 rounded hover-bg-light">
-                            <i class="fas fa-calendar me-3 text-primary" style="width: 20px; text-align: center;"></i>
-                            <span>Built in {{ application.apartment.building.year_built }}</span>
+                            <i class="fas fa-walking me-3 text-warning" style="width: 20px; text-align: center;"></i>
+                            <span>Walk Score: {{ application.apartment.building.walk_score }}/100</span>
                         </div>
                     </div>
                     {% endif %}
                     
-                    {% if application.apartment.building.total_units %}
+                    {% if application.apartment.building.transit_score %}
                     <div class="col-12">
                         <div class="d-flex align-items-center p-2 rounded hover-bg-light">
-                            <i class="fas fa-door-open me-3 text-primary" style="width: 20px; text-align: center;"></i>
-                            <span>{{ application.apartment.building.total_units }} total units</span>
+                            <i class="fas fa-subway me-3 text-warning" style="width: 20px; text-align: center;"></i>
+                            <span>Transit Score: {{ application.apartment.building.transit_score }}/100</span>
                         </div>
                     </div>
                     {% endif %}
                     
-                    {% if application.apartment.building.parking_available %}
+                    {% if application.apartment.building.pet_policy %}
                     <div class="col-12">
                         <div class="d-flex align-items-center p-2 rounded hover-bg-light">
-                            <i class="fas fa-car me-3 text-primary" style="width: 20px; text-align: center;"></i>
-                            <span>Parking available</span>
+                            <i class="fas fa-paw me-3 text-warning" style="width: 20px; text-align: center;"></i>
+                            <span>Pets: {{ application.apartment.building.get_pet_policy_display }}</span>
                         </div>
                     </div>
                     {% endif %}
@@ -410,52 +429,55 @@
         {% endif %}
 
         <!-- Additional Photos -->
-        {% if application.apartment.building.images.count > 1 %}
+        {% with bldg_images=application.apartment.building.images.all %}
+        {% if bldg_images.count > 1 %}
         <div class="card shadow-sm mb-4">
-            <div class="card-header bg-white">
+            <div class="card-header">
                 <h5 class="mb-0"><i class="fas fa-images me-2"></i>Property Gallery</h5>
             </div>
             <div class="card-body">
                 <div class="row g-2">
-                    {% for image in application.apartment.building.images.all|slice:":4" %}
+                    {% for image in bldg_images|slice:":4" %}
                     <div class="col-6">
                         <img src="{{ image.thumbnail_url }}" class="img-fluid rounded w-100" alt="Property Image" 
-                             style="height: 100px; object-fit: cover;">
+                             style="height: 100px; object-fit: cover;"
+                             onerror="this.src='{{ application.apartment.id|get_fallback_image }}';this.onerror=null;">
                     </div>
                     {% endfor %}
                 </div>
-                {% if application.apartment.building.images.count > 4 %}
+                {% if bldg_images.count > 4 %}
                 <p class="text-center mb-0 mt-2">
-                    <small class="text-muted">+{{ application.apartment.building.images.count|add:"-4" }} more photos</small>
+                    <small class="text-muted">+{{ bldg_images.count|add:"-4" }} more photos</small>
                 </p>
                 {% endif %}
             </div>
         </div>
         {% endif %}
+        {% endwith %}
         {% endif %}
 
         <!-- Contact Information -->
         {% if not is_preview %}
         <div class="card shadow-sm mb-4">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="fas fa-question-circle me-2"></i>Need Help?</h5>
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-question-circle me-2 text-warning"></i>Need Help?</h5>
             </div>
             <div class="card-body">
                 <p class="mb-3 text-muted small">If you have questions about this application:</p>
                 <ul class="list-unstyled mb-0">
                     {% if application.broker %}
                     <li class="mb-2">
-                        <i class="fas fa-user-tie me-2 text-primary"></i>
+                        <i class="fas fa-user-tie me-2 text-warning"></i>
                         Contact your broker: 
                         <a href="mailto:{{ application.broker.email }}" class="text-decoration-none">{{ application.broker.email }}</a>
                     </li>
                     {% endif %}
                     <li class="mb-2">
-                        <i class="fas fa-save me-2 text-primary"></i>
+                        <i class="fas fa-save me-2 text-warning"></i>
                         Save your progress and complete sections at your own pace
                     </li>
                     <li class="mb-0">
-                        <i class="fas fa-lock me-2 text-primary"></i>
+                        <i class="fas fa-lock me-2 text-warning"></i>
                         All information is securely encrypted and protected
                     </li>
                 </ul>
@@ -469,26 +491,37 @@
 {% block extra_js %}
 <script>
 function toggleDescription() {
-    const description = document.getElementById('propertyDescription');
+    const aptDesc = document.getElementById('propertyDescription');
+    const bldgDesc = document.getElementById('buildingDescription');
     const button = document.getElementById('showMoreBtn');
     
-    if (description.style.maxHeight === 'none') {
-        description.style.maxHeight = '150px';
+    let isExpanded = false;
+    if (aptDesc && aptDesc.style.maxHeight === 'none') isExpanded = true;
+    if (bldgDesc && bldgDesc.style.maxHeight === 'none') isExpanded = true;
+    
+    if (isExpanded) {
+        if (aptDesc) aptDesc.style.maxHeight = '150px';
+        if (bldgDesc) bldgDesc.style.maxHeight = '150px';
         button.innerHTML = '<i class="fas fa-chevron-down me-1"></i>Show More';
     } else {
-        description.style.maxHeight = 'none';
+        if (aptDesc) aptDesc.style.maxHeight = 'none';
+        if (bldgDesc) bldgDesc.style.maxHeight = 'none';
         button.innerHTML = '<i class="fas fa-chevron-up me-1"></i>Show Less';
     }
 }
 
 // On page load, check if Show More button is needed
 document.addEventListener('DOMContentLoaded', function() {
-    const description = document.getElementById('propertyDescription');
+    const aptDesc = document.getElementById('propertyDescription');
+    const bldgDesc = document.getElementById('buildingDescription');
     const button = document.getElementById('showMoreBtn');
     
-    if (description && button) {
-        // If content doesn't overflow, hide the button
-        if (description.scrollHeight <= 150) {
+    if (button) {
+        let needsButton = false;
+        if (aptDesc && aptDesc.scrollHeight > 150) needsButton = true;
+        if (bldgDesc && bldgDesc.scrollHeight > 150) needsButton = true;
+        
+        if (!needsButton) {
             button.style.display = 'none';
         }
     }

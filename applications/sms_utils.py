@@ -110,7 +110,7 @@ def send_application_link_sms(to_phone: str, application) -> Tuple[bool, str]:
             property_info += f" - Unit {application.get_unit_display()}"
     
     # SMS template (keep under 160 characters for single SMS)
-    message = f"DoorWay: Complete your application for {property_info}. Link: {application_url}"
+    message = f"{settings.SITE_NAME}: Complete your application for {property_info}. Link: {application_url}"
     
     return sms_backend.send_sms(to_phone, message)
 
@@ -130,7 +130,7 @@ def send_test_sms(to_phone: str) -> Tuple[bool, str]:
     if not sms_backend.enabled:
         return False, "SMS service not configured"
     
-    message = "This is a test SMS from DoorWay. If you received this, SMS is working!"
+    message = f"This is a test SMS from {settings.SITE_NAME}. If you received this, SMS is working!"
     
     return sms_backend.send_sms(to_phone, message)
 

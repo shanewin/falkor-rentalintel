@@ -29,14 +29,7 @@ def broker_progressive_profile(request):
         # Only basic fields are required - most are optional like applicant profile
         broker_profile = BrokerProfile.objects.create(
             user=request.user,
-            first_name='',
-            last_name='',
-            phone_number='',
             professional_email=request.user.email,  # Preload with account email
-            business_name='',
-            business_address_1='',
-            business_city='',
-            business_zip='',
             broker_license_number=f'TEMP-{request.user.id}',  # Temporary unique value
             license_state='NY',
             job_title='Real Estate Broker',
@@ -134,9 +127,6 @@ def owner_progressive_profile(request):
         # Create owner profile if it doesn't exist
         owner_profile = OwnerProfile.objects.create(
             user=request.user,
-            first_name='',
-            last_name='',
-            primary_phone='',
             address_1='',
             city='',
             zip_code='',
@@ -214,8 +204,6 @@ def staff_progressive_profile(request):
         # Create staff profile if it doesn't exist
         staff_profile = StaffProfile.objects.create(
             user=request.user,
-            first_name='',
-            last_name='',
             office_phone='',
             department='admin',
             job_title='',
@@ -431,9 +419,6 @@ def admin_progressive_profile(request):
         # Create admin profile if it doesn't exist
         admin_profile = AdminProfile.objects.create(
             user=request.user,
-            first_name='',
-            last_name='',
-            phone_number='',
             title='System Administrator',
             admin_level='system',
             responsibilities=''

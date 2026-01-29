@@ -128,13 +128,13 @@ class PhoneVerificationService:
             
             # Compose message based on purpose
             if purpose == "verification":
-                message = f"Your DoorWay verification code is: {otp_code}\n\nThis code expires in {self.OTP_EXPIRY_MINUTES} minutes."
+                message = f"Your {settings.SITE_NAME} verification code is: {otp_code}\n\nThis code expires in {self.OTP_EXPIRY_MINUTES} minutes."
             elif purpose == "2fa":
-                message = f"Your DoorWay login code is: {otp_code}\n\nDo not share this code with anyone."
+                message = f"Your {settings.SITE_NAME} login code is: {otp_code}\n\nDo not share this code with anyone."
             elif purpose == "password_reset":
-                message = f"Your DoorWay password reset code is: {otp_code}\n\nIf you didn't request this, please ignore."
+                message = f"Your {settings.SITE_NAME} password reset code is: {otp_code}\n\nIf you didn't request this, please ignore."
             else:
-                message = f"Your DoorWay verification code is: {otp_code}"
+                message = f"Your {settings.SITE_NAME} verification code is: {otp_code}"
             
             # Send SMS
             success, result = self.sms_backend.send_sms(formatted_phone, message)

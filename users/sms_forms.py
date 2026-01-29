@@ -4,6 +4,7 @@ Provides TCPA-compliant SMS consent during registration
 """
 
 from django import forms
+from django.conf import settings
 from .models import User
 
 
@@ -108,9 +109,9 @@ class ApplicantRegistrationWithSMSForm(forms.ModelForm, PhoneVerificationMixin):
             'class': 'form-check-input',
             'data-tcpa-consent': 'true'
         }),
-        label="I agree to receive automated text messages from DoorWay",
+        label=f"I agree to receive automated text messages from {settings.SITE_NAME}",
         help_text=(
-            "By checking this box, you consent to receive automated text messages from DoorWay "
+            f"By checking this box, you consent to receive automated text messages from {settings.SITE_NAME} "
             "regarding your rental application. Message frequency varies. Message and data rates may apply. "
             "Text STOP to cancel. Text HELP for help. View our Privacy Policy and Terms of Service."
         )

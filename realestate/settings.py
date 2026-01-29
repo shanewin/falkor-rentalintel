@@ -192,14 +192,28 @@ cloudinary.config(
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STORAGES = {
-    "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
-}
+# Storage configuration for static and media files
+if DEBUG:
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+else:
+    STORAGES = {
+        "default": {
+            "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+
+# Prevent app crash if a static file is missing from manifest
+WHITENOISE_MANIFEST_STRICT = False
 
 STATICFILES_DIRS = [
     BASE_DIR / 'static',       # Global static assets (css/doorway-theme.css)
@@ -211,17 +225,14 @@ STATICFILES_DIRS = [
 ]
 
 
-if DEBUG:
-    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage' 
-else:
-    STATICFILES_STORAGE = 'cloudinary_storage.storage.StaticHashedCloudinaryStorage'
+# Note: STATICFILES_STORAGE is deprecated in favor of STORAGES['staticfiles']
+# Similarly DEFAULT_FILE_STORAGE is deprecated in favor of STORAGES['default']
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 
-# Cloudinary media storage
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+# Cloudinary media storage is now handled in the STORAGES dictionary above
 
 AUTH_USER_MODEL = 'users.User'
 
@@ -247,20 +258,10 @@ EMAIL_SERVICE = config('EMAIL_SERVICE', default='console')
 SENDGRID_API_KEY = config('SENDGRID_API_KEY', default='')
 SENDGRID_FROM_EMAIL = config('SENDGRID_FROM_EMAIL', default='')
 
-# Mailgun Configuration  
-MAILGUN_API_KEY = config('MAILGUN_API_KEY', default='')
-MAILGUN_DOMAIN = config('MAILGUN_DOMAIN', default='')
-
-# Amazon SES Configuration
-AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', default='')
-AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', default='')
-AWS_SES_REGION = config('AWS_SES_REGION', default='us-east-1')
-AWS_SES_FROM_EMAIL = config('AWS_SES_FROM_EMAIL', default='')
-
 # General Email Settings
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='DoorWay <noreply@doorway.com>')
-SITE_NAME = config('SITE_NAME', default='DoorWay')
-REPLY_TO_EMAIL = config('REPLY_TO_EMAIL', default='support@doorway.com')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Falkor <info@rentfalkor.com>')
+SITE_NAME = config('SITE_NAME', default='Falkor')
+REPLY_TO_EMAIL = config('REPLY_TO_EMAIL', default='info@rentfalkor.com')
 
 # Auto-select email backend based on service configuration
 def get_email_backend():

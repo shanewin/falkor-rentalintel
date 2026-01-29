@@ -18,7 +18,7 @@ def get_filtered_apartments(request, user):
         auto_applied (bool): Whether preferences were auto-applied
     """
     # Start with all apartments - optimized query with related data
-    apartments = Apartment.objects.all().select_related('building').prefetch_related('images', 'building__amenities')
+    apartments = Apartment.objects.all().select_related('building').prefetch_related('images', 'building__amenities', 'amenities', 'availability_calendar')
     
     # Business Logic: Auto-populate filters from applicant preferences
     auto_applied_preferences = False
@@ -426,7 +426,7 @@ We've forwarded your {'tour request' if contact_type == 'request_tour' else 'que
 If you have any other questions, please don't hesitate to reach out.
 
 Best regards,
-DoorWay Team
+{settings.SITE_NAME} Team
         """
         
         send_mail(

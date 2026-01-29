@@ -103,6 +103,29 @@
     .filter-chip .btn-close-chip:hover {
         color: #dc3545;
     }
+
+    /* Modern Dropdown Search \u0026 Scroll */
+    .filter-search-container {
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 10;
+    }
+    .filter-scroll-container {
+        max-height: 300px;
+        overflow-y: auto;
+        padding: 5px 10px;
+    }
+    .filter-active-indicator {
+        width: 8px;
+        height: 8px;
+        background-color: #ffd60a;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
 </style>
 {% endblock %}
 
@@ -189,14 +212,21 @@
                             {% if selected_neighborhoods %}<span class="filter-active-indicator"></span>{% endif %}
                             Neighborhoods
                         </button>
-                        <div class="dropdown-menu" style="max-height: 400px; overflow-y: auto;">
-                            <h6 class="dropdown-header px-0 mb-2 fw-bold text-dark">Neighborhoods</h6>
-                            {% for value, label in neighborhood_choices %}
-                            <div class="form-check py-1">
-                                <input class="form-check-input" type="checkbox" name="neighborhoods" value="{{ value }}" id="n-{{ value }}" {% if value in selected_neighborhoods %}checked{% endif %}>
-                                <label class="form-check-label small" for="n-{{ value }}">{{ label }}</label>
+                        <div class="dropdown-menu shadow-lg border-0 p-0" style="min-width: 250px;">
+                            <div class="filter-search-container">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                                    <input type="text" class="form-control border-start-0 dropdown-filter-search" placeholder="Search neighborhoods..." data-target="neighborhood-list">
+                                </div>
                             </div>
-                            {% endfor %}
+                            <div class="filter-scroll-container" id="neighborhood-list">
+                                {% for value, label in neighborhood_choices %}
+                                <div class="form-check py-1 filter-item" data-label="{{ label|lower }}">
+                                    <input class="form-check-input" type="checkbox" name="neighborhoods" value="{{ value }}" id="n-{{ value }}" {% if value in selected_neighborhoods %}checked{% endif %}>
+                                    <label class="form-check-label small" for="n-{{ value }}">{{ label }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
                         </div>
                     </div>
 
@@ -206,14 +236,65 @@
                             {% if selected_amenities %}<span class="filter-active-indicator"></span>{% endif %}
                             Amenities
                         </button>
-                        <div class="dropdown-menu" style="max-height: 400px; overflow-y: auto;">
-                            <h6 class="dropdown-header px-0 mb-2 fw-bold text-dark">Amenities</h6>
-                            {% for amenity in all_amenities %}
-                            <div class="form-check py-1">
-                                <input class="form-check-input" type="checkbox" name="amenities" value="{{ amenity.id }}" id="a-{{ amenity.id }}" {% if amenity.id|stringformat:"i" in selected_amenities %}checked{% endif %}>
-                                <label class="form-check-label small" for="a-{{ amenity.id }}">{{ amenity.name }}</label>
+                        <div class="dropdown-menu shadow-lg border-0 p-0" style="min-width: 250px;">
+                            <div class="filter-search-container">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                                    <input type="text" class="form-control border-start-0 dropdown-filter-search" placeholder="Search amenities..." data-target="amenity-list">
+                                </div>
                             </div>
-                            {% endfor %}
+                            <div class="filter-scroll-container" id="amenity-list">
+                                {% for amenity in all_amenities %}
+                                <div class="form-check py-1 filter-item" data-label="{{ amenity.name|lower }}">
+                                    <input class="form-check-input" type="checkbox" name="amenities" value="{{ amenity.id }}" id="a-{{ amenity.id }}" {% if amenity.id|stringformat:"i" in selected_amenities %}checked{% endif %}>
+                                    <label class="form-check-label small" for="a-{{ amenity.id }}">{{ amenity.name }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pets Dropdown -->
+                    <div class="dropdown filter-dropdown">
+                        <button class="dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+                            {% if pets_allowed_checked %}<span class="filter-active-indicator"></span>{% endif %}
+                            Pets
+                        </button>
+                        <div class="dropdown-menu shadow-lg border-0 p-3" style="min-width: 200px;">
+                            <div class="form-check py-1">
+                                <input class="form-check-input" type="checkbox" name="pets_allowed" value="1" id="petsAllowed" {% if pets_allowed_checked %}checked{% endif %}>
+                                <label class="form-check-label small fw-bold" for="petsAllowed">Pets Allowed</label>
+                                <p class="text-muted small mb-0 mt-1">Show properties that allow cats or dogs.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Availability Dropdown -->
+                    <div class="dropdown filter-dropdown">
+                        <button class="dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+                            {% if request.GET.move_in_date %}<span class="filter-active-indicator"></span>{% endif %}
+                            Availability
+                        </button>
+                        <div class="dropdown-menu shadow-lg border-0 p-3" style="min-width: 220px;">
+                            <h6 class="dropdown-header px-0 mb-2 fw-bold text-dark">Move-in Date</h6>
+                            <div class="d-flex flex-column gap-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="move_in_date" id="move-any" value="" {% if not request.GET.move_in_date %}checked{% endif %}>
+                                    <label class="form-check-label small" for="move-any">Anytime</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="move_in_date" id="move-now" value="available_now" {% if request.GET.move_in_date == 'available_now' %}checked{% endif %}>
+                                    <label class="form-check-label small" for="move-now">Available Now</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="move_in_date" id="move-30" value="within_30" {% if request.GET.move_in_date == 'within_30' %}checked{% endif %}>
+                                    <label class="form-check-label small" for="move-30">Within 30 Days</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="move_in_date" id="move-60" value="within_60" {% if request.GET.move_in_date == 'within_60' %}checked{% endif %}>
+                                    <label class="form-check-label small" for="move-60">Within 60 Days</label>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -222,21 +303,21 @@
                     </div>
                 </div>
             </form>
-        </div>
-    </div>
-
-    <!-- Active Filter Chips -->
-    <div class="row px-lg-3">
-        <div class="col-12">
-            <div id="activeFilters" class="filter-chips">
-                {% if active_filters %}
-                    {% for filter in active_filters %}
-                    <div class="filter-chip shadow-sm" data-field="{{ filter.field }}" data-value="{{ filter.value }}">
-                        {{ filter.label }}
-                        <span class="btn-close-chip"><i class="fas fa-times"></i></span>
+            
+            <!-- Active Filter Chips (Moved inside filter bar) -->
+            <div class="row mt-2">
+                <div class="col-12">
+                    <div id="activeFilters" class="filter-chips pb-2">
+                        {% if active_filters %}
+                            {% for filter in active_filters %}
+                            <div class="filter-chip shadow-sm" data-field="{{ filter.field }}" data-value="{{ filter.value }}">
+                                {{ filter.label }}
+                                <span class="btn-close-chip"><i class="fas fa-times"></i></span>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
                     </div>
-                    {% endfor %}
-                {% endif %}
+                </div>
             </div>
         </div>
     </div>
@@ -579,9 +660,37 @@
         // Initialize currency inputs
         filterForm.querySelectorAll('.currency-input').forEach(setupCurrencyInput);
 
+        // --- NEW: Dropdown Search Functionality ---
+        const searchInputs = document.querySelectorAll('.dropdown-filter-search');
+        searchInputs.forEach(input => {
+            input.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                const targetId = e.target.dataset.target;
+                const container = document.getElementById(targetId);
+                const items = container.querySelectorAll('.filter-item');
+
+                items.forEach(item => {
+                    const label = item.dataset.label;
+                    if (label.includes(searchTerm)) {
+                        item.classList.remove('d-none');
+                    } else {
+                        item.classList.add('d-none');
+                    }
+                });
+            });
+            
+            // Prevent dropdown from closing when clicking in search
+            input.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+        });
+
         // Handle togglable radio buttons (Bedrooms/Bathrooms)
         // Standard radio buttons don't allow deselection, so we add a click listener
         filterForm.querySelectorAll('input[type="radio"]').forEach(radio => {
+            // Skip move_in_date radios as they have an explicit "Anytime" option
+            if (radio.name === 'move_in_date') return;
+
             radio.addEventListener('click', (e) => {
                 // If it was already checked, uncheck it
                 if (radio.dataset.wasChecked === 'true') {
@@ -607,7 +716,7 @@
         // Listen for all input changes in the filter form
         // Using 'change' is generally more reliable for checkboxes and radios
         filterForm.addEventListener('change', (e) => {
-            if (e.target.type !== 'number' && e.target.type !== 'text') {
+            if (e.target.type !== 'number' && e.target.type !== 'text' && !e.target.classList.contains('dropdown-filter-search')) {
                 console.log('Filter change triggered:', e.target.name, e.target.value);
                 performSearch();
             }
@@ -615,7 +724,7 @@
 
         // For text/number inputs, we want 'input' with debouncing
         filterForm.addEventListener('input', (e) => {
-            if ((e.target.type === 'number' || e.target.type === 'text') && !e.target.classList.contains('currency-input')) {
+            if ((e.target.type === 'number' || e.target.type === 'text') && !e.target.classList.contains('currency-input') && !e.target.classList.contains('dropdown-filter-search')) {
                 console.log('Filter input triggered (debounced):', e.target.name, e.target.value);
                 debouncedSearch();
             }
@@ -624,6 +733,12 @@
         // Prevention of form submission (though the button is gone, enter key might trigger it)
         filterForm.addEventListener('submit', (e) => {
             e.preventDefault();
+            
+            // Don't trigger main search if focusing on dropdown search
+            if (document.activeElement.classList.contains('dropdown-filter-search')) {
+                return; 
+            }
+            
             performSearch();
         });
 
@@ -678,6 +793,12 @@
                         input.checked = false;
                         if (input.type === 'radio') {
                             input.dataset.wasChecked = 'false';
+                            
+                            // Special handling for move_in_date: reset to 'Anytime' (empty value)
+                            if (field === 'move_in_date') {
+                                const anyOption = filterForm.querySelector('input[name="move_in_date"][value=""]');
+                                if (anyOption) anyOption.checked = true;
+                            }
                         }
                     } else {
                         input.value = '';

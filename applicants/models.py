@@ -249,8 +249,10 @@ class Applicant(models.Model):
     number_of_bathrooms = models.DecimalField(max_digits=3, decimal_places=1, default=1.0, blank=True, null=True)
     max_rent_budget = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     open_to_roommates = models.BooleanField(null=True, blank=True)
+    has_pets = models.BooleanField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
+
     updated_at = models.DateTimeField(auto_now=True)
 
     assigned_broker = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
@@ -335,54 +337,57 @@ class Applicant(models.Model):
     
     def get_field_completion_status(self):
         """
-        Calculates profile completeness with weighted fields and context awareness.
-        Weights:
-        - Critical Overlap (10 pts): Critical for both Match and Insights algorithms.
-        - Strategic (8 pts): High importance for one algorithm.
-        - Core Info (5 pts): Basic identity and contact.
-        - Stability (3 pts): Optional but helpful history.
-        - Bonus (1 pt): Small details.
+        Calculates a weighted completion status for each step of the profile.
+        Used primarily for UI progress bars and guiding the applicant.
         """
-        
         def is_filled(value):
-            """Check if a field has meaningful content"""
             if value is None:
                 return False
             if isinstance(value, str):
                 return bool(value.strip())
             if isinstance(value, bool):
-                return True # Boolean fields themselves are data
+                return True  # Both True and False are "filled" (explicit choices)
             return bool(value)
         
-        # Define field configuration with Step Mapping and Weights
-        # Step 1: Basic & Contact
-        # Step 2: Housing Needs & Preferences
-        # Step 3: Employment & Student Info
-        
+        # Step 1: Personal Info & History
         field_configs = {
-            # Step 1: Basic Information
-            'first_name': {'step': 1, 'weight': 5, 'label': 'First Name', 'value': self.first_name},
-            'last_name': {'step': 1, 'weight': 5, 'label': 'Last Name', 'value': self.last_name},
-            'email': {'step': 1, 'weight': 5, 'label': 'Email', 'value': self.email},
-            'phone_number': {'step': 1, 'weight': 5, 'label': 'Phone Number', 'value': self.phone_number},
+            # Identity & Contact (33% of Step 1)
+            'first_name': {'step': 1, 'weight': 10, 'label': 'First Name', 'value': self.first_name},
+            'last_name': {'step': 1, 'weight': 10, 'label': 'Last Name', 'value': self.last_name},
+            'email': {'step': 1, 'weight': 8, 'label': 'Email', 'value': self.email},
+            'phone_number': {'step': 1, 'weight': 8, 'label': 'Phone Number', 'value': self.phone_number},
             'date_of_birth': {'step': 1, 'weight': 5, 'label': 'Date of Birth', 'value': self.date_of_birth},
-            'street_address_1': {'step': 1, 'weight': 3, 'label': 'Current Street Address', 'value': self.street_address_1},
-            'city': {'step': 1, 'weight': 3, 'label': 'City', 'value': self.city},
-            'state': {'step': 1, 'weight': 3, 'label': 'State', 'value': self.state},
-            'zip_code': {'step': 1, 'weight': 3, 'label': 'Zip Code', 'value': self.zip_code},
-            'emergency_contact_name': {'step': 1, 'weight': 3, 'label': 'Emergency Contact', 'value': self.emergency_contact_name},
+            'profile_photo': {'step': 1, 'weight': 5, 'label': 'Profile Photo', 'value': True if self.photos.exists() else None},
+            'emergency_contact_name': {'step': 1, 'weight': 4, 'label': 'Emergency Contact Name', 'value': self.emergency_contact_name},
+            'emergency_contact_phone': {'step': 1, 'weight': 4, 'label': 'Emergency Contact Phone', 'value': self.emergency_contact_phone},
             
-            # Step 2: Housing Preferences (High Weight for Match Algorithm)
-            'max_rent_budget': {'step': 2, 'weight': 10, 'label': 'Max Rent Budget', 'value': self.max_rent_budget},
-            'desired_move_in_date': {'step': 2, 'weight': 10, 'label': 'Desired Move-in Date', 'value': self.desired_move_in_date},
-            'min_bedrooms': {'step': 2, 'weight': 8, 'label': 'Minimum Bedrooms', 'value': self.min_bedrooms},
-            'neighborhood_preferences': {'step': 2, 'weight': 8, 'label': 'Neighborhood Preferences', 'value': self.neighborhood_preferences.exists()},
-            'pets': {'step': 2, 'weight': 8, 'label': 'Pet Information', 'value': self.pets.exists()},
-            'min_bathrooms': {'step': 2, 'weight': 5, 'label': 'Minimum Bathrooms', 'value': self.min_bathrooms},
-            'amenities': {'step': 2, 'weight': 3, 'label': 'Amenity Preferences', 'value': self.amenities.exists()},
+            # Housing & History (67% of Step 1)
+            'street_address_1': {'step': 1, 'weight': 10, 'label': 'Street Address', 'value': self.street_address_1},
+            'city': {'step': 1, 'weight': 6, 'label': 'City', 'value': self.city},
+            'state': {'step': 1, 'weight': 4, 'label': 'State', 'value': self.state},
+            'zip_code': {'step': 1, 'weight': 4, 'label': 'Zip Code', 'value': self.zip_code},
+            'housing_status': {'step': 1, 'weight': 6, 'label': 'Housing Status', 'value': self.housing_status},
+            'evicted_before': {'step': 1, 'weight': 6, 'label': 'Eviction History', 'value': self.evicted_before},
+            'reason_for_moving': {'step': 1, 'weight': 5, 'label': 'Reason for Moving', 'value': self.reason_for_moving},
+            'previous_addresses': {'step': 1, 'weight': 10, 'label': 'Address History', 'value': True if self.previous_addresses.exists() else None},
+            'identification_documents': {'step': 1, 'weight': 10, 'label': 'ID Documents', 'value': True if self.identification_documents.exists() else None},
             
-            # Step 3: Income & Employment (High Weight for Insights Algorithm)
-            'employment_status': {'step': 3, 'weight': 10, 'label': 'Employment Status', 'value': self.employment_status},
+            # Step 2: Housing Needs (The Matching Core)
+            'desired_move_in_date': {'step': 2, 'weight': 15, 'label': 'Desired Move-in Date', 'value': self.desired_move_in_date},
+            'max_rent_budget': {'step': 2, 'weight': 15, 'label': 'Max Rent Budget', 'value': self.max_rent_budget},
+            'min_bedrooms': {'step': 2, 'weight': 10, 'label': 'Min Bedrooms', 'value': self.min_bedrooms},
+            'max_bedrooms': {'step': 2, 'weight': 8, 'label': 'Max Bedrooms', 'value': self.max_bedrooms},
+            'min_bathrooms': {'step': 2, 'weight': 8, 'label': 'Min Bathrooms', 'value': self.min_bathrooms},
+            'max_bathrooms': {'step': 2, 'weight': 5, 'label': 'Max Bathrooms', 'value': self.max_bathrooms},
+            'open_to_roommates': {'step': 2, 'weight': 8, 'label': 'Roommate Preference', 'value': self.open_to_roommates},
+            'pets': {'step': 2, 'weight': 8, 'label': 'Pet Information', 'value': self.has_pets if self.has_pets is not None else (True if self.pets.exists() else None)},
+            'neighborhood_preferences': {'step': 2, 'weight': 15, 'label': 'Neighborhood Preferences', 'value': True if self.neighborhood_preferences.exists() else None},
+            'amenities': {'step': 2, 'weight': 10, 'label': 'Amenity Preferences', 'value': True if self.amenities.exists() else None},
+            
+            # Step 3: Employment & Financial
+            'employment_status': {'step': 3, 'weight': 15, 'label': 'Employment Status', 'value': self.employment_status},
+            'income_sources': {'step': 3, 'weight': 10, 'label': 'Additional Income', 'value': True if self.income_sources.exists() else None},
+            'assets': {'step': 3, 'weight': 10, 'label': 'Financial Assets', 'value': True if self.assets.exists() else None},
         }
 
         # Context-Aware Logic for Step 3
@@ -391,37 +396,43 @@ class Applicant(models.Model):
 
         if is_employed:
             field_configs.update({
-                'company_name': {'step': 3, 'weight': 8, 'label': 'Company Name', 'value': self.company_name},
-                'annual_income': {'step': 3, 'weight': 10, 'label': 'Annual Income', 'value': self.annual_income},
-                'employment_start_date': {'step': 3, 'weight': 5, 'label': 'Employment Start Date', 'value': self.employment_start_date},
+                'company_name': {'step': 3, 'weight': 12, 'label': 'Company Name', 'value': self.company_name},
+                'position': {'step': 3, 'weight': 12, 'label': 'Position', 'value': self.position},
+                'annual_income': {'step': 3, 'weight': 15, 'label': 'Annual Income', 'value': self.annual_income},
+                'supervisor_name': {'step': 3, 'weight': 8, 'label': 'Supervisor Name', 'value': self.supervisor_name},
+                'currently_employed': {'step': 3, 'weight': 8, 'label': 'Employment Status (Current)', 'value': self.currently_employed},
+                'employment_start_date': {'step': 3, 'weight': 10, 'label': 'Employment Start Date', 'value': self.employment_start_date},
             })
         elif is_student:
             field_configs.update({
-                'school_name': {'step': 3, 'weight': 8, 'label': 'School Name', 'value': self.school_name},
-                'year_of_graduation': {'step': 3, 'weight': 5, 'label': 'Expected Graduation', 'value': self.year_of_graduation},
+                'school_name': {'step': 3, 'weight': 15, 'label': 'School Name', 'value': self.school_name},
+                'year_of_graduation': {'step': 3, 'weight': 15, 'label': 'Expected Graduation', 'value': self.year_of_graduation},
+                'school_phone': {'step': 3, 'weight': 10, 'label': 'School Phone', 'value': self.school_phone},
+                'school_address': {'step': 3, 'weight': 10, 'label': 'School Address', 'value': self.school_address},
             })
         
-        # Add Related Lists (counted as single items in their respective steps)
-        # Housing History (Step 1)
-        field_configs['previous_addresses'] = {
-            'step': 1, 'weight': 3, 'label': 'Rental History', 'value': self.previous_addresses.exists()
+        # Step Definitions for UI Category Display
+        steps = {
+            1: {'name': 'Personal Info', 'score': 0, 'max': 0, 'missing': [], 'missing_details': []}, 
+            2: {'name': 'Housing Needs', 'score': 0, 'max': 0, 'missing': [], 'missing_details': []}, 
+            3: {'name': 'Employment', 'score': 0, 'max': 0, 'missing': [], 'missing_details': []}
         }
-        
-        # Start Processing
-        steps = {1: {'score': 0, 'max': 0, 'missing': []}, 
-                 2: {'score': 0, 'max': 0, 'missing': []}, 
-                 3: {'score': 0, 'max': 0, 'missing': []}}
         
         for field, config in field_configs.items():
             step_num = config['step']
             weight = config['weight']
+            label = config['label']
             filled = is_filled(config['value'])
             
             steps[step_num]['max'] += weight
             if filled:
                 steps[step_num]['score'] += weight
             else:
-                steps[step_num]['missing'].append(config['label'])
+                steps[step_num]['missing'].append(label)
+                steps[step_num]['missing_details'].append({
+                    'key': field,
+                    'label': label
+                })
         
         # Calculate percentages and totals
         total_score = sum(s['score'] for s in steps.values())
@@ -437,9 +448,14 @@ class Applicant(models.Model):
             'steps': steps,
             'is_student': is_student,
             'is_employed': is_employed,
-            # Maintain backward compatibility for keys expected by current views/templates
-            'overall': {'overall_completion_percentage': overall_pct},
         }
+
+    def get_profile_completion_score(self):
+        """
+        Backward compatibility wrapper. 
+        DEPRECATED: Use get_field_completion_status()['overall_completion_percentage'] instead.
+        """
+        return self.get_field_completion_status()['overall_completion_percentage']
     
     def calculate_total_income(self):
         """
@@ -459,33 +475,6 @@ class Applicant(models.Model):
                 total += source.average_annual_income
         
         return total
-    
-    def get_profile_completion_score(self):
-        """
-        Calculate profile completion percentage
-        Business Value: Higher completion = faster approval process
-        """
-        fields_to_check = [
-            'first_name', 'last_name', 'email', 'phone_number', 'date_of_birth',
-            'street_address_1', 'city', 'state', 'zip_code',
-            'min_bedrooms', 'max_bedrooms',
-            'max_rent_budget'
-        ]
-        
-        filled = sum(1 for field in fields_to_check if getattr(self, field, None))
-        total = len(fields_to_check)
-        
-        # Add bonus points for employment info
-        if self.jobs.filter(currently_employed=True).exists():
-            filled += 2
-            total += 2
-        
-        # Add bonus for preferences
-        if self.neighborhood_preferences.exists():
-            filled += 1
-            total += 1
-        
-        return round((filled / total) * 100) if total > 0 else 0
 
 
 

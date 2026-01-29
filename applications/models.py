@@ -93,6 +93,10 @@ class Application(models.Model):
     revoked_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='revoked_applications')
     revocation_reason = models.CharField(max_length=200, blank=True, null=True)
     revocation_notes = models.TextField(blank=True, null=True)
+    
+    # Payment tracking (Application level)
+    payment_completed = models.BooleanField(default=False)
+    payment_completed_at = models.DateTimeField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
         """Ensure that required_documents only contains valid choices"""
@@ -236,17 +240,26 @@ class PersonalInfoData(models.Model):
     # Contact
     email = models.EmailField(blank=True, null=True)
     phone_cell = models.CharField(max_length=20, blank=True, null=True)
-    can_receive_sms = models.BooleanField(default=True)
     
     # Personal details (SSN is encrypted)
     date_of_birth = models.DateField(blank=True, null=True)
     ssn = EncryptedCharField(max_length=11, blank=True, null=True)  # Encrypted SSN field
     
     # Current address
-    current_address = models.CharField(max_length=255, blank=True, null=True)
-    apt_unit_number = models.CharField(max_length=50, blank=True, null=True)
-    address_duration = models.CharField(max_length=50, blank=True, null=True)
+    street_address_1 = models.CharField(max_length=255, blank=True, null=True)
+    street_address_2 = models.CharField(max_length=50, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    state = models.CharField(max_length=100, blank=True, null=True)
+    zip_code = models.CharField(max_length=20, blank=True, null=True)
+    
+    current_address_years = models.IntegerField(default=0)
+    current_address_months = models.IntegerField(default=0)
+    
+    # Housing status fields
+    housing_status = models.CharField(max_length=50, blank=True, null=True)
+    current_monthly_rent = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     is_rental_property = models.BooleanField(default=False)
+    reason_for_moving = models.TextField(blank=True, null=True)
     
     # Landlord info
     landlord_name = models.CharField(max_length=100, blank=True, null=True)
@@ -268,19 +281,42 @@ class PersonalInfoData(models.Model):
     reference2_name = models.CharField(max_length=100, blank=True, null=True)
     reference2_phone = models.CharField(max_length=20, blank=True, null=True)
     
-    leasing_agent = models.CharField(max_length=100, blank=True, null=True)
-    
     # Legal history
     has_filed_bankruptcy = models.BooleanField(default=False)
+    bankruptcy_explanation = models.TextField(blank=True, null=True)
     has_criminal_conviction = models.BooleanField(default=False)
-    
-    about_yourself = models.TextField(blank=True, null=True)
-    
-    # Broker pre-fill tracking
-    broker_notes = models.TextField(blank=True, null=True, help_text="Notes about broker pre-filled information")
+    conviction_explanation = models.TextField(blank=True, null=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class Pet(models.Model):
+    PET_CHOICES = [
+        ('Dog', 'Dog'),
+        ('Cat', 'Cat'),
+        ('Bird', 'Bird'),
+        ('Rabbit', 'Rabbit'),
+        ('Reptile', 'Reptile'),
+        ('Other', 'Other'),
+    ]
+
+    personal_info = models.ForeignKey(PersonalInfoData, on_delete=models.CASCADE, related_name='pets')
+    name = models.CharField(max_length=100, blank=True, null=True, help_text="Pet's name")
+    pet_type = models.CharField(max_length=50, choices=PET_CHOICES)
+    quantity = models.PositiveIntegerField(default=1)
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.quantity} {self.pet_type}(s) - Application {self.personal_info.application.id}"
+
+
+class PetPhoto(models.Model):
+    pet = models.ForeignKey(Pet, on_delete=models.CASCADE, related_name='photos')
+    image = CloudinaryField('image')
+
+    def __str__(self):
+        return f"Photo for {self.pet.pet_type} - Application {self.pet.personal_info.application.id}"
 
 
 class PreviousAddress(models.Model):
@@ -296,6 +332,8 @@ class PreviousAddress(models.Model):
     
     # Duration at address
     length_at_address = models.CharField(max_length=50, blank=True, null=True, help_text="How long did you live here?")
+    years = models.IntegerField(null=True, blank=True, help_text="Years at this address")
+    months = models.IntegerField(null=True, blank=True, help_text="Months at this address")
     
     # Housing status and landlord info
     housing_status = models.CharField(
@@ -307,6 +345,7 @@ class PreviousAddress(models.Model):
     landlord_name = models.CharField(max_length=255, blank=True, null=True)
     landlord_phone = models.CharField(max_length=20, blank=True, null=True)
     landlord_email = models.EmailField(blank=True, null=True)
+    monthly_rent = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     
     # Legacy fields for backward compatibility
     address = models.CharField(max_length=255, blank=True, null=True, help_text="Legacy field - use street_address_1 instead")
@@ -326,16 +365,42 @@ class IncomeData(models.Model):
     employment_type = models.CharField(max_length=20, choices=EmploymentType.choices)
     
     # Primary employment
-    company_name = models.CharField(max_length=200)
-    position = models.CharField(max_length=100)
-    annual_income = models.DecimalField(max_digits=10, decimal_places=2)
-    supervisor_name = models.CharField(max_length=100)
-    supervisor_email = models.EmailField()
-    supervisor_phone = models.CharField(max_length=20)
+    employer = models.CharField(max_length=200, blank=True, null=True)
+    job_title = models.CharField(max_length=100, blank=True, null=True)
+    annual_income = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    employment_length = models.CharField(max_length=100, blank=True, null=True)
+    supervisor_name = models.CharField(max_length=100, blank=True, null=True)
+    supervisor_email = models.EmailField(blank=True, null=True)
+    supervisor_phone = models.CharField(max_length=20, blank=True, null=True)
     currently_employed = models.BooleanField(default=True)
-    start_date = models.DateField()
+    start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
     
+    # Student fields
+    school_name = models.CharField(max_length=200, blank=True, null=True)
+    year_of_graduation = models.CharField(max_length=20, blank=True, null=True)
+    school_address = models.CharField(max_length=255, blank=True, null=True)
+    school_phone = models.CharField(max_length=20, blank=True, null=True)
+
+    # Document Uploads (Application ONLY)
+    paystub_1 = models.FileField(upload_to='application_docs/paystubs/', null=True, blank=True)
+    paystub_2 = models.FileField(upload_to='application_docs/paystubs/', null=True, blank=True)
+    paystub_3 = models.FileField(upload_to='application_docs/paystubs/', null=True, blank=True)
+    bank_statement_1 = models.FileField(upload_to='application_docs/bank_statements/', null=True, blank=True)
+    bank_statement_2 = models.FileField(upload_to='application_docs/bank_statements/', null=True, blank=True)
+    
+    # Additional income from template
+    additional_income_source = models.CharField(max_length=100, blank=True, null=True)
+    additional_income_amount = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    proof_of_income = models.FileField(upload_to='application_docs/proof/', null=True, blank=True)
+
+    # Photo ID Rollover (Application ONLY)
+    id_type = models.CharField(max_length=50, blank=True, null=True) # passport, driver_license, state_id
+    id_number = models.CharField(max_length=100, blank=True, null=True)
+    id_state = models.CharField(max_length=50, blank=True, null=True)
+    id_front_image = models.FileField(upload_to='application_docs/id_images/', null=True, blank=True)
+    id_back_image = models.FileField(upload_to='application_docs/id_images/', null=True, blank=True)
+
     # Flags for additional data
     has_multiple_jobs = models.BooleanField(default=False)
     has_additional_income = models.BooleanField(default=False)
@@ -346,29 +411,36 @@ class IncomeData(models.Model):
 
 
 class AdditionalEmployment(models.Model):
-    """For multiple jobs"""
+    """For multiple jobs - synced with ApplicantJob"""
     income_data = models.ForeignKey(IncomeData, on_delete=models.CASCADE, related_name='additional_jobs')
     company_name = models.CharField(max_length=200)
     position = models.CharField(max_length=100)
-    annual_income = models.DecimalField(max_digits=10, decimal_places=2)
-    start_date = models.DateField()
-    is_current = models.BooleanField(default=True)
+    annual_income = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    supervisor_name = models.CharField(max_length=100, blank=True, null=True)
+    supervisor_email = models.EmailField(blank=True, null=True)
+    supervisor_phone = models.CharField(max_length=20, blank=True, null=True)
+    currently_employed = models.BooleanField(default=True)
+    employment_start_date = models.DateField(null=True, blank=True)
+    employment_end_date = models.DateField(null=True, blank=True)
+    job_type = models.CharField(max_length=20, default='employed') # 'employed' or 'student'
 
 
 class AdditionalIncome(models.Model):
-    """For non-employment income sources"""
+    """For non-employment income sources - synced with ApplicantIncomeSource"""
     income_data = models.ForeignKey(IncomeData, on_delete=models.CASCADE, related_name='additional_income')
-    source_type = models.CharField(max_length=50)  # 'investment', 'rental', 'alimony', etc
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    description = models.TextField()
+    income_source = models.CharField(max_length=255)
+    average_annual_income = models.DecimalField(max_digits=12, decimal_places=2)
+    source_type = models.CharField(max_length=50, default='other')
+    description = models.TextField(blank=True, null=True)
 
 
 class AssetInfo(models.Model):
-    """For tracking assets"""
+    """For tracking assets - synced with ApplicantAsset"""
     income_data = models.ForeignKey(IncomeData, on_delete=models.CASCADE, related_name='assets')
-    asset_type = models.CharField(max_length=50)  # 'savings', 'stocks', 'property', etc
-    value = models.DecimalField(max_digits=12, decimal_places=2)
-    description = models.TextField()
+    asset_name = models.CharField(max_length=255)
+    account_balance = models.DecimalField(max_digits=12, decimal_places=2)
+    asset_type = models.CharField(max_length=50, default='other')
+    description = models.TextField(blank=True, null=True)
 
 
 class LegalDocuments(models.Model):

@@ -51,6 +51,22 @@
         <p class="card-text text-muted small mb-2">
             Unit {{ apartment.unit_number }} • {{ apartment.bedrooms|floatformat:0 }} bed / {{ apartment.bathrooms|floatformat:1 }} bath
         </p>
+
+        <!-- Availability Status -->
+        {% now "Y-m-d" as todays_date %}
+        {% with availability=apartment.availability_calendar.all.0 %}
+            <div class="mb-2">
+                {% if availability and availability.available_date|date:"Y-m-d" > todays_date %}
+                    <span class="badge bg-white text-dark border shadow-sm fw-normal">
+                        <i class="far fa-calendar-alt me-1 text-muted"></i>Available {{ availability.available_date|date:"M j" }}
+                    </span>
+                {% elif apartment.status == 'available' %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle fw-normal">
+                        <i class="fas fa-check-circle me-1"></i>Available Now
+                    </span>
+                {% endif %}
+            </div>
+        {% endwith %}
         
         <!-- Detailed Match Logic - Only if match data exists -->
         {% if match %}
@@ -94,6 +110,18 @@
             </div>
         </div>
         {% endif %}
+
+        <!-- Amenities Pills -->
+        <div class="d-flex flex-wrap gap-1 mt-3">
+            {% for amenity in apartment.amenities.all|slice:":3" %}
+                <span class="badge bg-light text-dark border fw-normal py-1 px-2" style="font-size: 0.75rem;">
+                    <i class="fas {{ amenity.icon }} text-muted me-1"></i>{{ amenity.name }}
+                </span>
+            {% endfor %}
+            {% if apartment.amenities.count > 3 %}
+                <span class="badge bg-light text-dark border fw-normal py-1 px-2" style="font-size: 0.75rem;">+{{ apartment.amenities.count|add:"-3" }}</span>
+            {% endif %}
+        </div>
     </div>
 
     <div class="card-footer bg-white border-top-0 pt-0 pb-3">

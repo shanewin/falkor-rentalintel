@@ -25,7 +25,6 @@ COPY . .
 # These will be overridden by Railway's actual environment variables at runtime
 ENV SECRET_KEY=dummy-secret-key-for-build \
     DEBUG=False \
-    DATABASE_URL=postgresql://user:pass@localhost/db \
     CLOUDINARY_CLOUD_NAME=dummy \
     CLOUDINARY_API_KEY=dummy \
     CLOUDINARY_API_SECRET=dummy \
@@ -36,7 +35,7 @@ ENV SECRET_KEY=dummy-secret-key-for-build \
     FIELD_ENCRYPTION_KEY=dummy-encryption-key
 
 # Collect static files (with dummy env vars)
-RUN python manage.py collectstatic --noinput || true
+RUN python manage.py collectstatic --noinput
 
 # Expose port (Railway will override this)
 EXPOSE 8000

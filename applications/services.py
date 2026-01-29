@@ -23,9 +23,11 @@ class ApplicationDataService:
         prefill_data = {
             # Basic Info
             'first_name': applicant.first_name,
+            'middle_name': getattr(applicant, 'middle_name', ''),
             'last_name': applicant.last_name,
+            'suffix': getattr(applicant, 'suffix', ''),
             'email': applicant.email,
-            'phone_number': applicant.phone_number,
+            'phone_cell': applicant.phone_number,  # Map phone_number to phone_cell
             'date_of_birth': applicant.date_of_birth,
             
             # Current Address
@@ -34,42 +36,69 @@ class ApplicationDataService:
             'city': applicant.city,
             'state': applicant.state,
             'zip_code': applicant.zip_code,
+            'housing_status': applicant.housing_status.title() if applicant.housing_status else '',
+            'current_monthly_rent': applicant.monthly_rent,
+            'current_address_years': getattr(applicant, 'current_address_years', 0),
+            'current_address_months': getattr(applicant, 'current_address_months', 0),
+            'housing_status': (applicant.housing_status.title() if applicant.housing_status else ''),
             
-            # Housing Info
-            'length_at_current_address': applicant.length_at_current_address,
-            'housing_status': applicant.housing_status,
-            'current_landlord_name': applicant.current_landlord_name,
-            'current_landlord_phone': applicant.current_landlord_phone,
-            'current_landlord_email': applicant.current_landlord_email,
-            'reason_for_moving': applicant.reason_for_moving,
-            'monthly_rent': applicant.monthly_rent,
+            # Previous Addresses
+            'previous_addresses': [
+                {
+                    'street_address_1': addr.street_address_1,
+                    'street_address_2': addr.street_address_2,
+                    'city': addr.city,
+                    'state': addr.state,
+                    'zip_code': addr.zip_code,
+                    'years': addr.years,
+                    'months': addr.months,
+                    'housing_status': addr.housing_status,
+                    'landlord_name': addr.landlord_name,
+                    'landlord_phone': addr.landlord_phone,
+                    'landlord_email': addr.landlord_email,
+                    'monthly_rent': addr.monthly_rent,
+                }
+                for addr in applicant.previous_addresses.all()
+            ],
             
-            # ID
-            'driver_license_number': applicant.driver_license_number,
-            'driver_license_state': applicant.driver_license_state,
+            # Pets
+            'pets': [
+                {
+                    'name': pet.name,
+                    'pet_type': pet.pet_type,
+                    'quantity': pet.quantity,
+                    'description': pet.description,
+                    'photos': [photo.image.url for photo in pet.photos.all()]
+                }
+                for pet in applicant.pets.all()
+            ],
+            
+            # Landlord Info
+            'landlord_name': applicant.current_landlord_name,
+            'landlord_phone': applicant.current_landlord_phone,
+            'landlord_email': applicant.current_landlord_email,
+            
+            # Housing Needs (Desired Property)
+            'desired_move_in_date': applicant.desired_move_in_date,
+            'has_pets': applicant.has_pets,
             
             # Employment Status & Fields
-            'employment_status': applicant.employment_status,
-            'company_name': applicant.company_name,
-            'position': applicant.position,
+            'employment_type': applicant.employment_status,
+            'employer': applicant.company_name,
+            'job_title': applicant.position,
             'annual_income': applicant.annual_income,
             'supervisor_name': applicant.supervisor_name,
             'supervisor_email': applicant.supervisor_email,
             'supervisor_phone': applicant.supervisor_phone,
             'currently_employed': applicant.currently_employed,
-            'employment_start_date': applicant.employment_start_date,
-            'employment_end_date': applicant.employment_end_date,
+            'start_date': applicant.employment_start_date,
+            'end_date': applicant.employment_end_date,
             
             # Student Fields
             'school_name': applicant.school_name,
             'year_of_graduation': applicant.year_of_graduation,
             'school_address': applicant.school_address,
             'school_phone': applicant.school_phone,
-            
-            # Emergency Contact
-            'emergency_contact_name': applicant.emergency_contact_name,
-            'emergency_contact_relationship': applicant.emergency_contact_relationship,
-            'emergency_contact_phone': applicant.emergency_contact_phone,
         }
         
         # Get data from most recent completed application if available
@@ -109,18 +138,26 @@ class ApplicationDataService:
         # Map of application field names to applicant field names
         field_mapping = {
             'first_name': 'first_name',
+            'middle_name': 'middle_name',
             'last_name': 'last_name',
-            'phone_number': 'phone_number',
+            'phone_cell': 'phone_number',
+            'email': 'email',
             'street_address_1': 'street_address_1',
             'street_address_2': 'street_address_2',
             'city': 'city',
             'state': 'state',
             'zip_code': 'zip_code',
-            'company_name': 'company_name',
-            'position': 'position',
+            'housing_status': 'housing_status',
+            'current_monthly_rent': 'monthly_rent',
+            'current_address_years': 'current_address_years',
+            'current_address_months': 'current_address_months',
+            'employment_type': 'employment_status',
+            'employer': 'company_name',
+            'job_title': 'position',
             'annual_income': 'annual_income',
-            'driver_license_number': 'driver_license_number',
-            'driver_license_state': 'driver_license_state',
+            'id_type': 'id_type',
+            'id_number': 'id_number',
+            'id_state': 'id_state',
         }
         
         updated_fields = []
