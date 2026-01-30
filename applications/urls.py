@@ -62,6 +62,7 @@ urlpatterns = [
     path('test-sms/', test_sms_send, name='test_sms_send'),
     path('<int:application_id>/preview/', application_preview, name='application_preview'),
     path('<int:application_id>/broker-prefill/', broker_prefill_dashboard, name='broker_prefill_dashboard'),
+    path('<int:application_id>/edit/', broker_prefill_dashboard, name='application_edit'),
     path('<int:application_id>/broker-prefill/section1/', broker_prefill_section1, name='broker_prefill_section1'),
     path('<int:application_id>/prefill-status/', prefill_status_api, name='prefill_status_api'),
     

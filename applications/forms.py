@@ -4,6 +4,9 @@ from django.utils.html import escape
 from .models import Application, RequiredDocumentType, PersonalInfoData, PreviousAddress, IncomeData
 from applicants.models import Applicant
 from apartments.models import Apartment
+from django.utils.translation import gettext_lazy as _
+
+BOOLEAN_CHOICES = [(True, _('Yes')), (False, _('No'))]
 
 # Reusable security and currency validators (mirrored from applicants/forms.py)
 def sanitize_text_input(value):
@@ -47,6 +50,31 @@ class PersonalInfoForm(forms.ModelForm):
         help_text='Start typing to search for your address'
     )
     
+    # Explicitly override boolean fields with Yes/No radios
+    has_pets = forms.TypedChoiceField(
+        choices=BOOLEAN_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        coerce=lambda x: str(x) == 'True',
+        required=False,
+        initial=None
+    )
+    
+    has_filed_bankruptcy = forms.TypedChoiceField(
+        choices=BOOLEAN_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        coerce=lambda x: str(x) == 'True',
+        required=False,
+        initial=None
+    )
+    
+    has_criminal_conviction = forms.TypedChoiceField(
+        choices=BOOLEAN_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        coerce=lambda x: str(x) == 'True',
+        required=False,
+        initial=None
+    )
+    
     class Meta:
         model = PersonalInfoData
         fields = [
@@ -56,11 +84,12 @@ class PersonalInfoForm(forms.ModelForm):
             'street_address_1', 'street_address_2',
             'city', 'state', 'zip_code',
             'current_address_years', 'current_address_months',
-            'housing_status', 'current_monthly_rent',
+            'housing_status', 'current_monthly_rent', 'is_rental_property',
             'landlord_name', 'landlord_phone', 'landlord_email',
             'desired_address', 'desired_unit', 'desired_move_in_date',
             'referral_source', 'has_pets',
-            'reference1_name', 'reference1_phone', 'reference2_name', 'reference2_phone',
+            'reference1_name', 'reference1_phone',
+            'reference2_name', 'reference2_phone',
             'has_filed_bankruptcy', 'bankruptcy_explanation',
             'has_criminal_conviction', 'conviction_explanation'
         ]
@@ -107,6 +136,7 @@ class PersonalInfoForm(forms.ModelForm):
                 ('Other', 'Other'),
             ]),
             'current_monthly_rent': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'is_rental_property': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             
             # Landlord fields (conditional)
             'landlord_name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -126,7 +156,6 @@ class PersonalInfoForm(forms.ModelForm):
                 'class': 'form-control', 
                 'placeholder': 'How did you hear about us?'
             }),
-            'has_pets': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             
             # References
             'reference1_name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -135,9 +164,7 @@ class PersonalInfoForm(forms.ModelForm):
             'reference2_phone': forms.TextInput(attrs={'class': 'form-control'}),
             
             # Legal history
-            'has_filed_bankruptcy': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'bankruptcy_explanation': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Please explain...'}),
-            'has_criminal_conviction': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'conviction_explanation': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Please explain...'}),
         }
         
@@ -170,11 +197,9 @@ class PersonalInfoForm(forms.ModelForm):
             'reference2_name': 'Reference #2 Name',
             'reference2_phone': 'Reference #2 Phone',
             'has_filed_bankruptcy': 'I have filed for bankruptcy',
-            'bankruptcy_explanation': 'Bankruptcy Explanation',
             'has_criminal_conviction': 'I have a criminal conviction',
-            'conviction_explanation': 'Conviction Explanation',
         }
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
@@ -183,20 +208,10 @@ class PersonalInfoForm(forms.ModelForm):
         # Here we can add data-conditional for JS logic
         landlord_fields = ['landlord_name', 'landlord_phone', 'landlord_email']
         for field in landlord_fields:
-            self.fields[field].widget.attrs['data-conditional-parent'] = 'id_housing_status'
-            self.fields[field].widget.attrs['data-conditional-value'] = 'Rent'
+            if field in self.fields:
+                self.fields[field].widget.attrs['data-conditional-parent'] = 'id_housing_status'
+                self.fields[field].widget.attrs['data-conditional-value'] = 'Rent'
 
-    def clean(self):
-        cleaned_data = super().clean()
-        housing_status = cleaned_data.get('housing_status')
-        
-        if housing_status == 'Rent':
-            for field in ['landlord_name', 'landlord_phone', 'landlord_email']:
-                if not cleaned_data.get(field):
-                    self.add_error(field, "This field is required for rental properties.")
-                    
-        return cleaned_data
-    
     def clean_ssn(self):
         """Validate and format SSN"""
         ssn = self.cleaned_data.get('ssn')
@@ -233,15 +248,13 @@ class PersonalInfoForm(forms.ModelForm):
     
     def clean(self):
         cleaned_data = super().clean()
-        is_rental = cleaned_data.get('is_rental_property')
+        housing_status = cleaned_data.get('housing_status')
         
-        # If it's a rental property, landlord fields are required
-        if is_rental:
-            required_fields = ['landlord_name', 'landlord_phone']
-            for field in required_fields:
+        if housing_status == 'Rent':
+            for field in ['landlord_name', 'landlord_phone', 'landlord_email']:
                 if not cleaned_data.get(field):
-                    self.add_error(field, f"This field is required when current address is a rental property")
-        
+                    self.add_error(field, "This field is required for rental properties.")
+                    
         return cleaned_data
 
 
@@ -250,35 +263,57 @@ class PreviousAddressForm(forms.ModelForm):
     
     class Meta:
         model = PreviousAddress
-        fields = ['address', 'apt_unit', 'duration', 'landlord_name', 'landlord_contact']
+        fields = ['street_address_1', 'street_address_2', 'city', 'state', 'zip_code', 'years', 'months', 'landlord_name', 'landlord_phone', 'landlord_email', 'monthly_rent', 'housing_status']
         
         widgets = {
-            'address': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
-            'apt_unit': forms.TextInput(attrs={'class': 'form-control'}),
-            'duration': forms.TextInput(attrs={
-                'class': 'form-control', 
-                'placeholder': 'e.g., 1 year, 6 months',
-                'required': True
-            }),
+            'street_address_1': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
+            'street_address_2': forms.TextInput(attrs={'class': 'form-control'}),
+            'city': forms.TextInput(attrs={'class': 'form-control'}),
+            'state': forms.TextInput(attrs={'class': 'form-control'}),
+            'zip_code': forms.TextInput(attrs={'class': 'form-control'}),
+            'years': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'months': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'max': 11}),
             'landlord_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'landlord_contact': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Phone or email'
-            }),
-        }
-        
-        labels = {
-            'address': 'Previous Address *',
-            'apt_unit': 'Apt/Unit Number',
-            'duration': 'How long did you live there? *',
-            'landlord_name': "Previous Landlord's Name",
-            'landlord_contact': "Previous Landlord's Contact",
+            'landlord_phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'landlord_email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'monthly_rent': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'housing_status': forms.Select(attrs={'class': 'form-select'}, choices=[('rent', 'Rent'), ('own', 'Own')]),
         }
 
 
 class IncomeForm(forms.ModelForm):
     """Section 2 - Income & Employment Form"""
     
+    # Explicitly override boolean fields with Yes/No radios
+    currently_employed = forms.TypedChoiceField(
+        choices=BOOLEAN_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        coerce=lambda x: str(x) == 'True',
+        required=False,
+        initial=None
+    )
+    has_multiple_jobs = forms.TypedChoiceField(
+        choices=BOOLEAN_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        coerce=lambda x: str(x) == 'True',
+        required=False,
+        initial=None
+    )
+    has_additional_income = forms.TypedChoiceField(
+        choices=BOOLEAN_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        coerce=lambda x: str(x) == 'True',
+        required=False,
+        initial=None
+    )
+    has_assets = forms.TypedChoiceField(
+        choices=BOOLEAN_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        coerce=lambda x: str(x) == 'True',
+        required=False,
+        initial=None
+    )
+
     class Meta:
         model = IncomeData
         fields = [
@@ -305,7 +340,6 @@ class IncomeForm(forms.ModelForm):
             'supervisor_name': forms.TextInput(attrs={'class': 'form-control'}),
             'supervisor_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(555) 123-4567'}),
             'supervisor_email': forms.EmailInput(attrs={'class': 'form-control'}),
-            'currently_employed': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'end_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             
@@ -315,14 +349,14 @@ class IncomeForm(forms.ModelForm):
             'school_address': forms.TextInput(attrs={'class': 'form-control'}),
             'school_phone': forms.TextInput(attrs={'class': 'form-control'}),
             
-            # Document uploads
+            # File fields
             'paystub_1': forms.FileInput(attrs={'class': 'form-control'}),
             'paystub_2': forms.FileInput(attrs={'class': 'form-control'}),
             'paystub_3': forms.FileInput(attrs={'class': 'form-control'}),
             'bank_statement_1': forms.FileInput(attrs={'class': 'form-control'}),
             'bank_statement_2': forms.FileInput(attrs={'class': 'form-control'}),
             
-            # Photo ID
+            # ID fields
             'id_type': forms.Select(attrs={'class': 'form-select'}, choices=[
                 ('', 'Select ID Type'),
                 ('passport', 'Passport'),
@@ -333,12 +367,8 @@ class IncomeForm(forms.ModelForm):
             'id_state': forms.TextInput(attrs={'class': 'form-control'}),
             'id_front_image': forms.FileInput(attrs={'class': 'form-control'}),
             'id_back_image': forms.FileInput(attrs={'class': 'form-control'}),
-
-            'has_multiple_jobs': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'has_additional_income': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'has_assets': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
-
+        
         labels = {
             'employment_type': 'Employment Status *',
             'employer': 'Company Name',
@@ -359,17 +389,17 @@ class IncomeForm(forms.ModelForm):
             'bank_statement_1': 'Most Recent Bank Statement (Full PDF)',
             'bank_statement_2': 'Second Most Recent Bank Statement (Full PDF)',
         }
-    
+        
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
         # Add basic form styling
         for field_name, field in self.fields.items():
-            if not isinstance(field.widget, (forms.CheckboxInput, forms.FileInput)):
+            if not isinstance(field.widget, (forms.CheckboxInput, forms.FileInput, forms.RadioSelect)):
                 field.widget.attrs.update({'class': 'form-control'})
             
         # Add security validators
-        text_fields = ['company_name', 'position', 'supervisor_name', 'school_name', 'id_number', 'id_state']
+        text_fields = ['employer', 'job_title', 'supervisor_name', 'school_name', 'id_number', 'id_state']
         for field in text_fields:
             if field in self.fields:
                 self.fields[field].validators.append(sanitize_text_input)
@@ -382,9 +412,8 @@ class IncomeForm(forms.ModelForm):
         cleaned_data = super().clean()
         emp_type = cleaned_data.get('employment_type')
         
-        # Mirror Step 3 conditional logic
         if emp_type == 'employed':
-            required_emp = ['company_name', 'position', 'annual_income', 'start_date']
+            required_emp = ['employer', 'job_title', 'annual_income', 'start_date']
             for field in required_emp:
                 if not cleaned_data.get(field):
                     self.add_error(field, "This field is required for employed applicants.")
@@ -396,5 +425,3 @@ class IncomeForm(forms.ModelForm):
                     self.add_error(field, "This field is required for student applicants.")
         
         return cleaned_data
-
-

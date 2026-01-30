@@ -13,6 +13,7 @@ import base64
 from applicants.models import Applicant, SavedApartment
 from apartments.models import Apartment
 from applicants.apartment_matching import ApartmentMatchingService
+from applicants.smart_insights import SmartInsights
 import cloudinary.uploader
 # Import activity tracking
 from applicants.signals import trigger_document_uploaded
@@ -1330,7 +1331,7 @@ def v2_section1_personal_info(request, application_id):
         'pets_data': pets_list,
         'current_section': 1,
         'section_title': 'Personal Information',
-        'progress_percent': 20,  # 1/5 sections
+        'progress_percent': application.get_total_progress(),
         'is_preview': is_preview,
         'preview_mode': is_preview,
         'token': token,
@@ -1496,7 +1497,7 @@ def applicant_application_interface(request, application_id):
     context = {
         'application': application,
         'sections': sections,
-        'progress_percent': progress_percent,
+        'progress_percent': application.get_total_progress(),
         'completed_sections': completed_sections,
         'total_sections': total_sections,
         'uploaded_files': uploaded_files,
@@ -1593,6 +1594,11 @@ def broker_application_management(request, application_id):
     # Get application activity log
     activity_log = application.activity_log.all().order_by('-timestamp')[:10]
     
+    # Smart Insights Analysis
+    insights = {}
+    if application.applicant:
+        insights = SmartInsights.analyze_applicant(application.applicant)
+    
     # Get personal info if available
     personal_info = getattr(application, 'personal_info', None)
     
@@ -1649,7 +1655,7 @@ def broker_application_management(request, application_id):
     context = {
         'application': application,
         'sections': sections,
-        'progress_percent': progress_percent,
+        'progress_percent': application.get_total_progress(),
         'completed_sections': completed_sections,
         'total_sections': total_sections,
         'uploaded_files': uploaded_files,
@@ -1657,6 +1663,8 @@ def broker_application_management(request, application_id):
         'personal_info': personal_info,
         'is_broker_access': True,
         'income_verification': income_verification,
+        'insights': insights,
+        'current_step': application.current_section,
     }
     
     return render(request, 'applications/v2/broker_management.html', context)
@@ -1711,8 +1719,8 @@ def v2_section2_income(request, application_id):
         application=application,
         defaults={
             'employment_type': 'employed',  # Default choice
-            'company_name': '',
-            'position': '',
+            'employer': '',
+            'job_title': '',
             'annual_income': 0.00,
             'supervisor_name': '',
             'supervisor_email': '',
@@ -1729,8 +1737,8 @@ def v2_section2_income(request, application_id):
         # Map employment data from applicant profile
         field_mapping = {
             'employment_type': 'employment_type',
-            'company_name': 'company_name',
-            'position': 'position', 
+            'employer': 'employer',
+            'job_title': 'job_title', 
             'annual_income': 'annual_income',
             'supervisor_name': 'supervisor_name',
             'supervisor_email': 'supervisor_email',
@@ -1904,7 +1912,7 @@ def v2_section2_income(request, application_id):
         'assets': assets,
         'current_section': 2,
         'section_title': 'Income & Employment',
-        'progress_percent': 40,  # 2/5 sections
+        'progress_percent': application.get_total_progress(),
         'is_preview': is_preview,
         'token': token,
         'is_applicant_access': is_applicant_access,
@@ -2017,7 +2025,6 @@ def process_app_dynamic_assets(request, income_data):
 
 
 @hybrid_csrf_protect
-@hybrid_csrf_protect
 def v2_section3_legal(request, application_id):
     """Section 3 - Legal Documents with E-signatures"""
     application = get_object_or_404(Application, id=application_id)
@@ -2099,7 +2106,7 @@ def v2_section3_legal(request, application_id):
         'current_section': 3,
         'section_title': 'Legal',
         'intro_text': intro_text,
-        'progress_percent': 60,  # 3/5 sections
+        'progress_percent': application.get_total_progress(),
         'is_preview': is_preview,
         'token': token,
         'is_applicant_access': is_applicant_access,
@@ -2442,11 +2449,17 @@ def v2_section5_payment(request, application_id):
         'payment': payment,
         'token': token,
         'is_applicant_access': is_applicant_access,
+        'progress_percent': application.get_total_progress(),
         'application_fee': application.application_fee_amount,
         'SOLA_SANDBOX_MODE': getattr(settings, 'SOLA_SANDBOX_MODE', True),
     }
     
-    template = 'applications/v2/section5_payment.html'
+    # Use different templates based on access type
+    if is_applicant_access:
+        template = 'applications/v2/applicant_section5_payment.html'
+    else:
+        template = 'applications/v2/section5_payment.html'
+    
     return render(request, template, context)
 
 

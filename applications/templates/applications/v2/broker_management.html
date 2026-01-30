@@ -112,43 +112,118 @@
     </div>
 
     <div class="row">
-        <!-- Left Column - Application Overview -->
-        <div class="col-lg-8">
+        <!-- Sidebar Column -->
+        <div class="col-lg-3">
+            {% include 'applications/v2/_application_sidebar.html' with show_detailed_info=True %}
             
+            <!-- Smart Insights Score Card -->
+            {% if insights %}
+            <div class="card mt-4 shadow border-0 overflow-hidden">
+                <div class="card-header bg-dark text-white py-3">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-brain me-2"></i>Smart Insights Score</h6>
+                </div>
+                <div class="card-body text-center py-4" style="background-color: #f8f9fa;">
+                    <div class="display-4 fw-bold mb-1 {% if insights.overall_score >= 80 %}text-success{% elif insights.overall_score >= 60 %}text-primary{% elif insights.overall_score >= 40 %}text-warning{% else %}text-danger{% endif %}">
+                        {{ insights.overall_score }}
+                    </div>
+                    <div class="text-uppercase small fw-bold text-muted mb-3">Overall Score</div>
+                    <div class="badge {% if insights.overall_score >= 80 %}bg-success{% elif insights.overall_score >= 60 %}bg-primary{% elif insights.overall_score >= 40 %}bg-warning text-dark{% else %}bg-danger{% endif %} px-3 py-2 fs-6">
+                        {% if insights.overall_score >= 80 %}Highly Qualified
+                        {% elif insights.overall_score >= 60 %}Qualified
+                        {% elif insights.overall_score >= 40 %}Needs Review
+                        {% else %}High Risk{% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Main Content Column -->
+        <div class="col-lg-6">
+            
+            <!-- Smart Insights Summary -->
+            {% if insights %}
+            <div class="card mb-4 shadow border-0">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-lightbulb text-warning me-2"></i>AI Capability Assessment</h5>
+                </div>
+                <div class="card-body">
+                    <div class="p-3 mb-3 rounded-3 {% if insights.overall_score >= 60 %}bg-success-subtle{% else %}bg-warning-subtle{% endif %}">
+                        <p class="mb-0 fs-5">{{ insights.summary|safe }}</p>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <h6 class="fw-bold text-uppercase small text-muted"><i class="fas fa-exclamation-triangle me-2"></i>Risk Factors</h6>
+                            {% if insights.red_flags %}
+                                <ul class="list-unstyled mb-0">
+                                {% for flag in insights.red_flags %}
+                                    <li class="mb-2 small">{{ flag }}</li>
+                                {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p class="text-success small mb-0"><i class="fas fa-check-circle me-1"></i> No immediate red flags identified.</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <h6 class="fw-bold text-uppercase small text-muted"><i class="fas fa-clipboard-check me-2"></i>Broker Recommendations</h6>
+                            <ul class="list-unstyled mb-0">
+                            {% for rec in insights.recommendations %}
+                                <li class="mb-2 small">{{ rec }}</li>
+                            {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Section Progress Overview -->
-            <div class="card mb-4 shadow">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-tasks"></i> Section Progress Overview</h5>
+            <div class="card mb-4 shadow border-0">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-tasks me-2"></i>Journey Milestones</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         {% for section in sections %}
-                        <div class="col-md-6 col-xl-4 mb-3">
-                            <div class="d-flex align-items-center p-3 border rounded {% if section.status == 'completed' %}bg-success-subtle border-success{% elif section.status == 'in_progress' %}bg-warning-subtle border-warning{% else %}bg-light border-light{% endif %}">
-                                <div class="me-3">
-                                    {% if section.status == 'completed' %}
-                                        <i class="fas fa-check-circle text-success fa-2x"></i>
-                                    {% elif section.status == 'in_progress' %}
-                                        <i class="fas fa-clock text-warning fa-2x"></i>
-                                    {% else %}
-                                        <i class="fas fa-circle text-muted fa-2x"></i>
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-center p-3 border rounded-3 {% if section.status == 'COMPLETED' %}bg-success-subtle border-success-subtle{% elif section.status == 'IN_PROGRESS' or section.get_progress_percentage > 0 %}bg-warning-subtle border-warning-subtle{% else %}bg-light border-light{% endif %}" style="transition: all 0.2s ease;">
+                                <div class="me-3 position-relative">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center shadow-sm" 
+                                         style="width: 50px; height: 50px; background-color: {% if section.status == 'COMPLETED' %}#22c55e{% elif section.status == 'IN_PROGRESS' or section.get_progress_percentage > 0 %}#ffe502{% else %}#f8f9fa{% endif %}; color: {% if section.status == 'COMPLETED' %}#ffffff{% else %}#1a1a1a{% endif %}; transition: all 0.3s ease;">
+                                        <i class="fas
+                                            {% if section.section_number == 1 %}fa-user
+                                            {% elif section.section_number == 2 %}fa-dollar-sign
+                                            {% elif section.section_number == 3 %}fa-gavel
+                                            {% elif section.section_number == 4 %}fa-eye
+                                            {% elif section.section_number == 5 %}fa-credit-card
+                                            {% endif %} fa-lg {% if section.status == 'IN_PROGRESS' or section.get_progress_percentage > 0 and section.status != 'COMPLETED' %}fa-beat-fade{% endif %}" style="--fa-animation-duration: 2s;"></i>
+                                    </div>
+                                    {% if section.status == 'IN_PROGRESS' or section.get_progress_percentage > 0 and section.status != 'COMPLETED' %}
+                                        <div class="position-absolute bottom-0 end-0 bg-white rounded-circle d-flex align-items-center justify-content-center shadow-sm border border-warning" style="width: 20px; height: 20px;">
+                                            <i class="fas fa-spinner fa-spin text-warning" style="font-size: 10px;"></i>
+                                        </div>
+                                    {% elif section.status == 'COMPLETED' %}
+                                        <div class="position-absolute bottom-0 end-0 bg-white rounded-circle d-flex align-items-center justify-content-center shadow-sm border border-success" style="width: 20px; height: 20px;">
+                                            <i class="fas fa-check text-success" style="font-size: 10px;"></i>
+                                        </div>
                                     {% endif %}
                                 </div>
-                                <div>
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold small text-uppercase text-muted">Step {{ section.section_number }}</div>
                                     <div class="fw-bold">
-                                        {% if section.section_number == 1 %}Personal Info
-                                        {% elif section.section_number == 2 %}Income
-                                        {% elif section.section_number == 3 %}Legal
-                                        {% elif section.section_number == 4 %}Review
-                                        {% elif section.section_number == 5 %}Payment
+                                        {% if section.section_number == 1 %}Personal Information
+                                        {% elif section.section_number == 2 %}Income & Employment
+                                        {% elif section.section_number == 3 %}Legal Documents
+                                        {% elif section.section_number == 4 %}Review Application
+                                        {% elif section.section_number == 5 %}Payment & Submit
                                         {% endif %}
                                     </div>
-                                    <small class="text-muted">
-                                        {% if section.status == 'completed' %}Completed
-                                        {% elif section.status == 'in_progress' %}In Progress
-                                        {% else %}Not Started
-                                        {% endif %}
-                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge {% if section.status == 'COMPLETED' %}bg-success{% elif section.status == 'IN_PROGRESS' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                        {{ section.get_progress_percentage }}%
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -362,7 +437,7 @@
         </div>
 
         <!-- Right Column - Management Actions & Activity -->
-        <div class="col-lg-4">
+        <div class="col-lg-3">
             
             <!-- Quick Actions Card -->
             <div class="card mb-4 shadow">

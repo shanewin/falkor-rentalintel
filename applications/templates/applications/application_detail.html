@@ -187,7 +187,7 @@
                             {% elif application.get_status_display == 'Waitlisted' %} bg-info
                             {% else %} bg-secondary
                             {% endif %}">
-                            {{ application.get_status_display }}
+                            {{ application.get_dynamic_status }}
                         </span>
                     </p>
 

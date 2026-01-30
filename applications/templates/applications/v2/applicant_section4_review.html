@@ -1,0 +1,213 @@
+{% extends 'applications/applicant_base.html' %}
+{% load static %}
+
+{% block title %}Section 4: Review Application{% endblock %}
+
+{% block header_title %}Review Application{% endblock %}
+{% block header_subtitle %}Section 4 of 5 • Final Verification{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <div class="form-card shadow-sm mb-4">
+            <div class="form-card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-shield-check me-2 text-warning"></i>Application Summary</h5>
+                {% if all_sections_complete %}
+                <span class="badge bg-success shadow-sm">Ready for Submission</span>
+                {% else %}
+                <span class="badge bg-danger shadow-sm">Incomplete</span>
+                {% endif %}
+            </div>
+            
+            <p class="text-muted small mb-4">Please review your information carefully before proceeding to payment. Once submitted, some details may be locked for processing.</p>
+
+            <!-- Alerts for Incomplete Sections -->
+            {% if not all_sections_complete %}
+            <div class="alert alert-danger mb-4 shadow-sm border-0">
+                <h6 class="alert-heading fw-bold"><i class="bi bi-exclamation-octagon-fill me-2"></i>Action Required</h6>
+                <p class="small mb-2">The following sections require your attention before you can submit:</p>
+                <ul class="mb-0 small ps-3">
+                    {% if not sections_complete.personal %}
+                    <li><strong>Personal Information:</strong> {{ sections_complete.personal_message }}</li>
+                    {% endif %}
+                    {% if not sections_complete.income %}
+                    <li><strong>Income Information:</strong> {{ sections_complete.income_message }}</li>
+                    {% endif %}
+                    {% if not sections_complete.legal %}
+                    <li><strong>Legal Documents:</strong> Please sign all required forms.</li>
+                    {% endif %}
+                    {% if not sections_complete.required_docs %}
+                    <li><strong>Required Documents:</strong> {{ sections_complete.docs_message }}</li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <div class="review-sections">
+                <!-- Personal Info Review -->
+                <div class="review-block mb-4 p-4 border rounded bg-white shadow-sm position-relative">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0 text-dark border-bottom pb-2 flex-grow-1">Personal Information</h6>
+                        <a href="{% url 'section1_personal_info' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn btn-sm btn-link text-warning fw-bold p-0 ms-3">
+                            <i class="bi bi-pencil-square me-1"></i> Edit
+                        </a>
+                    </div>
+                    {% if personal_info %}
+                    <div class="row g-3 small">
+                        <div class="col-md-6">
+                            <label class="text-muted d-block mb-1">Full Name</label>
+                            <p class="fw-bold mb-0">{{ personal_info.first_name }} {{ personal_info.last_name }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-muted d-block mb-1">Email Address</label>
+                            <p class="fw-bold mb-0">{{ personal_info.email }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-muted d-block mb-1">Phone Number</label>
+                            <p class="fw-bold mb-0">{{ personal_info.phone_cell|default:"-" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-muted d-block mb-1">Current Address</label>
+                            <p class="fw-bold mb-0">{{ personal_info.street_address_1 }}{% if personal_info.unit %}, Unit {{ personal_info.unit }}{% endif %}</p>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-danger small mb-0"><i class="bi bi-x-circle me-1"></i> Not completed</p>
+                    {% endif %}
+                </div>
+
+                <!-- Income Review -->
+                <div class="review-block mb-4 p-4 border rounded bg-white shadow-sm position-relative">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0 text-dark border-bottom pb-2 flex-grow-1">Income & Employment</h6>
+                        <a href="{% url 'section2_income' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn btn-sm btn-link text-warning fw-bold p-0 ms-3">
+                            <i class="bi bi-pencil-square me-1"></i> Edit
+                        </a>
+                    </div>
+                    {% if income_data %}
+                    <div class="row g-3 small">
+                        <div class="col-md-6">
+                            <label class="text-muted d-block mb-1">Employer</label>
+                            <p class="fw-bold mb-0">{{ income_data.employer }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-muted d-block mb-1">Annual Income</label>
+                            <p class="fw-bold mb-0 text-success">${{ income_data.annual_income|floatformat:2 }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-muted d-block mb-1">Job Title</label>
+                            <p class="fw-bold mb-0">{{ income_data.job_title }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-muted d-block mb-1">Manager/Supervisor</label>
+                            <p class="fw-bold mb-0">{{ income_data.supervisor_name }} ({{ income_data.supervisor_phone|default:"-" }})</p>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-danger small mb-0"><i class="bi bi-x-circle me-1"></i> Not completed</p>
+                    {% endif %}
+                </div>
+
+                <!-- Legal & Disclosures -->
+                <div class="review-block mb-4 p-4 border rounded bg-white shadow-sm position-relative">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0 text-dark border-bottom pb-2 flex-grow-1">Legal & Disclosures</h6>
+                        <a href="{% url 'section3_legal' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn btn-sm btn-link text-warning fw-bold p-0 ms-3">
+                            <i class="bi bi-pencil-square me-1"></i> Edit
+                        </a>
+                    </div>
+                    <div class="row g-3 small">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                {% if legal_docs.discrimination_form_signed %}
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                <span>Discrimination Disclosure</span>
+                                {% else %}
+                                <i class="bi bi-x-circle-fill text-danger me-2"></i>
+                                <span class="text-muted">Discrimination Disclosure</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                {% if legal_docs.brokers_form_signed %}
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                <span>Agency Disclosure</span>
+                                {% else %}
+                                <i class="bi bi-x-circle-fill text-danger me-2"></i>
+                                <span class="text-muted">Agency Disclosure</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Uploaded Documents Review -->
+                <div class="review-block mb-4 p-4 border rounded bg-white shadow-sm">
+                    <h6 class="fw-bold mb-3 text-dark border-bottom pb-2 flex-grow-1">Document Verification</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-borderless align-middle mb-0 small">
+                            <tbody>
+                                {% if required_documents_status %}
+                                    {% for doc_type, status in required_documents_status.items %}
+                                    <tr>
+                                        <td>{{ status.display_name }}</td>
+                                        <td class="text-end">
+                                            {% if status.uploaded %}
+                                            <span class="badge bg-success-subtle text-success border border-success px-2 py-1"><i class="bi bi-check-all me-1"></i> Uploaded</span>
+                                            {% else %}
+                                            <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1"><i class="bi bi-x-circle me-1"></i> Missing</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="2" class="text-muted fst-italic">No documents required for this property.</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Confirmation and Payment Button -->
+            <div class="mt-5 pt-4 border-top">
+                {% if all_sections_complete %}
+                <div class="text-center bg-dark text-white p-5 rounded shadow-sm">
+                    <h4 class="fw-bold mb-3">Application Ready!</h4>
+                    <p class="mb-4 text-white-50">Everything looks correct. Click the button below to proceed to the secure payment portal and finalize your application.</p>
+                    <form method="post">
+                        {% csrf_token %}
+                        <button type="submit" name="confirm_proceed" class="btn btn-warning btn-lg px-5 py-3 fw-bold shadow">
+                            FINAL STEP: SECURE PAYMENT <i class="bi bi-credit-card ms-2"></i>
+                        </button>
+                    </form>
+                </div>
+                {% else %}
+                <div class="text-center bg-light p-5 rounded border">
+                    <h4 class="fw-bold text-muted mb-3">Incomplete Application</h4>
+                    <p class="mb-4 text-muted small">Please complete all required fields and upload all documents marked as missing before you can proceed to payment.</p>
+                    <button class="btn btn-secondary btn-lg px-5 py-3 fw-bold shadow-sm" disabled>
+                        CANNOT PROCEED
+                    </button>
+                </div>
+                {% endif %}
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'v2_application_overview' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn btn-outline-dark">
+                        <i class="bi bi-house-door me-2"></i> Save and Exit
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        {% include 'applications/v2/_application_sidebar.html' with current_step=4 hide_sidebar_image=True hide_property_details=True show_detailed_info=True %}
+    </div>
+</div>
+{% endblock %}

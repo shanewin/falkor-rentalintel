@@ -1,23 +1,27 @@
-{% extends 'base.html' %}
+{% extends 'applications/applicant_base.html' %}
 {% load static %}
 
-{% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <!-- Main Content -->
-        <div class="col-lg-8">
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-primary text-white py-3">
-                    <h5 class="mb-0">Section 1: Personal Information</h5>
-                </div>
-                <div class="card-body p-4">
-                    <p class="text-muted mb-4">Please provide your personal details exactly as they appear on your legal documents. Fields marked with <span class="text-danger">*</span> are required.</p>
+{% block title %}Section 1: Personal Information{% endblock %}
 
-                    <form method="post" id="personal-info-form">
+{% block header_title %}Personal Information{% endblock %}
+{% block header_subtitle %}Section 1 of 5 • Basic Identity & Residence{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <div class="form-card shadow-sm mb-4">
+            <div class="form-card-header">
+                <h5 class="mb-0"><i class="bi bi-person-circle me-2 text-warning"></i>Basic Information</h5>
+            </div>
+            
+            <p class="text-muted small mb-4">Please provide your personal details exactly as they appear on your legal documents. Fields marked with <span class="text-danger">*</span> are required.</p>
+
+            <form method="post" id="personal-info-form" class="doorway-form">
                         {% csrf_token %}
                         
                         <!-- Personal Identity -->
-                        <h6 class="fw-bold mb-3 text-primary border-bottom pb-2">Personal Identity</h6>
+                        <h6 class="fw-bold mb-3 border-bottom pb-2">Personal Identity</h6>
                         <div class="row g-3 mb-4">
                             <div class="col-md-4">
                                 <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name <span class="text-danger">*</span></label>
@@ -62,7 +66,7 @@
                         </div>
 
                         <!-- Contact Information -->
-                        <h6 class="fw-bold mb-3 text-primary border-bottom pb-2 mt-4">Contact Information</h6>
+                        <h6 class="fw-bold mb-3 border-bottom pb-2 mt-4">Contact Information</h6>
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
                                 <label for="{{ form.email.id_for_label }}" class="form-label">Email Address <span class="text-danger">*</span></label>
@@ -81,7 +85,7 @@
                         </div>
 
                         <!-- Current Residence -->
-                        <h6 class="fw-bold mb-3 text-primary border-bottom pb-2 mt-4">Current Residence</h6>
+                        <h6 class="fw-bold mb-3 border-bottom pb-2 mt-4">Current Residence</h6>
                         <div class="mb-3">
                             <label for="{{ form.street_address_1.id_for_label }}" class="form-label">Street Address 1 <span class="text-danger">*</span></label>
                             {{ form.street_address_1 }}
@@ -123,7 +127,7 @@
 
                         <!-- Landlord Fields (Toggled by JS) -->
                         <div id="landlord-section" class="mb-4">
-                            <h6 class="fw-bold mb-3 text-primary border-bottom pb-2 mt-4">Landlord Information</h6>
+                            <h6 class="fw-bold mb-3 border-bottom pb-2 mt-4">Landlord Information</h6>
                             <div class="row g-3 mb-3">
                                 <div class="col-md-12">
                                     <label for="{{ form.current_monthly_rent.id_for_label }}" class="form-label">Monthly Rent <span id="rent-asterisk" class="text-danger d-none">*</span></label>
@@ -152,7 +156,7 @@
                         <!-- Previous Addresses Section -->
                         <div class="previous-addresses-section mt-5">
                             <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
-                                <h6 class="fw-bold mb-0 text-primary">Previous Addresses</h6>
+                                <h6 class="fw-bold mb-0">Previous Addresses</h6>
                                 <button type="button" id="add-previous-address-btn" class="btn btn-sm btn-outline-primary shadow-sm">
                                     <i class="bi bi-plus-circle me-1"></i> Add Previous Address
                                 </button>
@@ -166,17 +170,22 @@
                         <!-- Pets Section -->
                         <div class="pets-section mt-5 mb-5">
                             <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
-                                <h6 class="fw-bold mb-0 text-primary">Pets Information</h6>
+                                <h6 class="fw-bold mb-0">Pets Information</h6>
                                 <button type="button" id="add-pet-btn" class="btn btn-sm btn-outline-primary shadow-sm {% if not form.has_pets.value %}d-none{% endif %}">
                                     <i class="bi bi-plus-circle me-1"></i> Add Another Pet
                                 </button>
                             </div>
                             
-                            <div class="form-check mb-4">
-                                {{ form.has_pets }}
-                                <label class="form-check-label fw-bold" for="{{ form.has_pets.id_for_label }}">
-                                    I have pets
-                                </label>
+                            <div class="mb-4">
+                                <label class="form-label fw-bold d-block">I have pets</label>
+                                {% for radio in form.has_pets %}
+                                <div class="form-check form-check-inline">
+                                    {{ radio.tag }}
+                                    <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                        {{ radio.choice_label }}
+                                    </label>
+                                </div>
+                                {% endfor %}
                             </div>
 
                             <div id="pets-section-container" class="{% if not form.has_pets.value %}d-none{% endif %}">
@@ -190,7 +199,7 @@
                         </div>
 
                         <!-- References -->
-                        <h6 class="fw-bold mb-3 text-primary border-bottom pb-2 mt-4">Professional References</h6>
+                        <h6 class="fw-bold mb-3 border-bottom pb-2 mt-4">Professional References</h6>
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label for="{{ form.reference1_name.id_for_label }}" class="form-label">Reference #1 Name <span class="text-danger">*</span></label>
@@ -213,33 +222,39 @@
                         </div>
 
                         <!-- Declarations -->
-                        <h6 class="fw-bold mb-3 text-primary border-bottom pb-2 mt-4">Declarations</h6>
+                        <h6 class="fw-bold mb-3 border-bottom pb-2 mt-4">Declarations</h6>
                         <div class="mb-4">
-                            <div class="form-check mb-2">
-                                {{ form.has_filed_bankruptcy }}
-                                <label class="form-check-label" for="{{ form.has_filed_bankruptcy.id_for_label }}">
-                                    I have filed for bankruptcy in the last 7 years
+                            <label class="form-label fw-bold d-block">I have filed for bankruptcy in the last 7 years</label>
+                            {% for radio in form.has_filed_bankruptcy %}
+                            <div class="form-check form-check-inline">
+                                {{ radio.tag }}
+                                <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                    {{ radio.choice_label }}
                                 </label>
                             </div>
-                            <div id="bankruptcy-explanation" class="mb-3">
+                            {% endfor %}
+                            <div id="bankruptcy-explanation" class="mb-3 mt-2 {% if not form.has_filed_bankruptcy.value == True %}d-none{% endif %}">
                                 <label for="{{ form.bankruptcy_explanation.id_for_label }}" class="form-label small text-muted">Bankruptcy Explanation</label>
                                 {{ form.bankruptcy_explanation }}
                             </div>
 
-                            <div class="form-check mb-2">
-                                {{ form.has_criminal_conviction }}
-                                <label class="form-check-label" for="{{ form.has_criminal_conviction.id_for_label }}">
-                                    I have a criminal conviction
+                            <label class="form-label fw-bold d-block mt-4">I have a criminal conviction</label>
+                            {% for radio in form.has_criminal_conviction %}
+                            <div class="form-check form-check-inline">
+                                {{ radio.tag }}
+                                <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                    {{ radio.choice_label }}
                                 </label>
                             </div>
-                            <div id="conviction-explanation" class="mb-3">
+                            {% endfor %}
+                            <div id="conviction-explanation" class="mb-3 mt-2 {% if not form.has_criminal_conviction.value == True %}d-none{% endif %}">
                                 <label for="{{ form.conviction_explanation.id_for_label }}" class="form-label small text-muted">Conviction Explanation</label>
                                 {{ form.conviction_explanation }}
                             </div>
                         </div>
 
                         <!-- Additional Information -->
-                        <h6 class="fw-bold mb-3 text-primary border-bottom pb-2 mt-4">Additional Information</h6>
+                        <h6 class="fw-bold mb-3 border-bottom pb-2 mt-4">Additional Information</h6>
                         <div class="row g-3 mb-4">
                             <div class="col-md-12">
                                 <label for="{{ form.referral_source.id_for_label }}" class="form-label">Referral Source <span class="text-danger">*</span></label>
@@ -255,49 +270,10 @@
                     </form>
                 </div>
             </div>
-        </div>
 
-        <!-- Sidebar -->
-        <div class="col-lg-4">
-            <div class="card shadow-sm border-0 mb-4 sticky-top" style="top: 20px;">
-                <div class="card-header bg-dark text-white py-3">
-                    <h6 class="mb-0">Application Progress</h6>
-                </div>
-                <div class="card-body">
-                    <div class="list-group list-group-flush small">
-                        <div class="list-group-item d-flex align-items-center bg-primary bg-opacity-10 rounded mb-2 border-0 py-3">
-                            <span class="badge rounded-pill bg-primary me-3">1</span>
-                            <span class="fw-bold">Personal Information</span>
-                            <i class="bi bi-chevron-right ms-auto text-primary"></i>
-                        </div>
-                        <div class="list-group-item d-flex align-items-center text-muted mb-2 border-0 py-3 opacity-50">
-                            <span class="badge rounded-pill bg-secondary bg-opacity-25 text-dark me-3">2</span>
-                            <span>Income & Employment</span>
-                        </div>
-                        <div class="list-group-item d-flex align-items-center text-muted mb-2 border-0 py-3 opacity-50">
-                            <span class="badge rounded-pill bg-secondary bg-opacity-25 text-dark me-3">3</span>
-                            <span>Legal History</span>
-                        </div>
-                        <div class="list-group-item d-flex align-items-center text-muted border-0 py-3 opacity-50">
-                            <span class="badge rounded-pill bg-secondary bg-opacity-25 text-dark me-3">4</span>
-                            <span>Review & Submit</span>
-                        </div>
-                    </div>
-
-                    <hr class="my-4">
-
-                    <div class="apartment-summary">
-                        <h6 class="fw-bold mb-3 small uppercase text-muted">Apartment Summary</h6>
-                        <h6 class="fw-bold mb-1">{{ application.apartment.building.name }}</h6>
-                        <p class="small text-muted mb-3">{{ application.apartment.unit_number }} - {{ application.apartment.bedrooms }} Bed / {{ application.apartment.bathrooms }} Bath</p>
-                        <div class="d-flex justify-content-between small">
-                            <span>Monthly Rent</span>
-                            <span class="fw-bold text-primary">${{ application.apartment.rent }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        {% include 'applications/v2/_application_sidebar.html' with current_step=1 hide_sidebar_image=True hide_property_details=True show_detailed_info=True %}
     </div>
 </div>
 {% endblock %}
@@ -424,7 +400,7 @@
                         
                         <!-- Landlord Fields (Toggled by JS) -->
                         <div id="prev_landlord_info_${index}" class="${data.housing_status === 'rent' || data.housing_status === 'Rent' ? '' : 'd-none'}">
-                            <h6 class="fw-bold mb-3 text-primary border-bottom pb-2 mt-4">Landlord Information</h6>
+                            <h6 class="fw-bold mb-3 border-bottom pb-2 mt-4">Landlord Information</h6>
                             <div class="row g-3 mb-3">
                                 <div class="col-md-12">
                                     <label class="form-label">Monthly Rent <span class="text-danger">*</span></label>
@@ -509,7 +485,8 @@
         }
         
         // --- Pets Logic ---
-        const hasPetsCheckbox = document.getElementById('{{ form.has_pets.id_for_label }}');
+        // Pets Toggle
+        const petRadios = document.querySelectorAll('input[name="has_pets"]');
         const petsSection = document.getElementById('pets-section-container');
         const petsListContainer = document.getElementById('pets-list-container');
         const addPetBtn = document.getElementById('add-pet-btn');
@@ -517,20 +494,18 @@
         let petCount = 0;
         const maxPets = 5;
 
-        function togglePetsSection() {
-            if (hasPetsCheckbox.checked) {
-                petsSection.classList.remove('d-none');
-                if (addPetBtn) addPetBtn.classList.remove('d-none');
-                if (petCount === 0) addPet(); // Add first pet if none exist
-            } else {
-                petsSection.classList.add('d-none');
-                if (addPetBtn) addPetBtn.classList.add('d-none');
-            }
-        }
-
-        if (hasPetsCheckbox) {
-            hasPetsCheckbox.addEventListener('change', togglePetsSection);
-        }
+        petRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'True') {
+                    petsSection.classList.remove('d-none');
+                    addPetBtn.classList.remove('d-none');
+                    if (petCount === 0) addPet(); // Add first pet if none exist
+                } else {
+                    petsSection.classList.add('d-none');
+                    addPetBtn.classList.add('d-none');
+                }
+            });
+        });
 
         function createPetForm(index, data = {}) {
             const petTypes = ['Dog', 'Cat', 'Bird', 'Rabbit', 'Reptile', 'Other'];
@@ -664,37 +639,33 @@
                 petsData.forEach(pet => addPet(pet));
             }
         }
-        const hasBankruptcy = document.getElementById('{{ form.has_filed_bankruptcy.id_for_label }}');
-        const bankruptcyExplanation = document.getElementById('bankruptcy-explanation');
-        
-        function toggleBankruptcy() {
-            if (hasBankruptcy && hasBankruptcy.checked) {
-                bankruptcyExplanation.style.display = 'block';
-            } else {
-                bankruptcyExplanation.style.display = 'none';
-            }
-        }
-        
-        if (hasBankruptcy) {
-            hasBankruptcy.addEventListener('change', toggleBankruptcy);
-            toggleBankruptcy();
-        }
-        
-        const hasConviction = document.getElementById('{{ form.has_criminal_conviction.id_for_label }}');
-        const convictionExplanation = document.getElementById('conviction-explanation');
-        
-        function toggleConviction() {
-            if (hasConviction && hasConviction.checked) {
-                convictionExplanation.style.display = 'block';
-            } else {
-                convictionExplanation.style.display = 'none';
-            }
-        }
-        
-        if (hasConviction) {
-            hasConviction.addEventListener('change', toggleConviction);
-            toggleConviction();
-        }
+        // Bankruptcy Toggle
+        const bankruptcyRadios = document.querySelectorAll('input[name="has_filed_bankruptcy"]');
+        const bankruptcyExpl = document.getElementById('bankruptcy-explanation');
+
+        bankruptcyRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'True') {
+                    bankruptcyExpl.classList.remove('d-none');
+                } else {
+                    bankruptcyExpl.classList.add('d-none');
+                }
+            });
+        });
+
+        // Conviction Toggle
+        const convictionRadios = document.querySelectorAll('input[name="has_criminal_conviction"]');
+        const convictionExpl = document.getElementById('conviction-explanation');
+
+        convictionRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'True') {
+                    convictionExpl.classList.remove('d-none');
+                } else {
+                    convictionExpl.classList.add('d-none');
+                }
+            });
+        });
     });
 </script>
 {% endblock %}

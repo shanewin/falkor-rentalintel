@@ -18,8 +18,8 @@
             <div class="card border-0 shadow-sm sticky-top" style="top: 2rem; z-index: 100;">
                 <div class="card-body p-4 text-center">
                     <!-- Profile Photo -->
-                    {% if profile.profile_picture %}
-                        <img src="{{ profile.profile_picture.url }}" alt="{{ broker.get_full_name }}" 
+                    {% if profile.get_profile_photo_url %}
+                        <img src="{{ profile.get_profile_photo_url }}" alt="{{ broker.get_full_name }}" 
                              class="rounded-circle mb-4 object-fit-cover shadow-sm" width="150" height="150">
                     {% else %}
                         <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto mb-4 shadow-sm" 

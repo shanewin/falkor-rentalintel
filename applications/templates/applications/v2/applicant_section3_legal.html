@@ -1,0 +1,161 @@
+{% extends 'applications/applicant_base.html' %}
+{% load static %}
+
+{% block title %}Section 3: Legal Documents{% endblock %}
+
+{% block header_title %}Legal Documents{% endblock %}
+{% block header_subtitle %}Section 3 of 5 • Disclosures & Acknowledgments{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <div class="form-card shadow-sm mb-4">
+            <div class="form-card-header">
+                <h5 class="mb-0"><i class="bi bi-file-earmark-check me-2 text-warning"></i>Required Disclosures</h5>
+            </div>
+            
+            <p class="text-muted small mb-4">{{ intro_text }}</p>
+
+            <div class="legal-documents-container">
+                <!-- NY Discrimination Form -->
+                <div class="legal-form-block mb-5 p-4 border rounded bg-white shadow-sm" id="discrimination-block">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0">1. New York State Housing Discrimination Disclosure Form</h6>
+                        {% if legal_docs.discrimination_form_signed %}
+                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Signed</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark"><i class="bi bi-pencil me-1"></i> Pending Signature</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="legal-text-box mb-3 p-3 bg-light rounded shadow-inner" style="max-height: 300px; overflow-y: auto; font-size: 0.85rem; line-height: 1.6; border: 1px solid #dee2e6;">
+                        <p class="text-center fw-bold mb-3">NEW YORK STATE HOUSING DISCRIMINATION DISCLOSURE FORM</p>
+                        <p>Federal, State and local Fair Housing Laws make it illegal to discriminate in housing on the basis of race, religion, sex, disability, familial status or national origin. New York State Fair Housing Law also protects against discrimination on the basis of sexual orientation, marital status, military status, and age.</p>
+                        <p>Real estate agents are prohibited by law from discriminating on the basis of any of these protected classes. This means that an agent cannot:</p>
+                        <ul>
+                            <li>Refuse to rent or sell housing</li>
+                            <li>Refuse to negotiate for housing</li>
+                            <li>Make housing unavailable</li>
+                            <li>Set different terms, conditions or privileges for sale or rental of housing</li>
+                            <li>Falsely state that housing is unavailable for inspection, sale or rental</li>
+                        </ul>
+                        <p>If you believe you have been the victim of housing discrimination, you should contact the New York State Division of Human Rights or the U.S. Department of Housing and Urban Development.</p>
+                    </div>
+
+                    {% if not legal_docs.discrimination_form_signed %}
+                    <div class="signature-area p-3 bg-light rounded border">
+                        <label class="form-label fw-bold small">Type your full legal name to sign</label>
+                        <div class="input-group">
+                            <input type="text" id="sig-discrimination" class="form-control" placeholder="Full Legal Name">
+                            <button class="btn btn-dark" onclick="signDocument('NY_DISCRIMINATION', 'sig-discrimination')">
+                                <i class="bi bi-pen me-2"></i>Sign Document
+                            </button>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="signed-info p-3 border-start border-success border-4 bg-light rounded">
+                        <p class="mb-0 small fw-bold">Digitally Signed By: <span class="text-success">{{ legal_docs.discrimination_form_signature }}</span></p>
+                        <p class="mb-0 text-muted" style="font-size: 0.7rem;">Signed on {{ legal_docs.discrimination_form_signed_at|date:"M d, Y H:i" }} | IP: {{ legal_docs.discrimination_form_ip }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- NY Brokers Form -->
+                <div class="legal-form-block mb-4 p-4 border rounded bg-white shadow-sm" id="brokers-block">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0">2. New York State Disclosure Form for Buyer and Seller</h6>
+                        {% if legal_docs.brokers_form_signed %}
+                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Signed</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark"><i class="bi bi-pencil me-1"></i> Pending Signature</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="legal-text-box mb-3 p-3 bg-light rounded shadow-inner" style="max-height: 300px; overflow-y: auto; font-size: 0.85rem; line-height: 1.6; border: 1px solid #dee2e6;">
+                        <p class="text-center fw-bold mb-3">NEW YORK STATE DISCLOSURE FORM FOR LANDLORD AND TENANT</p>
+                        <p><strong>THIS IS NOT A CONTRACT</strong></p>
+                        <p>New York State law requires real estate licensees who are acting as agents of landlords and tenants of real property to advise the potential landlords and tenants with whom they work of the nature of their agency relationship and the rights and obligations it creates.</p>
+                        <p><strong>Tenant's Agent:</strong> A tenant's agent is an agent who is engaged by a tenant to represent the tenant's interests. The tenant's agent is responsible for performing the following duties for the tenant: reasonable care, undivided loyalty, confidentiality, full disclosure, obedience and duty to account.</p>
+                        <p><strong>Landlord's Agent:</strong> A landlord's agent is an agent who is engaged by a landlord to represent the landlord's interests. The landlord's agent is responsible for performing the following duties for the landlord: reasonable care, undivided loyalty, confidentiality, full disclosure, obedience and duty to account.</p>
+                    </div>
+
+                    {% if not legal_docs.brokers_form_signed %}
+                    <div class="signature-area p-3 bg-light rounded border">
+                        <label class="form-label fw-bold small">Type your full legal name to sign</label>
+                        <div class="input-group">
+                            <input type="text" id="sig-brokers" class="form-control" placeholder="Full Legal Name">
+                            <button class="btn btn-dark" onclick="signDocument('NY_BROKERS', 'sig-brokers')">
+                                <i class="bi bi-pen me-2"></i>Sign Document
+                            </button>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="signed-info p-3 border-start border-success border-4 bg-light rounded">
+                        <p class="mb-0 small fw-bold">Digitally Signed By: <span class="text-success">{{ legal_docs.brokers_form_signature }}</span></p>
+                        <p class="mb-0 text-muted" style="font-size: 0.7rem;">Signed on {{ legal_docs.brokers_form_signed_at|date:"M d, Y H:i" }} | IP: {{ legal_docs.brokers_form_ip }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <form method="post" class="mt-5 pt-3 border-top">
+                {% csrf_token %}
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'section2_income' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn btn-outline-dark">
+                        <i class="bi bi-arrow-left me-2"></i> Back
+                    </a>
+                    <button type="submit" name="save_continue" class="btn btn-warning px-5 fw-bold shadow-sm"
+                            {% if not legal_docs.discrimination_form_signed or not legal_docs.brokers_form_signed %}disabled{% endif %}
+                            id="btn-continue">
+                        Save and Continue <i class="bi bi-arrow-right ms-2"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        {% include 'applications/v2/_application_sidebar.html' with current_step=3 hide_sidebar_image=True hide_property_details=True show_detailed_info=True %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function signDocument(docType, inputId) {
+    const signature = document.getElementById(inputId).value;
+    if (!signature) {
+        alert("Please enter your name to sign.");
+        return;
+    }
+
+    if (!confirm(`Are you sure you want to digitally sign this document as "${signature}"?`)) {
+        return;
+    }
+
+    fetch("{% url 'v2_sign_document' application.id %}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-CSRFToken": "{{ csrf_token }}"
+        },
+        body: `doc_type=${docType}&signature=${encodeURIComponent(signature)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert("Error: " + data.error);
+        }
+    })
+    .catch(error => {
+        console.error("Error signing document:", error);
+        alert("An error occurred. Please try again.");
+    });
+}
+</script>
+{% endblock %}

@@ -359,8 +359,8 @@
                     <div class="card border-0 shadow-sm mb-4">
                         <div class="card-body p-4 text-center">
                             <a href="{% url 'public_broker_profile' broker.id %}" class="text-decoration-none text-dark">
-                                {% if broker.broker_profile.profile_picture %}
-                                    <img src="{{ broker.broker_profile.profile_picture.url }}" alt="{{ broker.get_full_name }}" 
+                                {% if broker.broker_profile.get_profile_photo_url %}
+                                    <img src="{{ broker.broker_profile.get_profile_photo_url }}" alt="{{ broker.get_full_name }}" 
                                          class="rounded-circle mb-3 object-fit-cover shadow-sm" width="80" height="80">
                                 {% else %}
                                     <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto mb-3 shadow-sm" 

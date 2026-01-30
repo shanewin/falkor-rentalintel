@@ -98,6 +98,20 @@ class Application(models.Model):
     payment_completed = models.BooleanField(default=False)
     payment_completed_at = models.DateTimeField(null=True, blank=True)
 
+    def get_total_progress(self):
+        """Calculates total weighted progress across all 5 sections"""
+        total = 0
+        sections = self.sections.all()
+        for section in sections:
+            total += section.get_progress_percentage()
+        return round(total / 5) if sections.exists() else 0
+
+    def get_dynamic_status(self):
+        """Returns dynamic status label for NEW applications"""
+        if self.status == 'NEW' or self.status == 'New':
+            return f"Not Submitted - {self.get_total_progress()}%"
+        return self.get_status_display()
+
     def save(self, *args, **kwargs):
         """Ensure that required_documents only contains valid choices"""
         if isinstance(self.required_documents, list):
@@ -226,6 +240,28 @@ class ApplicationSection(models.Model):
     def __str__(self):
         return f"Application {self.application.id} - Section {self.get_section_number_display()}"
 
+    def get_progress_percentage(self):
+        """Returns a percentage score for this section based on its data model"""
+        if self.status == SectionStatus.COMPLETED:
+            return 100
+            
+        # Try to find corresponding data model
+        if self.section_number == 1:
+            data_model = getattr(self.application, 'personal_info', None)
+        elif self.section_number == 2:
+            data_model = getattr(self.application, 'income_info', None)
+        elif self.section_number == 3:
+            data_model = getattr(self.application, 'legal_docs', None)
+        elif self.section_number == 5:
+            data_model = getattr(self.application, 'payment', None)
+        else:
+            data_model = None
+
+        if data_model and hasattr(data_model, 'get_completion_status'):
+            return data_model.get_completion_status()
+        
+        return 100 if self.status == SectionStatus.COMPLETED else (20 if self.status == SectionStatus.IN_PROGRESS else 0)
+
 
 class PersonalInfoData(models.Model):
     """Section 1 - Personal Information"""
@@ -258,7 +294,7 @@ class PersonalInfoData(models.Model):
     # Housing status fields
     housing_status = models.CharField(max_length=50, blank=True, null=True)
     current_monthly_rent = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    is_rental_property = models.BooleanField(default=False)
+    is_rental_property = models.BooleanField(null=True, blank=True, default=None)
     reason_for_moving = models.TextField(blank=True, null=True)
     
     # Landlord info
@@ -273,7 +309,7 @@ class PersonalInfoData(models.Model):
     
     # Additional info
     referral_source = models.CharField(max_length=200, blank=True, null=True)
-    has_pets = models.BooleanField(default=False)
+    has_pets = models.BooleanField(null=True, blank=True, default=None)
     
     # References
     reference1_name = models.CharField(max_length=100, blank=True, null=True)
@@ -282,13 +318,49 @@ class PersonalInfoData(models.Model):
     reference2_phone = models.CharField(max_length=20, blank=True, null=True)
     
     # Legal history
-    has_filed_bankruptcy = models.BooleanField(default=False)
+    has_filed_bankruptcy = models.BooleanField(null=True, blank=True, default=None)
     bankruptcy_explanation = models.TextField(blank=True, null=True)
-    has_criminal_conviction = models.BooleanField(default=False)
+    has_criminal_conviction = models.BooleanField(null=True, blank=True, default=None)
     conviction_explanation = models.TextField(blank=True, null=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def get_completion_status(self):
+        """Weighted completion for Section 1 - Comprehensive version"""
+        def is_filled(val):
+            if val is None: return False
+            if isinstance(val, str): return bool(val.strip())
+            return True
+
+        # Base required fields
+        weights = {
+            'first_name': 10, 'last_name': 10, 'email': 10, 'phone_cell': 5,
+            'date_of_birth': 5, 'ssn': 5,
+            'street_address_1': 5, 'city': 5, 'state': 5, 'zip_code': 5,
+            'current_address_years': 3, 'current_address_months': 2,
+            'housing_status': 5, 'referral_source': 5,
+            'reference1_name': 5, 'reference1_phone': 5,
+            'has_pets': 5  # This counts as answered if answered
+        }
+        
+        # Add conditional landlord fields if renting
+        if self.housing_status == 'Rent':
+            weights.update({
+                'current_monthly_rent': 5,
+                'landlord_name': 5,
+                'landlord_phone': 2,
+                'landlord_email': 3
+            })
+            
+        score = 0
+        total_weight = sum(weights.values())
+        
+        for field, weight in weights.items():
+            if is_filled(getattr(self, field)):
+                score += weight
+                
+        return round((score / total_weight) * 100) if total_weight > 0 else 0
 
 
 class Pet(models.Model):
@@ -372,7 +444,7 @@ class IncomeData(models.Model):
     supervisor_name = models.CharField(max_length=100, blank=True, null=True)
     supervisor_email = models.EmailField(blank=True, null=True)
     supervisor_phone = models.CharField(max_length=20, blank=True, null=True)
-    currently_employed = models.BooleanField(default=True)
+    currently_employed = models.BooleanField(null=True, blank=True, default=None)
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
     
@@ -402,12 +474,35 @@ class IncomeData(models.Model):
     id_back_image = models.FileField(upload_to='application_docs/id_images/', null=True, blank=True)
 
     # Flags for additional data
-    has_multiple_jobs = models.BooleanField(default=False)
-    has_additional_income = models.BooleanField(default=False)
-    has_assets = models.BooleanField(default=False)
+    has_multiple_jobs = models.BooleanField(null=True, blank=True, default=None)
+    has_additional_income = models.BooleanField(null=True, blank=True, default=None)
+    has_assets = models.BooleanField(null=True, blank=True, default=None)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def get_completion_status(self):
+        """Weighted completion for Section 2"""
+        def is_filled(val):
+            if val is None: return False
+            if isinstance(val, str): return bool(val.strip())
+            return True
+
+        weights = {'employment_type': 10, 'currently_employed': 10}
+        
+        if self.employment_type == 'student':
+            weights.update({'school_name': 30, 'year_of_graduation': 20, 'school_phone': 10, 'school_address': 20})
+        else:
+            weights.update({'employer': 30, 'job_title': 20, 'annual_income': 20, 'supervisor_name': 10})
+            
+        score = 0
+        total_weight = sum(weights.values())
+        
+        for field, weight in weights.items():
+            if is_filled(getattr(self, field)):
+                score += weight
+                
+        return round((score / total_weight) * 100) if total_weight > 0 else 0
 
 
 class AdditionalEmployment(models.Model):
@@ -464,6 +559,13 @@ class LegalDocuments(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def get_completion_status(self):
+        """Simple completion for Section 3"""
+        score = 0
+        if self.discrimination_form_signed: score += 50
+        if self.brokers_form_signed: score += 50
+        return score
+
 
 class ApplicationPayment(models.Model):
     """Section 5 - Payment Information"""
@@ -488,3 +590,7 @@ class ApplicationPayment(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def get_completion_status(self):
+        """Payment completion"""
+        return 100 if self.status == 'completed' else 0

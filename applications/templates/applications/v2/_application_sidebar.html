@@ -1,0 +1,303 @@
+{% load static %}
+{% load apartment_extras %}
+
+<!-- Property Overview -->
+{% if not hide_property_details %}
+<div class="card shadow-sm mb-4 border-0">
+    <div class="card-header bg-dark text-white py-3">
+        <h5 class="mb-0"><i class="bi bi-building me-2 text-warning"></i>Property Details</h5>
+    </div>
+    <div class="card-body p-0">
+        {% if application.apartment %}
+        {% if not hide_sidebar_image %}
+        <div class="position-relative" style="height: 160px; overflow: hidden;">
+            {% with first_image=application.apartment.all_images.0 fallback_img=application.apartment.id|get_fallback_image %}
+            <img src="{% if first_image %}{{ first_image.large_url }}{% else %}{{ fallback_img }}{% endif %}" 
+                 class="w-100 h-100 object-fit-cover" alt="Property">
+            {% endwith %}
+            <div class="position-absolute bottom-0 start-0 w-100 p-3" style="background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);">
+                <h6 class="text-white mb-0 fw-bold">{{ application.apartment.building.name }}</h6>
+                <small class="text-white-50">Unit {{ application.apartment.unit_number }}</small>
+            </div>
+        </div>
+        {% endif %}
+        <div class="p-3">
+            <div class="d-flex justify-content-between mb-2 small">
+                <span class="text-muted">Monthly Rent</span>
+                <span class="fw-bold">${{ application.apartment.rent_price|floatformat:0 }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2 small">
+                <span class="text-muted">Layout</span>
+                <span class="fw-bold">{{ application.apartment.bedrooms|default:"Studio" }} Bed / {{ application.apartment.bathrooms|default:"1" }} Bath</span>
+            </div>
+            {% if application.apartment.building.neighborhood %}
+            <div class="d-flex justify-content-between small">
+                <span class="text-muted">Neighborhood</span>
+                <span class="fw-bold">{{ application.apartment.building.neighborhood.name }}</span>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="p-4 text-center bg-light">
+            <i class="bi bi-house-door fs-1 text-muted mb-2"></i>
+            <h6 class="mb-1">{{ application.get_building_display }}</h6>
+            <small class="text-muted">{{ application.get_unit_display }}</small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Application Progress -->
+<div class="card shadow-sm mb-4 border-0">
+    <div class="card-header bg-dark text-white py-3">
+        <h5 class="mb-0"><i class="bi bi-clipboard-check me-2 text-warning"></i>Application Progress</h5>
+    </div>
+    <div class="card-body p-4">
+        <div class="application-steps">
+            {% for step in sections %}
+            <div class="d-flex align-items-start mb-4 {% if forloop.last %}mb-0{% endif %}">
+                <div class="step-indicator me-3 d-flex flex-column align-items-center">
+                    <div class="step-dot rounded-circle d-flex align-items-center justify-content-center shadow-sm
+                        {% if step.status == 'COMPLETED' %}bg-success text-white
+                        {% elif step.section_number == current_step %}bg-warning text-dark fw-bold
+                        {% else %}bg-light text-muted border{% endif %}"
+                         style="width: 32px; height: 32px; z-index: 2;">
+                        {% if step.status == 'COMPLETED' %}
+                        <i class="bi bi-check-lg"></i>
+                        {% else %}
+                        {{ step.section_number }}
+                        {% endif %}
+                    </div>
+                    {% if not forloop.last %}
+                    <div class="step-line" style="width: 2px; height: 30px; background-color: #dee2e6; margin-top: 4px;"></div>
+                    {% endif %}
+                </div>
+                <div class="step-content pt-1">
+                    <h6 class="mb-0 small fw-bold {% if step.section_number == current_step %}text-dark{% else %}text-muted{% endif %}">
+                        {% if step.section_number == 1 %}Personal Information
+                        {% elif step.section_number == 2 %}Income & Employment
+                        {% elif step.section_number == 3 %}Legal Documents
+                        {% elif step.section_number == 4 %}Review Application
+                        {% elif step.section_number == 5 %}Payment & Submit
+                        {% endif %}
+                    </h6>
+                    <small class="text-muted" style="font-size: 0.75rem;">
+                        {% if step.status == 'COMPLETED' %}Completed
+                        {% elif step.section_number == current_step %}In Progress
+                        {% else %}Pending{% endif %}
+                    </small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="mt-4 pt-3 border-top">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <small class="text-muted fw-bold">Overall Progress</small>
+                <small class="text-dark fw-bold">{{ progress_percent|floatformat:0 }}%</small>
+            </div>
+            <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress_percent|default:0 }}%;" aria-valuenow="{{ progress_percent|default:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if show_detailed_info %}
+{% if application.apartment %}
+<!-- Property Overview -->
+{% if application.apartment.description or application.apartment.building.description %}
+<div class="card shadow-sm mb-4 border-0">
+    <div class="card-header bg-dark text-white">
+        <h5 class="mb-0"><i class="bi bi-info-circle me-2 text-warning"></i>Property Overview</h5>
+    </div>
+    <div class="card-body">
+        {% if application.apartment.description %}
+        <div class="mb-3">
+            <h6 class="text-uppercase small fw-bold text-muted mb-2">About the Apartment</h6>
+            <div class="property-description-text small" id="sidebarPropertyDescription" style="max-height: 120px; overflow: hidden; position: relative;">
+                {{ application.apartment.description|safe }}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if application.apartment.building.description %}
+        <div class="mb-3">
+            <h6 class="text-uppercase small fw-bold text-muted mb-2">About {{ application.apartment.building.name }}</h6>
+            <div class="property-description-text small" id="sidebarBuildingDescription" style="max-height: 120px; overflow: hidden; position: relative;">
+                {{ application.apartment.building.description|safe }}
+            </div>
+        </div>
+        {% endif %}
+
+        <button class="btn btn-link btn-sm p-0 text-decoration-none text-dark fw-bold" id="sidebarShowMoreBtn" onclick="toggleSidebarDescription()">
+            <i class="bi bi-chevron-down me-1"></i>Show More
+        </button>
+    </div>
+</div>
+{% endif %}
+
+<!-- Building Amenities -->
+{% if application.apartment.building.amenities.exists %}
+<div class="card shadow-sm mb-4 border-0">
+    <div class="card-header bg-dark text-white">
+        <h5 class="mb-0"><i class="bi bi-building me-2 text-warning"></i>Building Amenities</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-2">
+            {% for amenity in application.apartment.building.amenities.all %}
+                {% with priority=application.applicant|get_amenity_priority:amenity %}
+                <div class="col-12">
+                    <div class="d-flex align-items-center justify-content-between p-2 rounded hover-bg-light">
+                        <div class="d-flex align-items-center">
+                            <i class="fas {{ amenity.icon|default:'fa-check' }} me-3 text-warning" style="width: 20px; text-align: center;"></i>
+                            <span class="small">{{ amenity.name }}</span>
+                        </div>
+                        {% if priority > 1 %}
+                            <span class="badge {{ priority|priority_class }}">{{ priority|priority_label }} Match</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endwith %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Apartment Amenities -->
+{% if application.apartment.amenities.exists %}
+<div class="card shadow-sm mb-4 border-0">
+    <div class="card-header bg-dark text-white">
+        <h5 class="mb-0"><i class="bi bi-house me-2 text-warning"></i>Apartment Amenities</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-2">
+            {% for amenity in application.apartment.amenities.all %}
+                {% with priority=application.applicant|get_amenity_priority:amenity %}
+                <div class="col-12">
+                    <div class="d-flex align-items-center justify-content-between p-2 rounded hover-bg-light">
+                        <div class="d-flex align-items-center">
+                            <i class="fas {{ amenity.icon|default:'fa-check' }} me-3 text-warning" style="width: 20px; text-align: center;"></i>
+                            <span class="small">{{ amenity.name }}</span>
+                        </div>
+                        {% if priority > 1 %}
+                            <span class="badge {{ priority|priority_class }}">{{ priority|priority_label }} Match</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endwith %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Building Features -->
+{% if application.apartment.building.walk_score or application.apartment.building.transit_score or application.apartment.building.pet_policy %}
+<div class="card shadow-sm mb-4 border-0">
+    <div class="card-header bg-dark text-white">
+        <h5 class="mb-0"><i class="bi bi-info-circle me-2 text-warning"></i>Building Features</h5>
+    </div>
+    <div class="card-body">
+        {% if application.apartment.building.walk_score %}
+        <div class="d-flex justify-content-between mb-2 small">
+            <span><i class="bi bi-walking me-2 text-muted"></i>Walk Score</span>
+            <span class="fw-bold">{{ application.apartment.building.walk_score }}</span>
+        </div>
+        {% endif %}
+        {% if application.apartment.building.transit_score %}
+        <div class="d-flex justify-content-between mb-2 small">
+            <span><i class="bi bi-bus me-2 text-muted"></i>Transit Score</span>
+            <span class="fw-bold">{{ application.apartment.building.transit_score }}</span>
+        </div>
+        {% endif %}
+        {% if application.apartment.building.pet_policy %}
+        <div class="d-flex justify-content-between small">
+            <span><i class="bi bi-paw me-2 text-muted"></i>Pet Policy</span>
+            <span class="fw-bold">{{ application.apartment.building.get_pet_policy_display }}</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endif %}
+
+<!-- Your Broker -->
+{% if application.broker %}
+<div class="card shadow-sm mb-4 border-0 text-center">
+    <div class="card-header bg-dark text-white">
+        <h5 class="mb-0"><i class="bi bi-person-badge me-2 text-warning"></i>Your Broker</h5>
+    </div>
+    <div class="card-body p-4">
+        {% if application.broker.broker_profile.get_profile_photo_url %}
+            <img src="{{ application.broker.broker_profile.get_profile_photo_url }}" alt="{{ application.broker.get_full_name }}" 
+                 class="rounded-circle mb-3 shadow-sm border border-2 border-warning" style="width: 80px; height: 80px; object-fit: cover;">
+        {% else %}
+            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto mb-3 shadow-sm" style="width: 80px; height: 80px;">
+                <i class="bi bi-person fa-2x text-muted"></i>
+            </div>
+        {% endif %}
+        <h5 class="fw-bold mb-1">{{ application.broker.get_full_name }}</h5>
+        <p class="text-muted small mb-0">Licensed Real Estate Broker</p>
+        <hr class="my-3">
+        <div class="d-grid">
+            <a href="mailto:{{ application.broker.email }}" class="btn btn-sm btn-outline-dark">
+                <i class="bi bi-envelope me-2"></i>Email Broker
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endif %}
+
+<!-- Support Card -->
+<div class="card shadow-sm border-0 bg-light">
+    <div class="card-body p-4">
+        <h6 class="fw-bold mb-2"><i class="bi bi-question-circle me-2 text-warning"></i>Need Assistance?</h6>
+        <p class="text-muted small mb-3">Our team is here to help you with your application process.</p>
+        <a href="mailto:support@doorway.com" class="btn btn-sm btn-outline-dark w-100">
+            <i class="bi bi-envelope me-2"></i>Contact Support
+        </a>
+    </div>
+</div>
+
+<script>
+function toggleSidebarDescription() {
+    const aptDesc = document.getElementById('sidebarPropertyDescription');
+    const bldgDesc = document.getElementById('sidebarBuildingDescription');
+    const button = document.getElementById('sidebarShowMoreBtn');
+    
+    let isExpanded = false;
+    if (aptDesc && aptDesc.style.maxHeight === 'none') isExpanded = true;
+    if (bldgDesc && bldgDesc.style.maxHeight === 'none') isExpanded = true;
+    
+    if (isExpanded) {
+        if (aptDesc) aptDesc.style.maxHeight = '120px';
+        if (bldgDesc) bldgDesc.style.maxHeight = '120px';
+        button.innerHTML = '<i class="bi bi-chevron-down me-1"></i>Show More';
+    } else {
+        if (aptDesc) aptDesc.style.maxHeight = 'none';
+        if (bldgDesc) bldgDesc.style.maxHeight = 'none';
+        button.innerHTML = '<i class="bi bi-chevron-up me-1"></i>Show Less';
+    }
+}
+
+// Check if Show More button is needed on load
+document.addEventListener('DOMContentLoaded', function() {
+    const aptDesc = document.getElementById('sidebarPropertyDescription');
+    const bldgDesc = document.getElementById('sidebarBuildingDescription');
+    const button = document.getElementById('sidebarShowMoreBtn');
+    
+    if (button) {
+        let needsButton = false;
+        if (aptDesc && aptDesc.scrollHeight > 120) needsButton = true;
+        if (bldgDesc && bldgDesc.scrollHeight > 120) needsButton = true;
+        
+        if (!needsButton) {
+            button.style.display = 'none';
+        }
+    }
+});
+</script>
