@@ -29,9 +29,9 @@ ENV SECRET_KEY=dummy-secret-key-for-build \
     CLOUDINARY_API_KEY=dummy \
     CLOUDINARY_API_SECRET=dummy \
     SENDGRID_API_KEY=dummy \
-    TWILIO_ACCOUNT_SID=dummy \
-    TWILIO_AUTH_TOKEN=dummy \
-    TWILIO_FROM_PHONE=dummy \
+    TELNYX_API_KEY=dummy \
+    TELNYX_FROM_PHONE=dummy \
+    TELNYX_PUBLIC_KEY=dummy \
     FIELD_ENCRYPTION_KEY=N2yX1XjZyQ4x_V-4y5_uO-Z7yR_xL_vLfRQ6f18x_N8=
 
 # Collect static files (with dummy env vars)

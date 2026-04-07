@@ -317,43 +317,100 @@ def verify_phone_for_user(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
-def twilio_webhook(request):
+def telnyx_webhook(request):
     """
-    Webhook endpoint for Twilio SMS status updates
-    Handles delivery confirmations and opt-outs
+    Webhook endpoint for Telnyx SMS status updates and inbound messages.
+    Handles delivery confirmations and inbound opt-out messages.
     """
     try:
-        # Parse Twilio webhook data
-        message_sid = request.POST.get('MessageSid')
-        message_status = request.POST.get('MessageStatus')
-        from_number = request.POST.get('From')
-        body = request.POST.get('Body', '').upper()
+        import telnyx
+        from django.conf import settings as django_settings
         
-        # Handle opt-out commands
-        if body in ['STOP', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT']:
-            # Find user by phone number
-            prefs = SMSPreferences.objects.filter(
-                phone_number=from_number
-            ).first()
+        # Verify webhook signature if public key is configured
+        public_key = getattr(django_settings, 'TELNYX_PUBLIC_KEY', '')
+        if public_key:
+            telnyx.public_key = public_key
+            try:
+                signature = request.headers.get('telnyx-signature-ed25519', '')
+                timestamp = request.headers.get('telnyx-timestamp', '')
+                event = telnyx.Webhook.construct_event(
+                    request.body.decode('utf-8'),
+                    signature,
+                    timestamp
+                )
+            except Exception as e:
+                logger.warning(f"Telnyx webhook signature verification failed: {e}")
+                return JsonResponse({'status': 'invalid_signature'}, status=403)
+        else:
+            # Fallback: parse JSON directly (less secure, for development)
+            event_data = json.loads(request.body)
             
-            if prefs:
-                prefs.record_opt_out()
-                logger.info(f"User opted out via SMS: {from_number}")
+            class EventPayload:
+                def __init__(self, data):
+                    self._data = data
+                def __getattr__(self, name):
+                    val = self._data.get(name)
+                    if isinstance(val, dict):
+                        return EventPayload(val)
+                    return val
+
+            class Event:
+                def __init__(self, raw):
+                    self.data = EventPayload(raw.get('data', {}))
+            
+            event = Event(event_data)
         
-        # Update message status if we have the SID
-        if message_sid:
-            from .sms_models import SMSMessage
-            msg = SMSMessage.objects.filter(sms_sid=message_sid).first()
-            if msg:
-                msg.status = message_status
-                if message_status == 'delivered':
-                    msg.delivered_at = timezone.now()
-                msg.save()
+        event_type = event.data.event_type
+        payload = event.data.payload
+        
+        if event_type == 'message.finalized':
+            # Outbound message delivery status update
+            message_id = getattr(payload, 'id', None)
+            to_list = getattr(payload, 'to', [])
+            
+            # Get delivery status
+            status = 'unknown'
+            if to_list and len(to_list) > 0:
+                first_to = to_list[0]
+                status = getattr(first_to, 'status', 'unknown') if hasattr(first_to, 'status') else first_to.get('status', 'unknown')
+            
+            # Update message status if we have the ID
+            if message_id:
+                from .sms_models import SMSMessage
+                msg = SMSMessage.objects.filter(sms_sid=message_id).first()
+                if msg:
+                    msg.status = status
+                    if status == 'delivered':
+                        msg.delivered_at = timezone.now()
+                    msg.save()
+            
+            logger.info(f"Telnyx delivery status: {message_id} -> {status}")
+        
+        elif event_type == 'message.received':
+            # Inbound message (e.g., manual opt-out not caught by Telnyx platform)
+            from_number = getattr(payload, 'from_', None)
+            if isinstance(from_number, dict):
+                from_number = from_number.get('phone_number', '')
+            elif hasattr(from_number, 'phone_number'):
+                from_number = from_number.phone_number
+            
+            text = getattr(payload, 'text', '')
+            body = (text or '').upper().strip()
+            
+            # Handle opt-out commands (backup — Telnyx handles these at platform level)
+            if body in ['STOP', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT']:
+                prefs = SMSPreferences.objects.filter(
+                    phone_number=from_number
+                ).first()
+                
+                if prefs:
+                    prefs.record_opt_out()
+                    logger.info(f"User opted out via inbound SMS: {from_number}")
         
         return JsonResponse({'status': 'ok'})
         
     except Exception as e:
-        logger.error(f"Twilio webhook error: {e}")
+        logger.error(f"Telnyx webhook error: {e}")
         return JsonResponse({'status': 'error'}, status=500)
 
 

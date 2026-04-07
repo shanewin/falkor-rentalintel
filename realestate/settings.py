@@ -280,10 +280,10 @@ def get_email_backend():
 
 EMAIL_BACKEND = get_email_backend()
 
-# Twilio SMS Configuration
-TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID', default='')
-TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN', default='')
-TWILIO_FROM_PHONE = config('TWILIO_FROM_PHONE', default='')
+# Telnyx SMS Configuration
+TELNYX_API_KEY = config('TELNYX_API_KEY', default='')
+TELNYX_FROM_PHONE = config('TELNYX_FROM_PHONE', default='')
+TELNYX_PUBLIC_KEY = config('TELNYX_PUBLIC_KEY', default='')  # For webhook signature verification
 
 # Site URL for generating links in emails/SMS
 SITE_URL = config('SITE_URL', default='http://localhost:8000')

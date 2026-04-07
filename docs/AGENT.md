@@ -11,7 +11,7 @@ DoorWay/Falkor is a Django-based rental platform that connects brokers, applican
 - **Deployment**: Docker Compose
 - **AI/ML**: OpenAI/Anthropic APIs for document analysis
 - **Storage**: Cloudinary for images
-- **Communication**: Twilio (SMS), Django email
+- **Communication**: Telnyx (SMS), Django email
 
 ## Key User Roles
 
@@ -68,7 +68,7 @@ DoorWay/Falkor is a Django-based rental platform that connects brokers, applican
 - **views.py**: Role-based dashboards and authentication
 - **profiles_models.py**: BrokerProfile, AdminProfile
 - **email_verification.py**: Email verification system
-- **sms_verification.py**: Phone verification via Twilio
+- **sms_verification.py**: Phone verification via Telnyx
 
 ### `doc_analysis/`
 - **views.py**: AI document analysis endpoint
@@ -141,9 +141,9 @@ OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
 
 # Communication
-TWILIO_ACCOUNT_SID=AC...
-TWILIO_AUTH_TOKEN=...
-TWILIO_PHONE_NUMBER=+1...
+TELNYX_API_KEY=KEY...
+TELNYX_FROM_PHONE=+1...
+TELNYX_PUBLIC_KEY=...
 EMAIL_HOST_PASSWORD=...
 
 # Storage

@@ -166,11 +166,11 @@ EMAIL_BACKEND = 'applications.email_backends.SendGridBackend'
 DEFAULT_FROM_EMAIL = 'DoorWay <noreply@doorway.com>'
 ```
 
-### SMS Settings (Twilio):
+### SMS Settings (Telnyx):
 ```python
-TWILIO_ACCOUNT_SID = 'AC...'
-TWILIO_AUTH_TOKEN = '...'
-TWILIO_FROM_PHONE = '+1234567890'
+TELNYX_API_KEY = 'KEY...'
+TELNYX_FROM_PHONE = '+1234567890'
+TELNYX_PUBLIC_KEY = '...'
 ```
 
 ## Next Steps

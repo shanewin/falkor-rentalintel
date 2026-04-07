@@ -143,14 +143,14 @@ print(f"SMS Enabled: {prefs.sms_enabled}")
 
 ### Environment Variables:
 ```env
-TWILIO_ACCOUNT_SID=ACxxxxxxxxxx
-TWILIO_AUTH_TOKEN=xxxxxxxxxx
-TWILIO_FROM_PHONE=+1234567890
+TELNYX_API_KEY=KEYxxxxxxxxxx
+TELNYX_FROM_PHONE=+1234567890
+TELNYX_PUBLIC_KEY=xxxxxxxxxx
 ```
 
-### Twilio Webhook (Production):
+### Telnyx Webhook (Production):
 ```
-https://yourdomain.com/users/webhook/twilio/
+https://rentfalkor.com/users/webhook/telnyx/
 ```
 
 ## 📈 Next Steps

@@ -56,7 +56,8 @@ urlpatterns = [
     path('sms-preferences/', sms_views.sms_preferences_view, name='sms_preferences'),
     path('verify-my-phone/', sms_views.verify_phone_for_user, name='verify_my_phone'),
     path('sms-status/', sms_views.sms_verification_status, name='sms_verification_status'),
-    path('webhook/twilio/', sms_views.twilio_webhook, name='twilio_webhook'),
+    path('webhook/telnyx/', sms_views.telnyx_webhook, name='telnyx_webhook'),
+    path('webhook/twilio/', sms_views.telnyx_webhook, name='twilio_webhook_redirect'),  # Legacy redirect
     
     # Public Profiles
     path('brokers/<int:broker_id>/', views.public_broker_profile, name='public_broker_profile'),

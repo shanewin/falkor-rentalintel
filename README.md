@@ -24,7 +24,7 @@ Integrated secure document pipeline that processes applicant uploads (paystubs, 
 *   **Database:** PostgreSQL
 *   **Infrastructure:** Docker & Docker Compose
 *   **Frontend:** Bootstrap 5, Vanilla JS (HTMX-style interactions)
-*   **External Services:** Cloudinary (Media), SendGrid (Email), Twilio (SMS), Mapbox (Geo)
+*   **External Services:** Cloudinary (Media), SendGrid (Email), Telnyx (SMS), Mapbox (Geo)
 
 ## 🏗️ Architecture Highlights
 

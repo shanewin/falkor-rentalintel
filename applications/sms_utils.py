@@ -1,5 +1,5 @@
 """
-SMS sending utilities using Twilio
+SMS sending utilities using Telnyx
 Complements the existing email system
 """
 
@@ -12,36 +12,33 @@ logger = logging.getLogger(__name__)
 
 class SMSBackend:
     """
-    Twilio SMS backend for sending application notifications
+    Telnyx SMS backend for sending application notifications
     """
     
     def __init__(self):
         self.enabled = self._is_configured()
         if self.enabled:
             try:
-                from twilio.rest import Client
-                self.client = Client(
-                    settings.TWILIO_ACCOUNT_SID,
-                    settings.TWILIO_AUTH_TOKEN
-                )
+                import telnyx
+                telnyx.api_key = settings.TELNYX_API_KEY
+                self._telnyx = telnyx
             except ImportError:
-                logger.error("Twilio package not installed. Run: pip install twilio")
+                logger.error("Telnyx package not installed. Run: pip install telnyx")
                 self.enabled = False
             except Exception as e:
-                logger.error(f"Twilio initialization failed: {e}")
+                logger.error(f"Telnyx initialization failed: {e}")
                 self.enabled = False
     
     def _is_configured(self) -> bool:
-        """Check if Twilio is properly configured"""
+        """Check if Telnyx is properly configured"""
         required_settings = [
-            'TWILIO_ACCOUNT_SID',
-            'TWILIO_AUTH_TOKEN', 
-            'TWILIO_FROM_PHONE'
+            'TELNYX_API_KEY',
+            'TELNYX_FROM_PHONE'
         ]
         
         for setting in required_settings:
             value = getattr(settings, setting, '')
-            if not value or value.startswith('your-'):
+            if not value or value.startswith('your-') or value == 'dummy':
                 return False
         
         return True
@@ -58,7 +55,7 @@ class SMSBackend:
             Tuple of (success: bool, message_id_or_error: str)
         """
         if not self.enabled:
-            return False, "SMS not configured. Please add Twilio credentials."
+            return False, "SMS not configured. Please add Telnyx credentials."
         
         try:
             # Ensure phone number formatting
@@ -66,14 +63,14 @@ class SMSBackend:
                 # Assume US number if no country code
                 to_phone = f"+1{to_phone.replace('-', '').replace('(', '').replace(')', '').replace(' ', '')}"
             
-            message = self.client.messages.create(
-                body=message,
-                from_=settings.TWILIO_FROM_PHONE,
-                to=to_phone
+            response = self._telnyx.Message.create(
+                from_=settings.TELNYX_FROM_PHONE,
+                to=to_phone,
+                text=message
             )
             
-            logger.info(f"SMS sent successfully via Twilio to {to_phone}")
-            return True, message.sid
+            logger.info(f"SMS sent successfully via Telnyx to {to_phone}")
+            return True, response.id
             
         except Exception as e:
             error_msg = f"SMS sending failed: {str(e)}"
@@ -178,7 +175,7 @@ def get_sms_status() -> dict:
     
     return {
         'configured': sms_backend.enabled,
-        'account_sid': getattr(settings, 'TWILIO_ACCOUNT_SID', '')[:8] + '...' if sms_backend.enabled else 'Not configured',
-        'from_phone': getattr(settings, 'TWILIO_FROM_PHONE', 'Not configured'),
+        'api_key': getattr(settings, 'TELNYX_API_KEY', '')[:8] + '...' if sms_backend.enabled else 'Not configured',
+        'from_phone': getattr(settings, 'TELNYX_FROM_PHONE', 'Not configured'),
         'status': 'Ready' if sms_backend.enabled else 'Needs configuration'
     }

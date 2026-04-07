@@ -1,6 +1,6 @@
 # Email and SMS Integration Documentation
 
-This document outlines how **SendGrid** (Email) and **Twilio** (SMS) are integrated into the Falkor application.
+This document outlines how **SendGrid** (Email) and **Telnyx** (SMS) are integrated into the Falkor application.
 
 ## 📧 Email Integration (SendGrid)
 
@@ -41,7 +41,7 @@ This document outlines how **SendGrid** (Email) and **Twilio** (SMS) are integra
 
 ---
 
-## 📱 SMS Integration (Twilio)
+## 📱 SMS Integration (Telnyx)
 
 ### Core Components
 - **Backend Class**: `SMSBackend` in `applications/sms_utils.py`.
@@ -60,12 +60,12 @@ This document outlines how **SendGrid** (Email) and **Twilio** (SMS) are integra
    - **Trigger**: Notifying applicants or sending reminders via text.
 
 3. **Status Webhooks**:
-   - **Endpoint**: `twilio_webhook` in `users/sms_views.py` (handles delivery status and opt-outs like STOP/CANCEL).
+   - **Endpoint**: `telnyx_webhook` in `users/sms_views.py` (handles delivery status updates; opt-outs like STOP/CANCEL are handled by Telnyx at the platform level).
 
 ### Configuration (Environment Variables)
-- `TWILIO_ACCOUNT_SID`: Your Twilio Account SID.
-- `TWILIO_AUTH_TOKEN`: Your Twilio Auth Token.
-- `TWILIO_FROM_PHONE`: Your Twilio-provided phone number.
+- `TELNYX_API_KEY`: Your Telnyx API v2 key.
+- `TELNYX_FROM_PHONE`: Your Telnyx-provided phone number.
+- `TELNYX_PUBLIC_KEY`: Your Telnyx public key (for webhook signature verification).
 
 ---
 
@@ -95,7 +95,7 @@ Based on the latest `.env` changes, here are the potential "obviously errors" or
 2. **`DEFAULT_FROM_EMAIL`**: Currently set to `Falkor <info@rentfalkor.com>`. This is correct for branding, but ensure `info@rentfalkor.com` is exactly matching your verified SendGrid Sender.
 3. **`REPLY_TO_EMAIL`**: Ensure this is set to a mailbox you actively monitor.
 4. **Celery Redis URL**: Currently `redis://redis:6379/0`. This is correct for **local Docker**, but for **Railway production**, it must be updated to use the dynamic `REDIS_URL`.
-5. **Twilio Phone Format**: `TWILIO_FROM_PHONE` must be in E.164 format (e.g., `+1234567890`).
+5. **Telnyx Phone Format**: `TELNYX_FROM_PHONE` must be in E.164 format (e.g., `+1234567890`).
 
 ---
 

@@ -99,7 +99,7 @@ django-encrypted-model-fields==0.6.5
 sendgrid==6.10.0
 mailgun2==2.0.1
 boto3==1.35.80
-twilio==9.3.7
+telnyx>=2.1.0
 celery
 redis
 gunicorn==21.2.0

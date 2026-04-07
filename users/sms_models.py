@@ -256,7 +256,7 @@ class SMSVerificationLog(models.Model):
     sms_sid = models.CharField(
         max_length=100,
         blank=True,
-        help_text="Twilio message SID"
+        help_text="SMS provider message ID"
     )
     
     # Timestamps
@@ -322,11 +322,11 @@ class SMSMessage(models.Model):
         default='pending'
     )
     
-    # Twilio tracking
+    # SMS provider tracking
     sms_sid = models.CharField(
         max_length=100,
         blank=True,
-        help_text="Twilio message SID"
+        help_text="SMS provider message ID"
     )
     
     error_message = models.TextField(blank=True)
@@ -388,6 +388,6 @@ class SMSMessage(models.Model):
         if not self.segments:
             self.segments = self.calculate_segments()
         if self.segments and not self.cost:
-            # Approximate cost (Twilio US pricing)
-            self.cost = self.segments * 0.0079
+            # Approximate cost (Telnyx US pricing)
+            self.cost = self.segments * 0.004
         super().save(*args, **kwargs)
