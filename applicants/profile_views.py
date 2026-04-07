@@ -501,17 +501,31 @@ def profile_step2(request):
         applicant=applicant
     ).select_related('neighborhood').order_by('preference_rank')
     
-    # Get all neighborhoods for the template
+    # Get all neighborhoods for the template — only those with actual buildings
     from .models import Neighborhood
-    all_neighborhoods = Neighborhood.objects.all().order_by('name')
+    from buildings.models import Building
+    from django.db.models import Count
+    active_neighborhood_codes = list(
+        Building.objects.exclude(neighborhood='')
+        .values_list('neighborhood', flat=True).distinct()
+    )
+    all_neighborhoods = Neighborhood.objects.filter(
+        name__in=active_neighborhood_codes
+    ).order_by('name')
     
-    # Get building and apartment amenities for the template
+    # Get building and apartment amenities — only those actually in use
     from buildings.models import Amenity as BuildingAmenity
-    from apartments.models import ApartmentAmenity
+    from apartments.models import ApartmentAmenity, Apartment
     from .models import ApplicantBuildingAmenityPreference, ApplicantApartmentAmenityPreference
     
-    all_building_amenities = BuildingAmenity.objects.all().order_by('name')
-    all_apartment_amenities = ApartmentAmenity.objects.all().order_by('name')
+    all_building_amenities = (BuildingAmenity.objects
+        .annotate(listing_count=Count('building'))
+        .filter(listing_count__gt=0)
+        .order_by('name'))
+    all_apartment_amenities = (ApartmentAmenity.objects
+        .annotate(listing_count=Count('apartment'))
+        .filter(listing_count__gt=0)
+        .order_by('name'))
     
     # Get existing amenity preferences for loading into sliders
     existing_building_preferences = ApplicantBuildingAmenityPreference.objects.filter(

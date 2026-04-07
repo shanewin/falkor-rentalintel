@@ -191,4 +191,79 @@
         </div>
     </div>
 </div>
+
+<!-- Preference migration awareness banner (shown when user arrives from Advanced Filters) -->
+<div class="container" id="prefsMigrationBanner" style="display:none;">
+    <!-- Injected by JS below when localStorage has prefs -->
+</div>
+
+<script>
+(function() {
+    const STORAGE_KEY = 'falkor_advanced_prefs';
+
+    function hasGuestPrefs() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return false;
+            const data = JSON.parse(raw);
+            // Check expiry (30 days)
+            if (Date.now() - data.timestamp > 30 * 24 * 60 * 60 * 1000) {
+                localStorage.removeItem(STORAGE_KEY);
+                return false;
+            }
+            return true;
+        } catch(e) { return false; }
+    }
+
+    function countPrefs() {
+        try {
+            const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+            let count = 0;
+            if (data.neighborhoodRankings?.length) count += data.neighborhoodRankings.length;
+            const bldg = Object.values(data.buildingAmenityPrefs || {}).filter(v => v > 0).length;
+            const apt = Object.values(data.apartmentAmenityPrefs || {}).filter(v => v > 0).length;
+            count += bldg + apt;
+            if (data.maxBudget) count++;
+            if (data.minBedrooms || data.maxBedrooms) count++;
+            return count;
+        } catch(e) { return 0; }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const fromPrefs = new URLSearchParams(window.location.search).get('from') === 'prefs';
+        const hasPrefs = hasGuestPrefs();
+
+        if (hasPrefs && fromPrefs) {
+            const count = countPrefs();
+            // Inject banner above the registration form
+            const card = document.querySelector('.card.shadow-sm');
+            if (card) {
+                const banner = document.createElement('div');
+                banner.className = 'alert mb-4 d-flex align-items-center shadow-sm';
+                banner.style.cssText = 'background: linear-gradient(135deg, #ffd60a22, #ffd60a11); border: 1px solid #ffd60a; border-radius: 12px;';
+                banner.innerHTML = `
+                    <div class="me-3" style="font-size:1.5rem;">✨</div>
+                    <div>
+                        <strong>Your preferences are ready!</strong>
+                        <div class="text-muted small">
+                            We found ${count} preference${count !== 1 ? 's' : ''} you set while browsing.
+                            They'll be saved to your profile automatically when you sign up.
+                        </div>
+                    </div>
+                `;
+                card.parentElement.insertBefore(banner, card);
+            }
+
+            // Update the benefits list to highlight pref migration
+            const benefitsList = document.querySelector('.list-unstyled.text-muted.small');
+            if (benefitsList) {
+                const prefItem = document.createElement('li');
+                prefItem.className = 'mb-2';
+                prefItem.innerHTML = '<i class="fas fa-star text-warning me-2"></i><strong>Keep your neighborhood & amenity preferences</strong>';
+                benefitsList.insertBefore(prefItem, benefitsList.firstChild);
+            }
+        }
+    });
+})();
+</script>
 {% endblock %}

@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils.html import format_html
 from .models import Building, Amenity, BuildingImage, BuildingAccess, BuildingSpecial, NearbySchool
 from .neighborhood_service import NeighborhoodService
 from django.contrib import messages
@@ -87,6 +88,21 @@ class BuildingAdmin(admin.ModelAdmin):
 
 @admin.register(Amenity)
 class AmenityAdmin(admin.ModelAdmin):
-    list_display = ('name',)
+    list_display = ('icon_preview', 'name', 'icon', 'building_count')
+    list_editable = ('name', 'icon')
     search_fields = ('name',)
+    ordering = ('name',)
+
+    def icon_preview(self, obj):
+        return format_html('<i class="fa-solid {} fa-lg"></i>', obj.icon)
+    icon_preview.short_description = "Preview"
+
+    def building_count(self, obj):
+        return obj.building_set.count()
+    building_count.short_description = "# Buildings"
+
+    class Media:
+        css = {
+            'all': ('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css',)
+        }
 

@@ -24,7 +24,7 @@ def get_filtered_apartments(request, user):
     auto_applied_preferences = False
     is_ajax_request = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     
-    if user.is_authenticated and not request.GET and hasattr(user, 'applicant_profile') and not is_ajax_request:
+    if user.is_authenticated and not request.GET and not request.GET.get('reset') and hasattr(user, 'applicant_profile') and not is_ajax_request:
         try:
             applicant = user.applicant_profile
             # Create a mutable copy of GET parameters

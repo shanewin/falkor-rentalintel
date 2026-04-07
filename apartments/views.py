@@ -80,6 +80,83 @@ def apartments_list(request):
     amenity_ids = request.GET.getlist('amenities')
     sort_by = request.GET.get('sort')
 
+    # Advanced Filters context — only show options that have actual listings
+    from applicants.models import Neighborhood
+    from .models import ApartmentAmenity
+    from django.db.models import Count, Subquery, IntegerField, OuterRef
+
+    # Only neighborhoods that have at least 1 building
+    active_neighborhood_codes = list(
+        Building.objects.exclude(neighborhood='')
+        .values_list('neighborhood', flat=True).distinct()
+    )
+    all_neighborhoods = list(Neighborhood.objects.filter(
+        name__in=active_neighborhood_codes
+    ).order_by('name'))
+
+    # Stamp listing count directly on each neighborhood object for template access
+    for nb in all_neighborhoods:
+        nb.listing_count = Apartment.objects.filter(
+            building__neighborhood=nb.name
+        ).count()
+
+    # Only building amenities assigned to at least 1 building
+    all_building_amenities = (Amenity.objects
+        .annotate(listing_count=Count('building'))
+        .filter(listing_count__gt=0)
+        .order_by('name'))
+
+    # Only apartment amenities assigned to at least 1 apartment
+    all_apartment_amenities = (ApartmentAmenity.objects
+        .annotate(listing_count=Count('apartment'))
+        .filter(listing_count__gt=0)
+        .order_by('name'))
+
+    # Serialize authenticated user's profile prefs for Advanced panel pre-fill
+    import json as json_module
+    applicant_prefs_json = '{}'
+    if request.user.is_authenticated and hasattr(request.user, 'applicant_profile'):
+        try:
+            from applicants.models import NeighborhoodPreference
+            from applicants.models import ApplicantBuildingAmenityPreference, ApplicantApartmentAmenityPreference
+            applicant = request.user.applicant_profile
+
+            # Neighborhood rankings
+            hood_rankings = []
+            for p in NeighborhoodPreference.objects.filter(applicant=applicant).order_by('preference_rank'):
+                hood_rankings.append({'id': str(p.neighborhood.id), 'name': p.neighborhood.name})
+
+            # Building amenity prefs: priority_level → slider val (4→3, 3→2, 2→1)
+            priority_to_slider = {4: 3, 3: 2, 2: 1}
+            bldg_prefs = {}
+            for p in ApplicantBuildingAmenityPreference.objects.filter(applicant=applicant):
+                slider_val = priority_to_slider.get(p.priority_level, 0)
+                if slider_val > 0:
+                    bldg_prefs[str(p.amenity.id)] = slider_val
+
+            # Apartment amenity prefs
+            apt_prefs = {}
+            for p in ApplicantApartmentAmenityPreference.objects.filter(applicant=applicant):
+                slider_val = priority_to_slider.get(p.priority_level, 0)
+                if slider_val > 0:
+                    apt_prefs[str(p.amenity.id)] = slider_val
+
+            profile_data = {
+                'maxBudget': str(int(applicant.max_rent_budget)) if applicant.max_rent_budget else '',
+                'minBedrooms': applicant.min_bedrooms or '',
+                'maxBedrooms': applicant.max_bedrooms or '',
+                'minBathrooms': applicant.min_bathrooms or '',
+                'maxBathrooms': applicant.max_bathrooms or '',
+                'moveInDate': str(applicant.desired_move_in_date) if applicant.desired_move_in_date else '',
+                'hasPets': bool(applicant.has_pets) if applicant.has_pets is not None else False,
+                'neighborhoodRankings': hood_rankings,
+                'buildingAmenityPrefs': bldg_prefs,
+                'apartmentAmenityPrefs': apt_prefs,
+            }
+            applicant_prefs_json = json_module.dumps(profile_data)
+        except Exception as e:
+            logger.error(f"Error serializing applicant prefs for Advanced panel: {e}")
+
     context = {
         'sort_by': sort_by,
         'apartments': apartments,
@@ -102,6 +179,12 @@ def apartments_list(request):
         'is_sort_price_asc': sort_by == 'price_asc',
         'is_sort_price_desc': sort_by == 'price_desc',
         'is_sort_newest': sort_by == 'newest',
+        # Advanced Filters data (filtered to only show items with actual listings)
+        'all_neighborhoods_list': all_neighborhoods,
+        'all_building_amenities': all_building_amenities,
+        'all_apartment_amenities': all_apartment_amenities,
+        # Authenticated user's profile prefs for Advanced panel pre-fill
+        'applicant_prefs_json': applicant_prefs_json,
     }
     
     return render(request, 'apartments/apartments_list.html', context)

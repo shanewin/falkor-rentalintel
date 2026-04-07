@@ -33,6 +33,12 @@ logger = logging.getLogger(__name__)
 class ApartmentMatchingService:
     """
     Service class for matching apartments to applicant preferences using weighted scoring.
+    
+    Can be constructed two ways:
+    1. ApartmentMatchingService(applicant) — from a saved Applicant model (logged-in users)
+    2. ApartmentMatchingService.from_preferences(prefs_dict) — from a raw dict (guest users)
+    
+    Both paths populate identical internal cache fields, so all scoring methods are shared.
     """
     
     # Scoring weights for different factors
@@ -56,9 +62,119 @@ class ApartmentMatchingService:
         # CRITICAL FIX #4: Cache applicant preferences to avoid repeated DB queries
         self._cache_applicant_preferences()
     
+    @classmethod
+    def from_preferences(cls, prefs_dict):
+        """
+        Alternative constructor for guest users. Populates the same internal
+        cache fields from a raw dictionary instead of a database model.
+        
+        Args:
+            prefs_dict: {
+                'neighborhood_rankings': [id1, id2, ...],  # ordered by rank
+                'building_amenity_prefs': {aid: slider_val(1-3), ...},
+                'apartment_amenity_prefs': {aid: slider_val(1-3), ...},
+                'max_budget': Decimal or None,
+                'min_bedrooms': str or None,
+                'max_bedrooms': str or None,
+                'min_bathrooms': str or None,
+                'max_bathrooms': str or None,
+                'desired_move_in_date': date or None,
+                'has_pets': bool,
+            }
+        """
+        instance = cls.__new__(cls)
+        instance.applicant = None  # No DB model
+        instance.logger = logging.getLogger(f"{__name__}.guest")
+        
+        # --- Basic fields ---
+        instance._applicant_id = 'guest'
+        instance._min_bedrooms = prefs_dict.get('min_bedrooms')
+        instance._max_bedrooms = prefs_dict.get('max_bedrooms')
+        instance._min_bathrooms = prefs_dict.get('min_bathrooms')
+        instance._max_bathrooms = prefs_dict.get('max_bathrooms')
+        instance._max_rent_budget = prefs_dict.get('max_budget')
+        instance._desired_move_in_date = prefs_dict.get('desired_move_in_date')
+        
+        # --- Neighborhood prefs → lightweight objects with .neighborhood.name and .preference_rank ---
+        from .models import Neighborhood
+        neighborhood_rankings = prefs_dict.get('neighborhood_rankings', [])
+        instance._neighborhood_prefs = []
+        if neighborhood_rankings:
+            neighborhoods = {n.id: n for n in Neighborhood.objects.filter(id__in=neighborhood_rankings)}
+            for rank, nid in enumerate(neighborhood_rankings, 1):
+                nid = int(nid)
+                if nid in neighborhoods:
+                    # Create a lightweight proxy object that matches the interface
+                    pref = type('NeighborhoodPrefProxy', (), {
+                        'neighborhood': neighborhoods[nid],
+                        'preference_rank': rank,
+                    })()
+                    instance._neighborhood_prefs.append(pref)
+        
+        # Build rank cache eagerly
+        instance._neighborhood_rank_cache = {}
+        for pref in instance._neighborhood_prefs:
+            instance._neighborhood_rank_cache[pref.neighborhood.name] = pref.preference_rank
+        
+        # --- Amenity prefs → lightweight objects with .amenity.id, .amenity.name, .priority_level ---
+        slider_to_priority = {1: 2, 2: 3, 3: 4}  # Nice=2, Important=3, Must=4
+        
+        from buildings.models import Amenity as BuildingAmenity
+        from apartments.models import ApartmentAmenity
+        
+        instance._building_amenity_prefs = []
+        raw_building = prefs_dict.get('building_amenity_prefs', {})
+        if raw_building:
+            bldg_ids = [int(k) for k, v in raw_building.items() if int(v) > 0]
+            bldg_amenities = {a.id: a for a in BuildingAmenity.objects.filter(id__in=bldg_ids)}
+            for aid_str, slider_val in raw_building.items():
+                aid, sv = int(aid_str), int(slider_val)
+                if sv > 0 and aid in bldg_amenities:
+                    pref = type('AmenityPrefProxy', (), {
+                        'amenity': bldg_amenities[aid],
+                        'priority_level': slider_to_priority.get(sv, 2),
+                    })()
+                    instance._building_amenity_prefs.append(pref)
+        
+        instance._apartment_amenity_prefs = []
+        raw_apt = prefs_dict.get('apartment_amenity_prefs', {})
+        if raw_apt:
+            apt_ids = [int(k) for k, v in raw_apt.items() if int(v) > 0]
+            apt_amenities = {a.id: a for a in ApartmentAmenity.objects.filter(id__in=apt_ids)}
+            for aid_str, slider_val in raw_apt.items():
+                aid, sv = int(aid_str), int(slider_val)
+                if sv > 0 and aid in apt_amenities:
+                    pref = type('AmenityPrefProxy', (), {
+                        'amenity': apt_amenities[aid],
+                        'priority_level': slider_to_priority.get(sv, 2),
+                    })()
+                    instance._apartment_amenity_prefs.append(pref)
+        
+        # --- Pets (simplified for guests — no detailed pet objects) ---
+        instance._pets = []
+        if prefs_dict.get('has_pets'):
+            # Create a minimal pet proxy for scoring
+            instance._pets = [type('PetProxy', (), {
+                'pet_type': 'unknown',
+                'description': '',
+                'name': 'Pet',
+                'id': 0,
+            })()]
+        
+        return instance
+    
     def _cache_applicant_preferences(self):
         """Cache applicant preferences to avoid repeated database queries"""
         try:
+            # Cache basic fields
+            self._applicant_id = self.applicant.id
+            self._min_bedrooms = self.applicant.min_bedrooms
+            self._max_bedrooms = self.applicant.max_bedrooms
+            self._min_bathrooms = self.applicant.min_bathrooms
+            self._max_bathrooms = self.applicant.max_bathrooms
+            self._max_rent_budget = self.applicant.max_rent_budget
+            self._desired_move_in_date = self.applicant.desired_move_in_date
+            
             # Cache neighborhood preferences with ranking
             from .models import NeighborhoodPreference
             self._neighborhood_prefs = list(
@@ -66,6 +182,11 @@ class ApartmentMatchingService:
                 .select_related('neighborhood')
                 .order_by('preference_rank')
             )
+            
+            # Build rank cache eagerly
+            self._neighborhood_rank_cache = {}
+            for pref in self._neighborhood_prefs:
+                self._neighborhood_rank_cache[pref.neighborhood.name] = pref.preference_rank
             
             # Cache building amenity preferences  
             self._building_amenity_prefs = list(
@@ -86,8 +207,9 @@ class ApartmentMatchingService:
             
         except Exception as e:
             # Fallback if caching fails
-            self.logger.warning(f"Failed to cache preferences for applicant {self.applicant.id}: {e}")
+            self.logger.warning(f"Failed to cache preferences for applicant {self._applicant_id}: {e}")
             self._neighborhood_prefs = []
+            self._neighborhood_rank_cache = {}
             self._building_amenity_prefs = []
             self._apartment_amenity_prefs = []
             self._pets = []
@@ -125,7 +247,7 @@ class ApartmentMatchingService:
                     }
                     self._pets_cache.append(pet_data)
                 except Exception as e:
-                    logger.warning(f"Error processing pet data for applicant {self.applicant.id}: {e}")
+                    logger.warning(f"Error processing pet data for applicant {self._applicant_id}: {e}")
                     # Add safe fallback
                     self._pets_cache.append({
                         'type': 'unknown',
@@ -166,11 +288,11 @@ class ApartmentMatchingService:
         # This prevents the "100% Match" on empty profile bug.
         
         has_neighborhoods = bool(self._neighborhood_prefs)
-        has_budget = self.applicant.max_rent_budget is not None and self.applicant.max_rent_budget > 0
-        has_bedrooms = self.applicant.min_bedrooms is not None
+        has_budget = self._max_rent_budget is not None and self._max_rent_budget > 0
+        has_bedrooms = self._min_bedrooms is not None
 
         if not (has_neighborhoods and has_budget and has_bedrooms):
-            self.logger.info(f"Applicant {self.applicant.id} missing core preferences (N:{has_neighborhoods}, $: {has_budget}, B:{has_bedrooms}). Returning 0 matches.")
+            self.logger.info(f"Applicant {self._applicant_id} missing core preferences (N:{has_neighborhoods}, $: {has_budget}, B:{has_bedrooms}). Returning 0 matches.")
             return []
         
         # End Strict Gating
@@ -191,12 +313,36 @@ class ApartmentMatchingService:
         
         # Always return at least some results - if no great matches, show best available
         if not matches:
-            self.logger.warning(f"No apartment matches found for applicant {self.applicant.id}")
+            self.logger.warning(f"No apartment matches found for applicant {self._applicant_id}")
             return []
             
         return matches[:limit]
     
-        return queryset
+    def score_apartments(self, apartment_ids, limit=50):
+        """
+        Score a specific batch of apartments. Used by the guest_match API.
+        
+        Args:
+            apartment_ids: List of apartment IDs to score
+            limit: Maximum number to score
+            
+        Returns:
+            Dict of {apartment_id: match_percentage}
+        """
+        from apartments.models import Apartment
+        
+        apartments = Apartment.objects.filter(
+            id__in=apartment_ids[:limit],
+            status='available'
+        ).select_related('building').prefetch_related(
+            'building__amenities', 'amenities'
+        )
+        
+        scores = {}
+        for apartment in apartments:
+            scores[apartment.id] = self._calculate_match_percentage(apartment)
+        
+        return scores
 
     def _apply_basic_filters(self, queryset):
         """Apply basic filters to reduce the apartment pool before detailed scoring"""
@@ -207,48 +353,45 @@ class ApartmentMatchingService:
             # User Feedback: "I might be inclined to live in a different neighborhood"
             # We relax the strict filter and rely on scoring to penalize non-matching neighborhoods
             pass
-            # Get list of preferred neighborhood names from cache
-            # preferred_neighborhoods = [pref.neighborhood.name for pref in self._neighborhood_prefs]
-            # queryset = queryset.filter(building__neighborhood__in=preferred_neighborhoods)
         
         # Bedroom filter - allow some flexibility 
-        if self.applicant.min_bedrooms or self.applicant.max_bedrooms:
+        if self._min_bedrooms or self._max_bedrooms:
             bedroom_filter = Q()
             
-            if self.applicant.min_bedrooms:
+            if self._min_bedrooms:
                 # Handle "studio" as 0 bedrooms
-                if isinstance(self.applicant.min_bedrooms, str) and self.applicant.min_bedrooms.lower() == 'studio':
+                if isinstance(self._min_bedrooms, str) and self._min_bedrooms.lower() == 'studio':
                     min_beds = Decimal('0')
                 else:
                     try:
                         # CRITICAL FIX #1: Use Decimal arithmetic for precise bedroom calculations
-                        min_beds_decimal = Decimal(str(self.applicant.min_bedrooms))
+                        min_beds_decimal = Decimal(str(self._min_bedrooms))
                         min_beds = max(Decimal('0'), min_beds_decimal - Decimal('0.5'))
                     except (ValueError, TypeError, InvalidOperation):
                         min_beds = Decimal('0')
-                        logger.warning(f"Invalid min_bedrooms for applicant {self.applicant.id}: {self.applicant.min_bedrooms}")
+                        logger.warning(f"Invalid min_bedrooms for applicant {self._applicant_id}: {self._min_bedrooms}")
                 bedroom_filter &= Q(bedrooms__gte=float(min_beds))  # Django ORM needs float
                 
-            if self.applicant.max_bedrooms:
+            if self._max_bedrooms:
                 # Handle max bedrooms conversion with Decimal precision
                 try:
-                    max_beds_decimal = Decimal(str(self.applicant.max_bedrooms))
+                    max_beds_decimal = Decimal(str(self._max_bedrooms))
                     max_beds = max_beds_decimal + Decimal('0.5')
                 except (ValueError, TypeError, InvalidOperation):
                     max_beds = Decimal('1.5')  # Default to 1BR + flexibility
-                    logger.warning(f"Invalid max_bedrooms for applicant {self.applicant.id}: {self.applicant.max_bedrooms}")
+                    logger.warning(f"Invalid max_bedrooms for applicant {self._applicant_id}: {self._max_bedrooms}")
                 bedroom_filter &= Q(bedrooms__lte=float(max_beds))  # Django ORM needs float
                 
             queryset = queryset.filter(bedroom_filter)
         
         # Rent filter - allow 10% over budget for "good matches"
-        if self.applicant.max_rent_budget:
+        if self._max_rent_budget:
             try:
-                budget = Decimal(str(self.applicant.max_rent_budget))
+                budget = Decimal(str(self._max_rent_budget))
                 max_rent_with_tolerance = budget * Decimal('1.10')
                 queryset = queryset.filter(rent_price__lte=max_rent_with_tolerance)
             except (InvalidOperation, ValueError):
-                logger.warning(f"Invalid max_rent_budget for applicant {self.applicant.id}: {self.applicant.max_rent_budget}")
+                logger.warning(f"Invalid max_rent_budget for applicant {self._applicant_id}: {self._max_rent_budget}")
                 # Skip rent filter if budget is invalid
 
         # STRICT PET FILTERING
@@ -269,12 +412,9 @@ class ApartmentMatchingService:
         
         # STRICT MOVE-IN DATE FILTERING
         # Exclude apartments that are not available by the desired move-in date
-        if self.applicant.desired_move_in_date:
-            # We filter out any apartment that has an availability date AFTER the desired move-in date.
-            # This implies the unit is not ready when the user needs it.
-            # Apartments with NO availability record are assumed Available Now (so they rely on status='available')
+        if self._desired_move_in_date:
             queryset = queryset.exclude(
-                availability_calendar__available_date__gt=self.applicant.desired_move_in_date
+                availability_calendar__available_date__gt=self._desired_move_in_date
             )
         
         return queryset
@@ -308,17 +448,17 @@ class ApartmentMatchingService:
         score = 100.0  # Start with perfect score
         
         # Bedroom scoring
-        if self.applicant.min_bedrooms or self.applicant.max_bedrooms:
+        if self._min_bedrooms or self._max_bedrooms:
             bedroom_score = self._score_bedroom_match(apartment)
             score = score * (bedroom_score / 100.0)
         
         # Bathroom scoring  
-        if self.applicant.min_bathrooms or self.applicant.max_bathrooms:
+        if self._min_bathrooms or self._max_bathrooms:
             bathroom_score = self._score_bathroom_match(apartment)
             score = score * (bathroom_score / 100.0)
             
         # Rent scoring
-        if self.applicant.max_rent_budget:
+        if self._max_rent_budget:
             rent_score = self._score_rent_match(apartment)
             score = score * (rent_score / 100.0)
             
@@ -343,8 +483,8 @@ class ApartmentMatchingService:
             logger.warning(f"Invalid bedrooms for apartment {apartment.id}: {apartment.bedrooms}")
         
         # Convert string preferences to numeric
-        min_beds = self._convert_bedroom_preference(self.applicant.min_bedrooms)
-        max_beds = self._convert_bedroom_preference(self.applicant.max_bedrooms)
+        min_beds = self._convert_bedroom_preference(self._min_bedrooms)
+        max_beds = self._convert_bedroom_preference(self._max_bedrooms)
         
         # Perfect match
         if min_beds is not None and max_beds is not None:
@@ -392,8 +532,8 @@ class ApartmentMatchingService:
             logger.warning(f"Invalid bathrooms for apartment {apartment.id}: {apartment.bathrooms}")
         
         # Convert bathroom preferences to numeric
-        min_baths = self._convert_numeric_preference(self.applicant.min_bathrooms)
-        max_baths = self._convert_numeric_preference(self.applicant.max_bathrooms)
+        min_baths = self._convert_numeric_preference(self._min_bathrooms)
+        max_baths = self._convert_numeric_preference(self._max_bathrooms)
         
         # Perfect match
         if min_baths is not None and max_baths is not None:
@@ -421,16 +561,16 @@ class ApartmentMatchingService:
     def _score_rent_match(self, apartment) -> float:
         """Score how well apartment rent matches budget with tolerance"""
         
-        if not self.applicant.max_rent_budget:
+        if not self._max_rent_budget:
             return 100.0
         
         try:
             # CRITICAL FIX #1 & #2: Use Decimal arithmetic and protect against division by zero
             rent = Decimal(str(apartment.rent_price))
-            budget = Decimal(str(self.applicant.max_rent_budget))
+            budget = Decimal(str(self._max_rent_budget))
             
             if budget <= 0:
-                logger.warning(f"Invalid budget for applicant {self.applicant.id}: {budget}")
+                logger.warning(f"Invalid budget for applicant {self._applicant_id}: {budget}")
                 return 100.0  # No budget constraint
             
             if rent <= budget:
@@ -453,21 +593,15 @@ class ApartmentMatchingService:
             return 100.0  # Default to no penalty if calculation fails
     
     def _score_neighborhood_match(self, apartment) -> float:
-        """Score based on ranked neighborhood preferences"""
+        """Score based on ranked neighborhood preferences (uses cached prefs)"""
         
-        # Get user's neighborhood preferences with rankings using through model
-        from .models import NeighborhoodPreference
-        neighborhood_prefs = NeighborhoodPreference.objects.filter(
-            applicant=self.applicant
-        ).select_related('neighborhood')
-        
-        if not neighborhood_prefs.exists():
+        if not self._neighborhood_prefs:
             return 100.0  # No preference = all neighborhoods are fine
             
         apartment_neighborhood = apartment.building.neighborhood
         
-        # Find the preference rank for this neighborhood
-        for pref in neighborhood_prefs:
+        # Find the preference rank for this neighborhood using cached data
+        for pref in self._neighborhood_prefs:
             if pref.neighborhood.name == apartment_neighborhood:
                 # Score based on ranking (1st choice = 100%, 2nd = 90%, etc.)
                 rank = pref.preference_rank
@@ -482,8 +616,7 @@ class ApartmentMatchingService:
                 else:
                     return max(50.0, 100.0 - (rank * 10))
         
-        
-        # Neighborhood not in preferences - should be filtered out, but just in case
+        # Neighborhood not in preferences
         return 40.0  # User Feedback: Non-match target ~63% total (40 * 0.6 + 40 amenity pts = 64)
     
     def _calculate_building_amenities_score(self, apartment) -> float:
@@ -522,7 +655,7 @@ class ApartmentMatchingService:
             percentage = max(0, (total_points / max_possible_points) * 100)
             return min(100.0, percentage)
         except ZeroDivisionError:
-            logger.warning(f"Division by zero in building amenities scoring for applicant {self.applicant.id}")
+            logger.warning(f"Division by zero in building amenities scoring for applicant {self._applicant_id}")
             return 100.0  # Default to perfect score if calculation fails
     
     def _calculate_apartment_amenities_score(self, apartment) -> float:
@@ -561,7 +694,7 @@ class ApartmentMatchingService:
             percentage = max(0, (total_points / max_possible_points) * 100)
             return min(100.0, percentage)
         except ZeroDivisionError:
-            logger.warning(f"Division by zero in apartment amenities scoring for applicant {self.applicant.id}")
+            logger.warning(f"Division by zero in apartment amenities scoring for applicant {self._applicant_id}")
             return 100.0  # Default to perfect score if calculation fails
     
     def _score_pet_policy_match(self, apartment) -> float:
@@ -595,7 +728,7 @@ class ApartmentMatchingService:
                                 all_small = False
                                 break
                     except (ValueError, AttributeError, re.error) as e:
-                        logger.warning(f"Error parsing pet weight for applicant {self.applicant.id}, pet {pet.id}: {e}")
+                        logger.warning(f"Error parsing pet weight for applicant {self._applicant_id}, pet {pet.id}: {e}")
                         # Continue without weight info - assume large pet for safety
                         all_small = False
                         break
@@ -664,7 +797,7 @@ class ApartmentMatchingService:
             'building_amenities_score': round(building_score, 1),
             'apartment_amenities_score': round(apartment_score, 1),
             'combined_amenities_score': round(combined_amenities_score, 1),
-            'rent_within_budget': apartment.rent_price <= (self.applicant.max_rent_budget or apartment.rent_price),
+            'rent_within_budget': apartment.rent_price <= (self._max_rent_budget or apartment.rent_price),
             'preferred_neighborhood': self._is_preferred_neighborhood(apartment),
             'basic_reasons': basic_reasons,
             'building_reasons': building_reasons,
@@ -677,12 +810,9 @@ class ApartmentMatchingService:
         }
     
     def _is_preferred_neighborhood(self, apartment) -> bool:
-        """Check if apartment is in a preferred neighborhood"""
-        from .models import NeighborhoodPreference
-        preferred_neighborhoods = NeighborhoodPreference.objects.filter(
-            applicant=self.applicant
-        ).values_list('neighborhood__name', flat=True)
-        return apartment.building.neighborhood in preferred_neighborhoods
+        """Check if apartment is in a preferred neighborhood (uses cached prefs)"""
+        preferred_names = [pref.neighborhood.name for pref in self._neighborhood_prefs]
+        return apartment.building.neighborhood in preferred_names
     
     def _get_basic_requirements_reasons(self, apartment) -> List[str]:
         """Get specific reasons for basic requirements score deductions"""
@@ -690,8 +820,8 @@ class ApartmentMatchingService:
         
         # Check bedroom mismatch
         apt_bedrooms = float(apartment.bedrooms or 0)
-        min_beds = self._convert_bedroom_preference(self.applicant.min_bedrooms)
-        max_beds = self._convert_bedroom_preference(self.applicant.max_bedrooms)
+        min_beds = self._convert_bedroom_preference(self._min_bedrooms)
+        max_beds = self._convert_bedroom_preference(self._max_bedrooms)
         
         if min_beds is not None and apt_bedrooms < min_beds:
             if apt_bedrooms >= min_beds - 0.5:
@@ -703,8 +833,8 @@ class ApartmentMatchingService:
         
         # Check bathroom mismatch  
         apt_bathrooms = float(apartment.bathrooms or 1.0)
-        min_baths = self._convert_numeric_preference(self.applicant.min_bathrooms)
-        max_baths = self._convert_numeric_preference(self.applicant.max_bathrooms)
+        min_baths = self._convert_numeric_preference(self._min_bathrooms)
+        max_baths = self._convert_numeric_preference(self._max_bathrooms)
         
         if min_baths is not None and apt_bathrooms < min_baths:
             reasons.append(f"Has {apt_bathrooms} bath(s), you wanted {min_baths}+")
@@ -712,19 +842,18 @@ class ApartmentMatchingService:
             reasons.append(f"Has {apt_bathrooms} bath(s), you wanted max {max_baths}")
         
         # Check rent overage
-        if self.applicant.max_rent_budget and apartment.rent_price > self.applicant.max_rent_budget:
-            overage_percent = ((apartment.rent_price - self.applicant.max_rent_budget) / self.applicant.max_rent_budget) * 100
+        if self._max_rent_budget and apartment.rent_price > self._max_rent_budget:
+            overage_percent = ((apartment.rent_price - self._max_rent_budget) / self._max_rent_budget) * 100
             if overage_percent <= 3:
-                reasons.append(f"${int(apartment.rent_price - self.applicant.max_rent_budget)} over budget")
+                reasons.append(f"${int(apartment.rent_price - self._max_rent_budget)} over budget")
             elif overage_percent <= 6:
-                reasons.append(f"${int(apartment.rent_price - self.applicant.max_rent_budget)} over budget")
+                reasons.append(f"${int(apartment.rent_price - self._max_rent_budget)} over budget")
             elif overage_percent <= 10:
-                reasons.append(f"${int(apartment.rent_price - self.applicant.max_rent_budget)} over budget")
+                reasons.append(f"${int(apartment.rent_price - self._max_rent_budget)} over budget")
         
-        # Check neighborhood ranking
-        from .models import NeighborhoodPreference
-        neighborhood_prefs = NeighborhoodPreference.objects.filter(applicant=self.applicant)
-        if neighborhood_prefs.exists():
+        # Check neighborhood ranking (using cached data)
+        neighborhood_prefs = self._neighborhood_prefs
+        if neighborhood_prefs:
             apartment_neighborhood = apartment.building.neighborhood
             for pref in neighborhood_prefs:
                 if pref.neighborhood.name == apartment_neighborhood:
@@ -813,8 +942,8 @@ class ApartmentMatchingService:
         
         # Check bedroom match
         apt_bedrooms = float(apartment.bedrooms or 0)
-        min_beds = self._convert_bedroom_preference(self.applicant.min_bedrooms)
-        max_beds = self._convert_bedroom_preference(self.applicant.max_bedrooms)
+        min_beds = self._convert_bedroom_preference(self._min_bedrooms)
+        max_beds = self._convert_bedroom_preference(self._max_bedrooms)
         
         if min_beds is not None and max_beds is not None:
             if min_beds <= apt_bedrooms <= max_beds:
@@ -827,8 +956,8 @@ class ApartmentMatchingService:
         
         # Check bathroom match
         apt_bathrooms = float(apartment.bathrooms or 1.0)
-        min_baths = self._convert_numeric_preference(self.applicant.min_bathrooms)
-        max_baths = self._convert_numeric_preference(self.applicant.max_bathrooms)
+        min_baths = self._convert_numeric_preference(self._min_bathrooms)
+        max_baths = self._convert_numeric_preference(self._max_bathrooms)
         
         if min_baths is not None and apt_bathrooms >= min_baths:
             if apt_bathrooms == min_baths:
@@ -837,24 +966,15 @@ class ApartmentMatchingService:
                 positives.append(f"✓ {apt_bathrooms} bathroom{'s' if apt_bathrooms > 1 else ''} (exceeds requirement)")
         
         # Check rent match
-        if self.applicant.max_rent_budget:
-            if apartment.rent_price <= self.applicant.max_rent_budget:
-                savings = self.applicant.max_rent_budget - apartment.rent_price
+        if self._max_rent_budget:
+            if apartment.rent_price <= self._max_rent_budget:
+                savings = self._max_rent_budget - apartment.rent_price
                 if savings > 100:
                     positives.append(f"✓ ${int(savings)} under budget!")
                 else:
                     positives.append("✓ Within budget")
         
-        # Check neighborhood match
-        # CRITICAL FIX #4: Use cached neighborhood data
-        if not hasattr(self, '_neighborhood_rank_cache'):
-            from .models import NeighborhoodPreference
-            self._neighborhood_rank_cache = {}
-            neighborhood_prefs = NeighborhoodPreference.objects.filter(
-                applicant=self.applicant
-            ).select_related('neighborhood')
-            for pref in neighborhood_prefs:
-                self._neighborhood_rank_cache[pref.neighborhood.name] = pref.preference_rank
+        # Check neighborhood match (using eagerly-built rank cache)
         
         apartment_neighborhood = apartment.building.neighborhood
         if apartment_neighborhood in self._neighborhood_rank_cache:
@@ -882,13 +1002,13 @@ class ApartmentMatchingService:
             positives.append("✓ No pet restrictions apply to you")
             
         # Check move-in date match
-        if self.applicant.desired_move_in_date:
+        if self._desired_move_in_date:
             # Since we strict filter, all shown apartments are available by date.
             # We can try to be specific if we have the date.
             availability = apartment.get_current_availability()
             if availability and availability.available_date:
-                if availability.available_date <= self.applicant.desired_move_in_date:
-                    positives.append(f"✓ Available by {self.applicant.desired_move_in_date.strftime('%b %d')}")
+                if availability.available_date <= self._desired_move_in_date:
+                    positives.append(f"✓ Available by {self._desired_move_in_date.strftime('%b %d')}")
             else:
                 # No specific date usually means available now
                 positives.append("✓ Available for immediate move-in")

@@ -217,14 +217,24 @@ class ApartmentAdmin(admin.ModelAdmin):
 @admin.register(ApartmentAmenity)
 class ApartmentAmenityAdmin(admin.ModelAdmin):
     """Manage apartment-specific amenities"""
-    list_display = ['name', 'apartment_count']
+    list_display = ['icon_preview', 'name', 'icon', 'apartment_count']
+    list_editable = ['name', 'icon']
     search_fields = ['name']
     ordering = ['name']
+    
+    def icon_preview(self, obj):
+        return format_html('<i class="fa-solid {} fa-lg"></i>', obj.icon)
+    icon_preview.short_description = "Preview"
     
     def apartment_count(self, obj):
         """Count of apartments with this amenity"""
         return obj.apartment_set.count()
     apartment_count.short_description = "# Apartments"
+
+    class Media:
+        css = {
+            'all': ('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css',)
+        }
 
 
 @admin.register(ApartmentImage)

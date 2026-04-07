@@ -347,6 +347,69 @@ def test_email_send(request):
 
 
 @login_required
+def broker_send_sms(request, application_id):
+    """Broker sends SMS to applicant from application overview"""
+    from .models import Application
+    
+    application = get_object_or_404(Application, id=application_id)
+    
+    # Permission check: only the assigned broker or superuser
+    if not (request.user.is_superuser or request.user == application.broker):
+        messages.error(request, "You are not authorized to send SMS for this application.")
+        return redirect('broker_application_management', application_id=application_id)
+    
+    if request.method == 'POST':
+        message_text = request.POST.get('message', '').strip()
+        
+        if not message_text:
+            messages.error(request, "Please enter a message to send.")
+            return redirect('broker_application_management', application_id=application_id)
+        
+        # Get applicant phone number
+        phone = None
+        try:
+            personal_info = application.personal_info
+            if personal_info:
+                phone = personal_info.phone_cell
+        except Exception:
+            pass
+        
+        if not phone:
+            messages.error(request, "No phone number found for this applicant.")
+            return redirect('broker_application_management', application_id=application_id)
+        
+        try:
+            from .sms_utils import SMSBackend
+            sms = SMSBackend()
+            success, result = sms.send_sms(phone, message_text)
+            
+            if success:
+                messages.success(request, f"SMS sent successfully to {phone}!")
+                
+                # Log the message
+                try:
+                    from users.sms_models import SMSMessage
+                    SMSMessage.objects.create(
+                        user=application.applicant.user if application.applicant else None,
+                        phone_number=phone,
+                        message_type='broker_message',
+                        content=message_text,
+                        sms_sid=result,
+                        direction='outbound',
+                        status='sent'
+                    )
+                except Exception as log_err:
+                    logger.warning(f"Failed to log SMS message: {log_err}")
+            else:
+                messages.error(request, f"SMS sending failed: {result}")
+                
+        except Exception as e:
+            messages.error(request, f"SMS sending failed: {str(e)}")
+    
+    return redirect('broker_application_management', application_id=application_id)
+
+
+@login_required
 def test_sms_send(request):
     """Admin test SMS functionality"""
     if not request.user.is_superuser:

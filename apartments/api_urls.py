@@ -34,4 +34,8 @@ urlpatterns = [
     # Reference data endpoints
     path('amenities/', api_views.apartment_amenities_api, name='amenities'),
     path('neighborhoods/', api_views.neighborhoods_api, name='neighborhoods'),
+    
+    # Advanced Filters — Guest Smart Matching & Preference Saving
+    path('guest-match/', api_views.guest_match, name='guest_match'),
+    path('save-advanced-prefs/', api_views.save_advanced_prefs, name='save_advanced_prefs'),
 ]

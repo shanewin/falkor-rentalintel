@@ -7,10 +7,11 @@
     <div style="position:relative;z-index:1;">
         <div class="mb-3"><span class="badge" style="background:#ffcc00;color:#000;font-size:0.9rem;padding:8px 16px;border-radius:20px;font-weight:700;">AI-POWERED MATCHING</span></div>
         <h3>Find Your Perfect NYC Apartment</h3>
-        <p>Create a free account and let our smart matching algorithm find apartments tailored to your budget, preferences, and lifestyle.</p>
+        <p>Create a free account and let our smart matching algorithm find apartments tailored to your budget, preferences, and lifestyle. Or try our <strong>Advanced Filters</strong> to get instant match scores.</p>
         <div class="d-flex gap-3 justify-content-center flex-wrap">
             <a href="{% url 'register_applicant' %}" class="btn btn-lg rounded-pill px-5" style="background:#ffcc00;border:none;color:#000;font-weight:700;box-shadow:0 4px 12px rgba(255,204,0,0.3);">Get Started Free</a>
-            <a href="{% url 'login' %}" class="btn btn-outline-light btn-lg rounded-pill px-5" style="font-weight:600;">Sign In</a>
+            <button type="button" class="btn btn-outline-light btn-lg rounded-pill px-4" style="font-weight:600;" data-bs-toggle="collapse" data-bs-target="#advancedFiltersPanel">✨ Try Advanced Filters</button>
+            <a href="{% url 'login' %}" class="btn btn-outline-light btn-lg rounded-pill px-4" style="font-weight:600;">Sign In</a>
         </div>
     </div>
 </div>
@@ -27,7 +28,7 @@
     </div>
     <div class="row g-3">
         {% for match in smart_matches %}
-        <div class="col-12 col-md-6">
+        <div class="col-12 col-md-6 apartment-card" data-apartment-id="{{ match.apartment.id }}">
             {# Re-use the master smart match card component #}
             {# We pass 'apartment' explicitly because the include expects it, but 'match' is also available in context #}
             {% include 'includes/smart_match_card.html' with apartment=match.apartment match=match %}

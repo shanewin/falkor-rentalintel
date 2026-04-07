@@ -532,3 +532,293 @@ def calculate_match_score(apartment, criteria):
         score += 10
         
     return min(max(score, 0), 100)  # Clamp between 0 and 100
+
+
+# ============================================================================
+# ADVANCED FILTERS — Guest Smart Matching & Preference Saving
+# ============================================================================
+
+# Simple in-memory rate limiter for guest endpoints
+_guest_match_rate_limit = {}  # {ip: [timestamps]}
+
+def _check_rate_limit(ip, max_requests=30, window_seconds=60):
+    """Simple rate limiter: max_requests per window_seconds per IP."""
+    import time
+    now = time.time()
+    if ip not in _guest_match_rate_limit:
+        _guest_match_rate_limit[ip] = []
+    # Prune old entries
+    _guest_match_rate_limit[ip] = [t for t in _guest_match_rate_limit[ip] if now - t < window_seconds]
+    if len(_guest_match_rate_limit[ip]) >= max_requests:
+        return False
+    _guest_match_rate_limit[ip].append(now)
+    return True
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def guest_match(request):
+    """
+    POST /apartments/api/guest-match/
+    Calculates match scores for a batch of apartments against guest-provided
+    preferences using the same ApartmentMatchingService as logged-in users.
+    
+    No authentication required. Rate-limited to prevent abuse.
+    Accepts JSON:
+    {
+        "neighborhood_rankings": [neighborhood_id, ...],  // ordered by preference
+        "building_amenity_prefs": {"amenity_id": priority_1_to_3, ...},
+        "apartment_amenity_prefs": {"amenity_id": priority_1_to_3, ...},
+        "apartment_ids": [id, ...],  // batch of up to 50 apartments to score
+        "max_budget": 2500,          // optional housing basics
+        "min_bedrooms": "2",
+        "max_bedrooms": "3",
+        "min_bathrooms": "1",
+        "max_bathrooms": "2",
+        "desired_move_in_date": "2026-05-15",
+        "has_pets": false
+    }
+    
+    Returns JSON:
+    {
+        "scores": {"apartment_id": match_percentage, ...},
+        "scored_count": N,
+        "total_requested": M
+    }
+    """
+    # Rate limiting
+    client_ip = request.META.get('REMOTE_ADDR', 'unknown')
+    if not _check_rate_limit(client_ip):
+        return JsonResponse({'error': 'Rate limit exceeded. Please try again shortly.'}, status=429)
+    
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    
+    # Parse apartment IDs
+    apartment_ids = data.get('apartment_ids', [])
+    if len(apartment_ids) > 50:
+        apartment_ids = apartment_ids[:50]
+    
+    if not apartment_ids:
+        return JsonResponse({'scores': {}, 'scored_count': 0, 'total_requested': 0})
+    
+    # Validate that we have at least some preferences to score against
+    neighborhood_rankings = data.get('neighborhood_rankings', [])
+    building_amenity_prefs = data.get('building_amenity_prefs', {})
+    apartment_amenity_prefs = data.get('apartment_amenity_prefs', {})
+    has_any_prefs = bool(neighborhood_rankings) or bool(building_amenity_prefs) or bool(apartment_amenity_prefs)
+    
+    if not has_any_prefs:
+        return JsonResponse({'error': 'At least one preference type is required'}, status=400)
+    
+    try:
+        from applicants.apartment_matching import ApartmentMatchingService
+        from decimal import Decimal, InvalidOperation
+        from datetime import datetime
+        
+        # Parse housing basics
+        max_budget = None
+        raw_budget = data.get('max_budget')
+        if raw_budget:
+            try:
+                max_budget = Decimal(str(raw_budget).replace(',', ''))
+            except (InvalidOperation, ValueError):
+                pass
+        
+        desired_move_in = None
+        raw_date = data.get('desired_move_in_date')
+        if raw_date:
+            try:
+                desired_move_in = datetime.strptime(str(raw_date), '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                pass
+        
+        # Build preferences dict — same format as from_preferences() expects
+        prefs = {
+            'neighborhood_rankings': neighborhood_rankings,
+            'building_amenity_prefs': building_amenity_prefs,
+            'apartment_amenity_prefs': apartment_amenity_prefs,
+            'max_budget': max_budget,
+            'min_bedrooms': data.get('min_bedrooms') or None,
+            'max_bedrooms': data.get('max_bedrooms') or None,
+            'min_bathrooms': data.get('min_bathrooms') or None,
+            'max_bathrooms': data.get('max_bathrooms') or None,
+            'desired_move_in_date': desired_move_in,
+            'has_pets': bool(data.get('has_pets')),
+        }
+        
+        # Use the SAME scoring engine as logged-in users
+        service = ApartmentMatchingService.from_preferences(prefs)
+        raw_scores = service.score_apartments(apartment_ids)
+        
+        # Convert keys to strings for JSON
+        scores = {str(k): v for k, v in raw_scores.items()}
+        
+        return JsonResponse({
+            'scores': scores,
+            'scored_count': len(scores),
+            'total_requested': len(apartment_ids)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in guest_match API: {e}", exc_info=True)
+        return JsonResponse({'error': 'An error occurred while calculating matches'}, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def save_advanced_prefs(request):
+    """
+    POST /apartments/api/save-advanced-prefs/
+    Saves advanced filter preferences (neighborhood rankings, amenity priorities,
+    and housing basics) to the authenticated user's applicant profile.
+    
+    Accepts JSON:
+    {
+        "neighborhood_rankings": [neighborhood_id, ...],
+        "building_amenity_prefs": {"amenity_id": priority_1_to_3, ...},
+        "apartment_amenity_prefs": {"amenity_id": priority_1_to_3, ...},
+        "max_budget": 2500,
+        "min_bedrooms": "1",
+        "max_bedrooms": "2",
+        "min_bathrooms": "1",
+        "max_bathrooms": "2",
+        "desired_move_in_date": "2026-05-15",
+        "has_pets": false
+    }
+    """
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    
+    # Ensure user has an applicant profile
+    try:
+        from applicants.models import Applicant
+        applicant = request.user.applicant_profile
+    except (Applicant.DoesNotExist, AttributeError):
+        # Create one if it doesn't exist
+        from applicants.models import Applicant
+        applicant = Applicant.objects.create(
+            user=request.user,
+            email=request.user.email,
+            first_name=request.user.first_name or '',
+            last_name=request.user.last_name or '',
+        )
+    
+    neighborhood_rankings = data.get('neighborhood_rankings', [])
+    building_amenity_prefs = data.get('building_amenity_prefs', {})
+    apartment_amenity_prefs = data.get('apartment_amenity_prefs', {})
+    
+    saved_counts = {'neighborhoods': 0, 'building_amenities': 0, 'apartment_amenities': 0, 'housing_basics': False}
+    
+    try:
+        from django.db import transaction
+        from applicants.models import NeighborhoodPreference, Neighborhood
+        from applicants.models import ApplicantBuildingAmenityPreference, ApplicantApartmentAmenityPreference
+        from buildings.models import Amenity as BuildingAmenity
+        from .models import ApartmentAmenity as AptAmenity
+        from decimal import Decimal, InvalidOperation
+        from datetime import datetime
+        
+        with transaction.atomic():
+            # --- Save Housing Basics ---
+            raw_budget = data.get('max_budget')
+            if raw_budget is not None:
+                try:
+                    applicant.max_rent_budget = Decimal(str(raw_budget).replace(',', ''))
+                except (InvalidOperation, ValueError):
+                    pass
+            
+            raw_min_beds = data.get('min_bedrooms')
+            if raw_min_beds is not None:
+                applicant.min_bedrooms = str(raw_min_beds) if raw_min_beds else ''
+            
+            raw_max_beds = data.get('max_bedrooms')
+            if raw_max_beds is not None:
+                applicant.max_bedrooms = str(raw_max_beds) if raw_max_beds else ''
+            
+            raw_min_baths = data.get('min_bathrooms')
+            if raw_min_baths is not None:
+                applicant.min_bathrooms = str(raw_min_baths) if raw_min_baths else ''
+            
+            raw_max_baths = data.get('max_bathrooms')
+            if raw_max_baths is not None:
+                applicant.max_bathrooms = str(raw_max_baths) if raw_max_baths else ''
+            
+            raw_date = data.get('desired_move_in_date')
+            if raw_date is not None:
+                if raw_date:
+                    try:
+                        applicant.desired_move_in_date = datetime.strptime(str(raw_date), '%Y-%m-%d').date()
+                    except (ValueError, TypeError):
+                        pass
+                else:
+                    applicant.desired_move_in_date = None
+            
+            if 'has_pets' in data:
+                applicant.has_pets = bool(data['has_pets'])
+            
+            applicant.save()
+            saved_counts['housing_basics'] = True
+            
+            # --- Save Neighborhood Rankings ---
+            NeighborhoodPreference.objects.filter(applicant=applicant).delete()
+            for rank, nid in enumerate(neighborhood_rankings, 1):
+                try:
+                    neighborhood = Neighborhood.objects.get(id=int(nid))
+                    NeighborhoodPreference.objects.create(
+                        applicant=applicant,
+                        neighborhood=neighborhood,
+                        preference_rank=rank
+                    )
+                    saved_counts['neighborhoods'] += 1
+                except (Neighborhood.DoesNotExist, ValueError):
+                    continue
+            
+            # --- Save Building Amenity Preferences ---
+            ApplicantBuildingAmenityPreference.objects.filter(applicant=applicant).delete()
+            slider_to_priority = {1: 2, 2: 3, 3: 4}
+            for aid_str, slider_val in building_amenity_prefs.items():
+                try:
+                    aid = int(aid_str)
+                    sv = int(slider_val)
+                    if sv > 0 and sv in slider_to_priority:
+                        amenity = BuildingAmenity.objects.get(id=aid)
+                        ApplicantBuildingAmenityPreference.objects.create(
+                            applicant=applicant,
+                            amenity=amenity,
+                            priority_level=slider_to_priority[sv]
+                        )
+                        saved_counts['building_amenities'] += 1
+                except (BuildingAmenity.DoesNotExist, ValueError):
+                    continue
+            
+            # --- Save Apartment Amenity Preferences ---
+            ApplicantApartmentAmenityPreference.objects.filter(applicant=applicant).delete()
+            for aid_str, slider_val in apartment_amenity_prefs.items():
+                try:
+                    aid = int(aid_str)
+                    sv = int(slider_val)
+                    if sv > 0 and sv in slider_to_priority:
+                        amenity = AptAmenity.objects.get(id=aid)
+                        ApplicantApartmentAmenityPreference.objects.create(
+                            applicant=applicant,
+                            amenity=amenity,
+                            priority_level=slider_to_priority[sv]
+                        )
+                        saved_counts['apartment_amenities'] += 1
+                except (AptAmenity.DoesNotExist, ValueError):
+                    continue
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Preferences saved to your profile!',
+            'saved': saved_counts
+        })
+        
+    except Exception as e:
+        logger.error(f"Error saving advanced preferences: {e}", exc_info=True)
+        return JsonResponse({'error': 'An error occurred while saving preferences'}, status=500)

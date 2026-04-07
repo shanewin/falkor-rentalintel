@@ -357,12 +357,117 @@
 </div>
 
 <script>
-    // Initialize Bootstrap tooltips
     document.addEventListener('DOMContentLoaded', function () {
+        // Initialize Bootstrap tooltips
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
+
+        // --- Guest → Profile Preference Migration ---
+        (async function migrateGuestPrefs() {
+            const STORAGE_KEY = 'falkor_advanced_prefs';
+            const MIGRATED_KEY = 'falkor_prefs_migrated';
+            const EXPIRY_DAYS = 30;
+
+            // Skip if already migrated this session
+            if (sessionStorage.getItem(MIGRATED_KEY)) return;
+
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return;  // Nothing to migrate
+
+            let data;
+            try {
+                data = JSON.parse(raw);
+            } catch(e) {
+                localStorage.removeItem(STORAGE_KEY);
+                return;
+            }
+
+            // Check expiry
+            if (Date.now() - data.timestamp > EXPIRY_DAYS * 24 * 60 * 60 * 1000) {
+                localStorage.removeItem(STORAGE_KEY);
+                return;
+            }
+
+            // Check if there's actually anything to migrate
+            const hasNeighborhoods = (data.neighborhoodRankings || []).length > 0;
+            const hasBldg = Object.values(data.buildingAmenityPrefs || {}).some(v => v > 0);
+            const hasApt = Object.values(data.apartmentAmenityPrefs || {}).some(v => v > 0);
+            const hasHousing = !!(data.maxBudget || data.minBedrooms || data.maxBedrooms || data.minBathrooms || data.maxBathrooms || data.moveInDate || data.hasPets);
+
+            if (!hasNeighborhoods && !hasBldg && !hasApt && !hasHousing) {
+                localStorage.removeItem(STORAGE_KEY);
+                return;
+            }
+
+            // Build payload matching save_advanced_prefs API format
+            const payload = {
+                neighborhood_rankings: (data.neighborhoodRankings || []).map(n => parseInt(n.id)),
+                building_amenity_prefs: data.buildingAmenityPrefs || {},
+                apartment_amenity_prefs: data.apartmentAmenityPrefs || {},
+                max_budget: data.maxBudget || null,
+                min_bedrooms: data.minBedrooms || null,
+                max_bedrooms: data.maxBedrooms || null,
+                min_bathrooms: data.minBathrooms || null,
+                max_bathrooms: data.maxBathrooms || null,
+                desired_move_in_date: data.moveInDate || null,
+                has_pets: !!data.hasPets
+            };
+
+            // Get CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value
+                || document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1]
+                || '{{ csrf_token }}';
+
+            try {
+                const response = await fetch('/apartments/api/save-advanced-prefs/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Clear localStorage — migration complete
+                    localStorage.removeItem(STORAGE_KEY);
+                    sessionStorage.setItem(MIGRATED_KEY, 'true');
+
+                    // Show success toast with "View Your Matches" CTA
+                    const toast = document.createElement('div');
+                    toast.className = 'alert alert-success alert-dismissible fade show position-fixed shadow-lg';
+                    toast.style.cssText = 'top:20px;right:20px;z-index:9999;max-width:450px;border-radius:12px;border-left:4px solid #ffd60a;';
+                    toast.innerHTML = `
+                        <div class="d-flex align-items-start">
+                            <div class="me-3" style="font-size:1.5rem;">✨</div>
+                            <div class="flex-grow-1">
+                                <strong>Preferences saved to your profile!</strong>
+                                <div class="text-muted small mt-1">Your neighborhood rankings, amenity preferences, and housing basics have been imported.</div>
+                                <a href="/apartments/" class="btn btn-sm btn-warning text-dark fw-bold mt-2 rounded-pill">
+                                    View Your Matches →
+                                </a>
+                            </div>
+                            <button type="button" class="btn-close ms-2" data-bs-dismiss="alert"></button>
+                        </div>
+                    `;
+                    document.body.appendChild(toast);
+
+                    // Auto-dismiss after 10 seconds
+                    setTimeout(() => { if (toast.parentNode) toast.remove(); }, 10000);
+
+                    console.log('[Falkor] Guest preferences migrated successfully:', result.saved);
+                } else {
+                    console.warn('[Falkor] Preference migration failed:', result.error);
+                }
+            } catch(e) {
+                // Network error — don't clear localStorage, retry on next visit
+                console.error('[Falkor] Preference migration network error:', e);
+            }
+        })();
     });
 </script>
 {% endblock %}

@@ -126,6 +126,338 @@
         display: inline-block;
         margin-right: 5px;
     }
+
+    /* ===== Advanced Filters Panel ===== */
+    .btn-advanced-filters {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        color: #ffd60a;
+        border: 2px solid #ffd60a;
+        border-radius: 50px;
+        padding: 6px 18px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    .btn-advanced-filters:hover {
+        background: #ffd60a;
+        color: #1a1a2e;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(255, 214, 10, 0.35);
+    }
+    .btn-advanced-filters .adv-active-dot {
+        width: 8px;
+        height: 8px;
+        background: #00e676;
+        border-radius: 50%;
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        border: 2px solid #fff;
+        display: none;
+    }
+    .btn-advanced-filters.has-prefs .adv-active-dot { display: block; }
+
+    #advancedFiltersPanel {
+        background: rgba(255, 255, 255, 0.97);
+        backdrop-filter: blur(12px);
+        border-radius: 16px;
+        border: 1px solid rgba(0,0,0,0.08);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+    }
+
+    /* Neighborhood ranking */
+    .adv-neighborhood-list {
+        border: 2px dashed #dee2e6;
+        border-radius: 12px;
+        padding: 12px;
+        min-height: 200px;
+        max-height: 280px;
+        overflow-y: auto;
+        background: #fafbfc;
+    }
+    .adv-neighborhood-list.drop-active {
+        border-color: #ffd60a;
+        background: #fffde7;
+    }
+    .adv-neighborhood-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 14px;
+        margin-bottom: 6px;
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.9rem;
+    }
+    .adv-neighborhood-item:hover {
+        border-color: #ffd60a;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .adv-neighborhood-item.selected {
+        background: #1a1a2e;
+        color: #fff;
+        border-color: #1a1a2e;
+    }
+    .adv-neighborhood-item .rank-badge {
+        background: #ffd60a;
+        color: #1a1a2e;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.75rem;
+    }
+    .sortable-ghost {
+        opacity: 0.4;
+        background: #fffde7 !important;
+    }
+
+    /* Amenity sliders (consolidated) */
+    .adv-amenities-scroll {
+        max-height: 320px;
+        overflow-y: auto;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        background: #fafbfc;
+    }
+    .adv-amenity-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 16px;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background 0.2s;
+    }
+    .adv-amenity-item:last-child { border-bottom: none; }
+    .adv-amenity-item:hover { background: #fff; }
+    .adv-amenity-item .amenity-label {
+        flex: 1;
+        font-size: 0.88rem;
+        font-weight: 500;
+    }
+    .adv-amenity-item .amenity-priority-label {
+        font-size: 0.72rem;
+        font-weight: 600;
+        min-width: 75px;
+        text-align: center;
+    }
+    .adv-amenity-item input[type=range] {
+        width: 120px;
+        accent-color: #ffd60a;
+    }
+    .adv-category-header {
+        background: #f0f1f3;
+        padding: 8px 16px;
+        font-weight: 700;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #666;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+    .priority-nice { color: #4caf50; }
+    .priority-important { color: #ff9800; }
+    .priority-must { color: #f44336; }
+    .priority-none { color: #adb5bd; }
+
+    /* Match percentage badge */
+    .match-badge {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        z-index: 5;
+        border-radius: 50%;
+        width: 52px;
+        height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 0.8rem;
+        line-height: 1;
+        box-shadow: 0 3px 12px rgba(0,0,0,0.2);
+        animation: badgePop 0.3s ease;
+    }
+    .match-badge.match-high { background: #00c853; color: #fff; }
+    .match-badge.match-medium { background: #ffd60a; color: #1a1a2e; }
+    .match-badge.match-low { background: #ff5722; color: #fff; }
+    @keyframes badgePop {
+        0% { transform: scale(0); opacity: 0; }
+        70% { transform: scale(1.1); }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Loading progress bar */
+    .adv-loading-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(255,255,255,0.85);
+        backdrop-filter: blur(4px);
+        z-index: 20;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+    }
+    .adv-progress-bar {
+        width: 200px;
+        height: 6px;
+        background: #e9ecef;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+    .adv-progress-bar .fill {
+        height: 100%;
+        background: linear-gradient(90deg, #ffd60a, #00e676);
+        border-radius: 3px;
+        animation: progressAnim 1.5s ease-in-out infinite;
+    }
+    @keyframes progressAnim {
+        0% { width: 0%; }
+        50% { width: 70%; }
+        100% { width: 100%; }
+    }
+
+    /* Save CTA modal */
+    .save-prefs-modal .modal-content {
+        border: none;
+        border-radius: 20px;
+        overflow: hidden;
+    }
+    .save-prefs-modal .modal-header {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        color: #fff;
+        border: none;
+        padding: 24px 28px;
+    }
+    .save-prefs-modal .modal-body { padding: 28px; }
+
+    /* Priority legend mini */
+    .adv-legend {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+    }
+    .adv-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.75rem;
+        color: #666;
+    }
+    .adv-legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+    }
+    .adv-legend-dot.lg-none { background: #dee2e6; }
+    .adv-legend-dot.lg-nice { background: #4caf50; }
+    .adv-legend-dot.lg-important { background: #ff9800; }
+    .adv-legend-dot.lg-must { background: #f44336; }
+
+    /* ===== MODE TOGGLE ===== */
+    .filter-mode-toggle {
+        display: inline-flex;
+        background: #f0f0f0;
+        border-radius: 50px;
+        padding: 3px;
+        gap: 2px;
+    }
+    .filter-mode-toggle .mode-btn {
+        padding: 5px 18px;
+        border-radius: 50px;
+        border: none;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: transparent;
+        color: #666;
+        position: relative;
+    }
+    .filter-mode-toggle .mode-btn.active {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        color: #ffd60a;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .filter-mode-toggle .mode-btn .mode-dot {
+        width: 7px;
+        height: 7px;
+        background: #00e676;
+        border-radius: 50%;
+        position: absolute;
+        top: 2px;
+        right: 4px;
+        border: 1.5px solid #fff;
+        display: none;
+    }
+    .filter-mode-toggle .mode-btn.has-prefs .mode-dot { display: block; }
+
+    /* Quick filter disabled state */
+    .quick-filters-disabled {
+        pointer-events: none;
+        opacity: 0.35;
+        filter: grayscale(60%);
+        transition: all 0.3s ease;
+    }
+    .quick-filters-disabled .dropdown-toggle,
+    .quick-filters-disabled .filter-dropdown {
+        cursor: not-allowed !important;
+    }
+
+    /* Click overlay to switch back to Quick mode */
+    .quick-filter-reactivate {
+        display: none;
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+        cursor: pointer;
+    }
+    .quick-filters-disabled .quick-filter-reactivate {
+        display: block;
+    }
+
+    /* Housing Basics row in Advanced panel */
+    .adv-housing-basics {
+        background: #fafbfc;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+    }
+    .adv-housing-basics label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #555;
+        margin-bottom: 4px;
+    }
+    .adv-housing-basics .form-control,
+    .adv-housing-basics .form-select {
+        font-size: 0.85rem;
+        border-radius: 8px;
+        padding: 6px 10px;
+    }
+    .adv-radio-group {
+        display: flex;
+        gap: 12px;
+        margin-top: 4px;
+    }
+    .adv-radio-group label {
+        font-weight: 400;
+        font-size: 0.82rem;
+        color: #333;
+    }
 </style>
 {% endblock %}
 
@@ -142,10 +474,13 @@
     <div class="filter-bar d-none d-lg-block">
         <div class="container-fluid">
             <form id="filterForm" method="get">
+                {% csrf_token %}
                 <div class="d-flex flex-wrap align-items-center gap-3">
                     <h5 class="fw-bold mb-0 me-3">Filters</h5>
                     
-                    <!-- Price Dropdown -->
+                    <!-- Quick Filter Dropdowns (greyed out when Advanced is active) -->
+                    <div class="d-flex flex-wrap gap-3 position-relative" id="quickFiltersGroup">
+                    <div class="quick-filter-reactivate" id="quickFilterReactivate" title="Click to switch back to Quick Filters"></div>
                     <div class="dropdown filter-dropdown">
                         <button class="dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
                             {% if request.GET.min_price or request.GET.max_price %}<span class="filter-active-indicator"></span>{% endif %}
@@ -297,9 +632,26 @@
                             </div>
                         </div>
                     </div>
+                    </div><!-- /quickFiltersGroup -->
 
-                    <div class="ms-auto flex-shrink-0">
-                        <a href="{% url 'apartments_list' %}" class="btn btn-link link-dark text-decoration-none small fw-bold">Reset</a>
+                    <div class="ms-auto flex-shrink-0 d-flex align-items-center gap-2">
+                        <div class="filter-mode-toggle" id="filterModeToggle">
+                            <button type="button" class="mode-btn active" data-mode="quick" id="btnModeQuick">
+                                ⚡ Quick Filters
+                            </button>
+                            <button type="button" class="mode-btn" data-mode="advanced" id="btnModeAdvanced">
+                                <span class="mode-dot"></span>
+                                ✨ Advanced
+                            </button>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill d-none" id="btnMinimizeAdvanced"
+                                title="Minimize or expand the Advanced filters panel"
+                                style="font-size:0.8rem;padding:3px 12px;">
+                            <i class="fas fa-chevron-up me-1" id="minimizeIcon"></i>
+                            <span id="minimizeLabel">Hide Filters</span>
+                        </button>
+                        <a href="{% url 'apartments_list' %}?reset=1" class="btn btn-link link-dark text-decoration-none small fw-bold" id="btnResetAll"
+                           onclick="try{localStorage.removeItem('falkor_advanced_prefs')}catch(e){}">Reset</a>
                     </div>
                 </div>
             </form>
@@ -316,6 +668,278 @@
                             </div>
                             {% endfor %}
                         {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Filters Collapsible Panel -->
+        <div class="collapse mt-3" id="advancedFiltersPanel">
+            <div class="p-4 position-relative" id="advancedFiltersPanelInner">
+                <!-- Section 0: Housing Basics -->
+                <div class="adv-housing-basics" id="advHousingBasics">
+                    <h6 class="fw-bold mb-3"><i class="fas fa-home me-2 text-warning"></i>Housing Basics</h6>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-3">
+                            <label for="advMaxBudget">Max Monthly Rent</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">$</span>
+                                <input type="text" class="form-control" id="advMaxBudget" placeholder="e.g. 2500">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="advMoveInDate">Desired Move-in</label>
+                            <input type="date" class="form-control form-control-sm" id="advMoveInDate">
+                        </div>
+                        <div class="col-md-3">
+                            <label>Pets?</label>
+                            <div class="adv-radio-group">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="advHasPets" id="advPetsNo" value="no" checked>
+                                    <label class="form-check-label" for="advPetsNo">No</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="advHasPets" id="advPetsYes" value="yes">
+                                    <label class="form-check-label" for="advPetsYes">Yes</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label>Roommates?</label>
+                            <div class="adv-radio-group">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="advRoommates" id="advRoommatesNo" value="no" checked>
+                                    <label class="form-check-label" for="advRoommatesNo">No</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="advRoommates" id="advRoommatesYes" value="yes">
+                                    <label class="form-check-label" for="advRoommatesYes">Yes</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <label for="advMinBeds">Min Beds</label>
+                            <select class="form-select form-select-sm" id="advMinBeds">
+                                <option value="">Any</option>
+                                <option value="studio">Studio</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5+</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="advMaxBeds">Max Beds</label>
+                            <select class="form-select form-select-sm" id="advMaxBeds">
+                                <option value="">Any</option>
+                                <option value="studio">Studio</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5+</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="advMinBaths">Min Baths</label>
+                            <select class="form-select form-select-sm" id="advMinBaths">
+                                <option value="">Any</option>
+                                <option value="1">1</option>
+                                <option value="1.5">1.5</option>
+                                <option value="2">2</option>
+                                <option value="2.5">2.5</option>
+                                <option value="3">3</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="advMaxBaths">Max Baths</label>
+                            <select class="form-select form-select-sm" id="advMaxBaths">
+                                <option value="">Any</option>
+                                <option value="1">1</option>
+                                <option value="1.5">1.5</option>
+                                <option value="2">2</option>
+                                <option value="2.5">2.5</option>
+                                <option value="3">3</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Section A: Neighborhood Rankings -->
+                    <div class="col-md-5 mb-4 mb-md-0">
+                        <h6 class="fw-bold mb-2"><i class="fas fa-map-marker-alt me-2 text-warning"></i>Neighborhood Rankings</h6>
+                        <p class="text-muted small mb-3">Click to add, then drag to rank by priority. #1 = highest priority.</p>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="small text-muted fw-bold mb-1">Available</div>
+                                <div class="adv-neighborhood-list" id="advAvailableNeighborhoods">
+                                    {% for neighborhood in all_neighborhoods_list %}
+                                    <div class="adv-neighborhood-item" data-neighborhood-id="{{ neighborhood.id }}" data-neighborhood-name="{{ neighborhood.name }}">
+                                        <span>{{ neighborhood.name }} <small class="text-muted">({{ neighborhood.listing_count }})</small></span>
+                                        <i class="fas fa-plus text-success" style="font-size:0.75rem;"></i>
+                                    </div>
+                                    {% empty %}
+                                    <p class="text-muted small text-center py-3">No neighborhoods found</p>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="small text-muted fw-bold mb-1">Your Rankings</div>
+                                <div class="adv-neighborhood-list" id="advSelectedNeighborhoods">
+                                    <div class="text-muted text-center py-4 small" id="advEmptyRankMsg">
+                                        <i class="fas fa-hand-pointer mb-1 d-block"></i>
+                                        Click neighborhoods to add
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section B: Amenities & Features -->
+                    <div class="col-md-7">
+                        <h6 class="fw-bold mb-2"><i class="fas fa-sliders-h me-2 text-warning"></i>Amenities & Features</h6>
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="adv-legend">
+                                <div class="adv-legend-item"><span class="adv-legend-dot lg-none"></span> Don't Care</div>
+                                <div class="adv-legend-item"><span class="adv-legend-dot lg-nice"></span> Nice to Have</div>
+                                <div class="adv-legend-item"><span class="adv-legend-dot lg-important"></span> Important</div>
+                                <div class="adv-legend-item"><span class="adv-legend-dot lg-must"></span> Must Have</div>
+                            </div>
+                        </div>
+                        <!-- Search -->
+                        <div class="input-group input-group-sm mb-2">
+                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                            <input type="text" class="form-control border-start-0" placeholder="Search amenities & features..." id="advAmenitySearch">
+                        </div>
+                        <!-- Consolidated amenity list -->
+                        <div class="adv-amenities-scroll" id="advAmenitiesContainer">
+                            <!-- Building Amenities -->
+                            <div class="adv-category-header">🏢 Building Amenities</div>
+                            {% for amenity in all_building_amenities %}
+                            <div class="adv-amenity-item" data-amenity-id="{{ amenity.id }}" data-amenity-type="building" data-amenity-name="{{ amenity.name|lower }}">
+                                <i class="fa-solid {{ amenity.icon }} text-warning" style="width:20px;text-align:center;"></i>
+                                <span class="amenity-label">{{ amenity.name }} <small class="text-muted">({{ amenity.listing_count }})</small></span>
+                                <span class="amenity-priority-label priority-none">—</span>
+                                <input type="range" min="0" max="3" value="0" step="1" class="adv-amenity-slider" data-amenity-id="{{ amenity.id }}" data-amenity-type="building">
+                            </div>
+                            {% empty %}
+                            <p class="text-muted small p-3">No building amenities available</p>
+                            {% endfor %}
+                            <!-- Apartment Features -->
+                            <div class="adv-category-header">🏠 Apartment Features</div>
+                            {% for amenity in all_apartment_amenities %}
+                            <div class="adv-amenity-item" data-amenity-id="{{ amenity.id }}" data-amenity-type="apartment" data-amenity-name="{{ amenity.name|lower }}">
+                                <i class="fa-solid {{ amenity.icon }} text-warning" style="width:20px;text-align:center;"></i>
+                                <span class="amenity-label">{{ amenity.name }} <small class="text-muted">({{ amenity.listing_count }})</small></span>
+                                <span class="amenity-priority-label priority-none">—</span>
+                                <input type="range" min="0" max="3" value="0" step="1" class="adv-amenity-slider" data-amenity-id="{{ amenity.id }}" data-amenity-type="apartment">
+                            </div>
+                            {% empty %}
+                            <p class="text-muted small p-3">No apartment features available</p>
+                            {% endfor %}
+                            <!-- No results message -->
+                            <div class="text-center text-muted py-3 d-none" id="advNoAmenityResults">
+                                <i class="fas fa-search mb-1 d-block opacity-50"></i>
+                                No amenities match your search.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Bar -->
+                <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                    <button type="button" class="btn btn-link text-muted text-decoration-none small" id="btnClearAdvanced"
+                            title="Clears current session filters only — your saved profile preferences are not affected">
+                        <i class="fas fa-undo me-1"></i> Clear Session Filters
+                    </button>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-outline-dark rounded-pill px-4" id="btnApplyAdvanced">
+                            <i class="fas fa-sparkles me-1"></i> Apply & See Matches
+                        </button>
+                        <button type="button" class="btn rounded-pill px-4 fw-bold" id="btnSavePrefs" style="background:#ffd60a;color:#1a1a2e;">
+                            <i class="fas fa-bookmark me-1"></i> Save & See Matches
+                        </button>
+                    </div>
+                </div>
+                <!-- Bottom minimize shortcut -->
+                <div class="text-center mt-2">
+                    <button type="button" class="btn btn-link text-muted text-decoration-none small" id="btnMinimizeBottom"
+                            title="Minimize the filters panel">
+                        <i class="fas fa-chevron-up me-1"></i> Minimize Filters
+                    </button>
+                </div>
+
+                <!-- Loading overlay (hidden by default) -->
+                <div class="adv-loading-overlay d-none" id="advLoadingOverlay">
+                    <div class="mb-3 fw-bold text-dark">Calculating your matches...</div>
+                    <div class="adv-progress-bar"><div class="fill"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Preferences Modal (for unauthenticated users) -->
+    <div class="modal fade save-prefs-modal" id="savePrefsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg">
+                <div class="modal-header">
+                    <div>
+                        <h5 class="modal-title fw-bold mb-1"><i class="fas fa-bookmark me-2"></i>Save Your Preferences</h5>
+                        <p class="mb-0 small" style="opacity:0.8;">Get personalized matches every time you visit</p>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-user-plus fa-3x text-warning mb-3 d-block"></i>
+                        <h5 class="fw-bold">Create a Free Account</h5>
+                        <p class="text-muted">Your neighborhood rankings and amenity preferences will be saved automatically when you sign up.</p>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'register_applicant' %}?from=prefs" class="btn btn-lg rounded-pill fw-bold" style="background:#ffd60a;color:#1a1a2e;" id="btnModalSignup">
+                            Create Account & Save
+                        </a>
+                        <a href="{% url 'login' %}?next=/apartments/&from=prefs" class="btn btn-outline-dark btn-lg rounded-pill" id="btnModalLogin">
+                            I Already Have an Account
+                        </a>
+                    </div>
+                    <p class="text-muted small mt-3 mb-0"><i class="fas fa-lock me-1"></i> Your data is private and secure</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Guest Apply Soft Prompt Modal -->
+    <div class="modal fade save-prefs-modal" id="applyGuestModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg">
+                <div class="modal-header">
+                    <div>
+                        <h5 class="modal-title fw-bold mb-1"><i class="fas fa-sparkles me-2"></i>See Your Matches</h5>
+                        <p class="mb-0 small" style="opacity:0.8;">Create an account to save preferences & get personalized results</p>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-magic fa-3x text-warning mb-3 d-block"></i>
+                        <h5 class="fw-bold">Want to save these preferences?</h5>
+                        <p class="text-muted">Sign up to keep your preferences across visits and get smarter recommendations over time.</p>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'register_applicant' %}?from=prefs" class="btn btn-lg rounded-pill fw-bold" style="background:#ffd60a;color:#1a1a2e;">
+                            Create Account & Save
+                        </a>
+                        <a href="{% url 'login' %}?next=/apartments/&from=prefs" class="btn btn-outline-dark btn-lg rounded-pill">
+                            I Already Have an Account
+                        </a>
+                        <button type="button" class="btn btn-link text-muted text-decoration-none mt-1" id="btnSkipAndApply">
+                            Skip & See Matches →
+                        </button>
                     </div>
                 </div>
             </div>
@@ -338,6 +962,7 @@
                         </div>
                         <select class="form-select form-select-sm border-0 bg-light rounded-3 px-3 py-2 w-auto fw-semibold" id="sortSelect">
                             <option value="relevant" {% if is_sort_relevant %}selected{% endif %}>Relevant</option>
+                            <option value="match_score">Match %</option>
                             <option value="price_asc" {% if is_sort_price_asc %}selected{% endif %}>Price: Low to High</option>
                             <option value="price_desc" {% if is_sort_price_desc %}selected{% endif %}>Price: High to Low</option>
                             <option value="newest" {% if is_sort_newest %}selected{% endif %}>Newest</option>
@@ -379,6 +1004,7 @@
 
 {% block extra_js %}
 <script src='https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.js'></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
     let map;
     let markers = [];
@@ -817,5 +1443,732 @@
             });
         }
     });
+
+    // ================================================================
+    // ADVANCED FILTERS MODULE
+    // ================================================================
+    (function() {
+        'use strict';
+
+        const STORAGE_KEY = 'falkor_advanced_prefs';
+        const EXPIRY_DAYS = 7;
+        const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content
+            || document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        const IS_AUTHENTICATED = {{ user.is_authenticated|yesno:"true,false" }};
+        const PROFILE_PREFS = JSON.parse('{{ applicant_prefs_json|escapejs }}');
+
+        // --- State ---
+        let advancedState = {
+            neighborhoodRankings: [],  // [{id, name}, ...] in rank order
+            buildingAmenityPrefs: {},  // {amenityId: sliderValue 0-3}
+            apartmentAmenityPrefs: {},
+            // Housing basics
+            maxBudget: '',
+            minBedrooms: '',
+            maxBedrooms: '',
+            minBathrooms: '',
+            maxBathrooms: '',
+            moveInDate: '',
+            hasPets: false,
+            hasRoommates: false,
+            // Runtime
+            matchScores: {},           // {apartmentId: score}
+            isActive: false,
+            currentMode: 'quick'       // 'quick' or 'advanced'
+        };
+
+        // --- localStorage helpers ---
+        function saveState() {
+            const payload = {
+                neighborhoodRankings: advancedState.neighborhoodRankings,
+                buildingAmenityPrefs: advancedState.buildingAmenityPrefs,
+                apartmentAmenityPrefs: advancedState.apartmentAmenityPrefs,
+                maxBudget: advancedState.maxBudget,
+                minBedrooms: advancedState.minBedrooms,
+                maxBedrooms: advancedState.maxBedrooms,
+                minBathrooms: advancedState.minBathrooms,
+                maxBathrooms: advancedState.maxBathrooms,
+                moveInDate: advancedState.moveInDate,
+                hasPets: advancedState.hasPets,
+                hasRoommates: advancedState.hasRoommates,
+                timestamp: Date.now()
+            };
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+            } catch(e) { console.warn('localStorage save failed:', e); }
+            updateActiveIndicator();
+        }
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return;
+                const data = JSON.parse(raw);
+                // Check expiry
+                if (Date.now() - data.timestamp > EXPIRY_DAYS * 24 * 60 * 60 * 1000) {
+                    localStorage.removeItem(STORAGE_KEY);
+                    return;
+                }
+                advancedState.neighborhoodRankings = data.neighborhoodRankings || [];
+                advancedState.buildingAmenityPrefs = data.buildingAmenityPrefs || {};
+                advancedState.apartmentAmenityPrefs = data.apartmentAmenityPrefs || {};
+                advancedState.maxBudget = data.maxBudget || '';
+                advancedState.minBedrooms = data.minBedrooms || '';
+                advancedState.maxBedrooms = data.maxBedrooms || '';
+                advancedState.minBathrooms = data.minBathrooms || '';
+                advancedState.maxBathrooms = data.maxBathrooms || '';
+                advancedState.moveInDate = data.moveInDate || '';
+                advancedState.hasPets = !!data.hasPets;
+                advancedState.hasRoommates = !!data.hasRoommates;
+                advancedState.isActive = hasAnyPrefs();
+            } catch(e) { console.warn('localStorage load failed:', e); }
+        }
+
+        // Load profile prefs from server-injected JSON (authenticated users only)
+        // Profile data WINS over localStorage when user is logged in
+        function loadProfilePrefs() {
+            if (!IS_AUTHENTICATED || !PROFILE_PREFS || Object.keys(PROFILE_PREFS).length === 0) return;
+            // Skip on explicit reset
+            if (new URLSearchParams(window.location.search).get('reset')) return;
+
+            const p = PROFILE_PREFS;
+            if (p.neighborhoodRankings?.length) advancedState.neighborhoodRankings = p.neighborhoodRankings;
+            if (Object.keys(p.buildingAmenityPrefs || {}).length) advancedState.buildingAmenityPrefs = p.buildingAmenityPrefs;
+            if (Object.keys(p.apartmentAmenityPrefs || {}).length) advancedState.apartmentAmenityPrefs = p.apartmentAmenityPrefs;
+            if (p.maxBudget) advancedState.maxBudget = p.maxBudget;
+            if (p.minBedrooms) advancedState.minBedrooms = String(p.minBedrooms);
+            if (p.maxBedrooms) advancedState.maxBedrooms = String(p.maxBedrooms);
+            if (p.minBathrooms) advancedState.minBathrooms = String(p.minBathrooms);
+            if (p.maxBathrooms) advancedState.maxBathrooms = String(p.maxBathrooms);
+            if (p.moveInDate) advancedState.moveInDate = p.moveInDate;
+            if (p.hasPets) advancedState.hasPets = true;
+
+            advancedState.isActive = hasAnyPrefs();
+            console.log('[Falkor] Profile prefs loaded into Advanced state');
+        }
+
+        function hasAnyPrefs() {
+            const hasNeighborhoods = advancedState.neighborhoodRankings.length > 0;
+            const hasBldgAmenities = Object.values(advancedState.buildingAmenityPrefs).some(v => v > 0);
+            const hasAptAmenities = Object.values(advancedState.apartmentAmenityPrefs).some(v => v > 0);
+            const hasHousing = !!advancedState.maxBudget || !!advancedState.minBedrooms || !!advancedState.maxBedrooms || !!advancedState.minBathrooms || !!advancedState.maxBathrooms || !!advancedState.moveInDate || advancedState.hasPets;
+            return hasNeighborhoods || hasBldgAmenities || hasAptAmenities || hasHousing;
+        }
+
+        function updateActiveIndicator() {
+            const btn = document.getElementById('btnModeAdvanced');
+            if (btn) {
+                if (hasAnyPrefs()) {
+                    btn.classList.add('has-prefs');
+                } else {
+                    btn.classList.remove('has-prefs');
+                }
+            }
+        }
+
+        // --- Mode Toggle ---
+        function setMode(mode) {
+            advancedState.currentMode = mode;
+            const quickGroup = document.getElementById('quickFiltersGroup');
+            const advPanel = document.getElementById('advancedFiltersPanel');
+            const btnQuick = document.getElementById('btnModeQuick');
+            const btnAdv = document.getElementById('btnModeAdvanced');
+            const activeFiltersRow = document.getElementById('activeFilters')?.closest('.row');
+            const btnMinimize = document.getElementById('btnMinimizeAdvanced');
+
+            if (mode === 'advanced') {
+                // Hide quick filters entirely
+                quickGroup?.classList.add('quick-filters-disabled');
+                if (quickGroup) quickGroup.classList.add('d-none');
+                // Hide active filter chips (they belong to Quick mode)
+                if (activeFiltersRow) activeFiltersRow.style.display = 'none';
+                // Close any open quick filter dropdowns
+                document.querySelectorAll('#quickFiltersGroup .dropdown-toggle').forEach(btn => {
+                    const dd = bootstrap.Dropdown.getOrCreateInstance(btn);
+                    dd.hide();
+                });
+                // Open advanced panel
+                if (advPanel && !advPanel.classList.contains('show')) {
+                    new bootstrap.Collapse(advPanel, { toggle: true });
+                }
+                btnQuick?.classList.remove('active');
+                btnAdv?.classList.add('active');
+                // Show minimize toggle
+                btnMinimize?.classList.remove('d-none');
+                updateMinimizeIcon();
+            } else {
+                // Restore quick filters
+                quickGroup?.classList.remove('quick-filters-disabled');
+                if (quickGroup) quickGroup.classList.remove('d-none');
+                // Restore active filter chips
+                if (activeFiltersRow) activeFiltersRow.style.display = '';
+                // Collapse advanced panel
+                if (advPanel && advPanel.classList.contains('show')) {
+                    new bootstrap.Collapse(advPanel, { toggle: true });
+                }
+                btnAdv?.classList.remove('active');
+                btnQuick?.classList.add('active');
+                // Hide minimize toggle
+                btnMinimize?.classList.add('d-none');
+                // Remove match badges & reset sort
+                document.querySelectorAll('.match-badge').forEach(b => b.remove());
+                advancedState.matchScores = {};
+                advancedState.isActive = false;
+                const sortSelect = document.getElementById('sortSelect');
+                if (sortSelect && sortSelect.value === 'match_score') {
+                    sortSelect.value = 'relevant';
+                }
+            }
+        }
+
+        function toggleMinimizeAdvanced() {
+            const advPanel = document.getElementById('advancedFiltersPanel');
+            if (advPanel) {
+                new bootstrap.Collapse(advPanel, { toggle: true });
+            }
+            // Delay icon update to let Bootstrap animation complete
+            setTimeout(updateMinimizeIcon, 350);
+        }
+
+        function updateMinimizeIcon() {
+            const advPanel = document.getElementById('advancedFiltersPanel');
+            const icon = document.getElementById('minimizeIcon');
+            const label = document.getElementById('minimizeLabel');
+            if (!icon || !advPanel) return;
+            if (advPanel.classList.contains('show')) {
+                icon.className = 'fas fa-chevron-up me-1';
+                if (label) label.textContent = 'Hide Filters';
+            } else {
+                icon.className = 'fas fa-chevron-down me-1';
+                if (label) label.textContent = 'Show Filters';
+            }
+        }
+
+        function syncHousingBasicsFromUI() {
+            advancedState.maxBudget = document.getElementById('advMaxBudget')?.value?.replace(/,/g, '') || '';
+            advancedState.minBedrooms = document.getElementById('advMinBeds')?.value || '';
+            advancedState.maxBedrooms = document.getElementById('advMaxBeds')?.value || '';
+            advancedState.minBathrooms = document.getElementById('advMinBaths')?.value || '';
+            advancedState.maxBathrooms = document.getElementById('advMaxBaths')?.value || '';
+            advancedState.moveInDate = document.getElementById('advMoveInDate')?.value || '';
+            advancedState.hasPets = document.querySelector('input[name="advHasPets"]:checked')?.value === 'yes';
+            advancedState.hasRoommates = document.querySelector('input[name="advRoommates"]:checked')?.value === 'yes';
+        }
+
+        function restoreHousingBasicsToUI() {
+            const budgetEl = document.getElementById('advMaxBudget');
+            if (budgetEl) budgetEl.value = advancedState.maxBudget;
+            const moveInEl = document.getElementById('advMoveInDate');
+            if (moveInEl) moveInEl.value = advancedState.moveInDate;
+            const minBedsEl = document.getElementById('advMinBeds');
+            if (minBedsEl) minBedsEl.value = advancedState.minBedrooms;
+            const maxBedsEl = document.getElementById('advMaxBeds');
+            if (maxBedsEl) maxBedsEl.value = advancedState.maxBedrooms;
+            const minBathsEl = document.getElementById('advMinBaths');
+            if (minBathsEl) minBathsEl.value = advancedState.minBathrooms;
+            const maxBathsEl = document.getElementById('advMaxBaths');
+            if (maxBathsEl) maxBathsEl.value = advancedState.maxBathrooms;
+            if (advancedState.hasPets) {
+                const petsYes = document.getElementById('advPetsYes');
+                if (petsYes) petsYes.checked = true;
+            }
+            if (advancedState.hasRoommates) {
+                const roomYes = document.getElementById('advRoommatesYes');
+                if (roomYes) roomYes.checked = true;
+            }
+        }
+
+        // --- Neighborhood Ranking ---
+        function initNeighborhoodRanking() {
+            const availableList = document.getElementById('advAvailableNeighborhoods');
+            const selectedList = document.getElementById('advSelectedNeighborhoods');
+            const emptyMsg = document.getElementById('advEmptyRankMsg');
+            if (!availableList || !selectedList) return;
+
+            // Make selected list sortable
+            if (typeof Sortable !== 'undefined') {
+                Sortable.create(selectedList, {
+                    animation: 200,
+                    ghostClass: 'sortable-ghost',
+                    filter: '#advEmptyRankMsg',
+                    onEnd: function() {
+                        syncNeighborhoodState();
+                        saveState();
+                    }
+                });
+            }
+
+            // Click to add from available
+            availableList.addEventListener('click', function(e) {
+                const item = e.target.closest('.adv-neighborhood-item');
+                if (!item) return;
+                const id = item.dataset.neighborhoodId;
+                const name = item.dataset.neighborhoodName;
+                // Don't add duplicates
+                if (advancedState.neighborhoodRankings.some(n => n.id == id)) return;
+
+                item.style.display = 'none';
+                addNeighborhoodToSelected(id, name);
+                syncNeighborhoodState();
+                saveState();
+            });
+
+            // Restore from state
+            advancedState.neighborhoodRankings.forEach(n => {
+                const availItem = availableList.querySelector(`[data-neighborhood-id="${n.id}"]`);
+                if (availItem) availItem.style.display = 'none';
+                addNeighborhoodToSelected(n.id, n.name);
+            });
+            updateEmptyMsg();
+
+            function addNeighborhoodToSelected(id, name) {
+                const rank = selectedList.querySelectorAll('.adv-neighborhood-item').length + 1;
+                const el = document.createElement('div');
+                el.className = 'adv-neighborhood-item selected';
+                el.dataset.neighborhoodId = id;
+                el.dataset.neighborhoodName = name;
+                el.innerHTML = `
+                    <span class="rank-badge">${rank}</span>
+                    <span class="flex-grow-1 ms-2">${name}</span>
+                    <i class="fas fa-times" style="cursor:pointer;font-size:0.75rem;opacity:0.6;"></i>
+                `;
+                // Remove handler
+                el.querySelector('.fa-times').addEventListener('click', function(ev) {
+                    ev.stopPropagation();
+                    el.remove();
+                    // Show in available list again
+                    const availItem = availableList.querySelector(`[data-neighborhood-id="${id}"]`);
+                    if (availItem) availItem.style.display = '';
+                    syncNeighborhoodState();
+                    saveState();
+                });
+                selectedList.appendChild(el);
+                updateEmptyMsg();
+            }
+
+            function syncNeighborhoodState() {
+                const items = selectedList.querySelectorAll('.adv-neighborhood-item');
+                advancedState.neighborhoodRankings = [];
+                items.forEach((item, idx) => {
+                    const badge = item.querySelector('.rank-badge');
+                    if (badge) badge.textContent = idx + 1;
+                    advancedState.neighborhoodRankings.push({
+                        id: item.dataset.neighborhoodId,
+                        name: item.dataset.neighborhoodName
+                    });
+                });
+                updateEmptyMsg();
+            }
+
+            function updateEmptyMsg() {
+                if (emptyMsg) {
+                    emptyMsg.style.display = selectedList.querySelectorAll('.adv-neighborhood-item').length > 0 ? 'none' : '';
+                }
+            }
+        }
+
+        // --- Amenity Sliders ---
+        const PRIORITY_LABELS = {
+            0: { text: '—', cls: 'priority-none' },
+            1: { text: 'Nice', cls: 'priority-nice' },
+            2: { text: 'Important', cls: 'priority-important' },
+            3: { text: 'Must Have', cls: 'priority-must' }
+        };
+
+        function initAmenitySliders() {
+            const sliders = document.querySelectorAll('.adv-amenity-slider');
+            sliders.forEach(slider => {
+                const type = slider.dataset.amenityType;
+                const id = slider.dataset.amenityId;
+                // Restore from state
+                const stateMap = type === 'building' ? advancedState.buildingAmenityPrefs : advancedState.apartmentAmenityPrefs;
+                if (stateMap[id] !== undefined) {
+                    slider.value = stateMap[id];
+                }
+                updateSliderLabel(slider);
+
+                slider.addEventListener('input', function() {
+                    const val = parseInt(this.value);
+                    if (type === 'building') {
+                        advancedState.buildingAmenityPrefs[id] = val;
+                    } else {
+                        advancedState.apartmentAmenityPrefs[id] = val;
+                    }
+                    updateSliderLabel(this);
+                    saveState();
+                });
+            });
+
+            // Amenity search
+            const searchInput = document.getElementById('advAmenitySearch');
+            const container = document.getElementById('advAmenitiesContainer');
+            const noResults = document.getElementById('advNoAmenityResults');
+            if (searchInput && container) {
+                searchInput.addEventListener('input', function() {
+                    const term = this.value.toLowerCase().trim();
+                    let visible = 0;
+                    container.querySelectorAll('.adv-amenity-item').forEach(item => {
+                        const name = item.dataset.amenityName || '';
+                        if (!term || name.includes(term)) {
+                            item.classList.remove('d-none');
+                            visible++;
+                        } else {
+                            item.classList.add('d-none');
+                        }
+                    });
+                    // Show/hide category headers intelligently
+                    container.querySelectorAll('.adv-category-header').forEach(header => {
+                        let next = header.nextElementSibling;
+                        let anyVisible = false;
+                        while (next && !next.classList.contains('adv-category-header')) {
+                            if (!next.classList.contains('d-none') && next.classList.contains('adv-amenity-item')) {
+                                anyVisible = true;
+                            }
+                            next = next.nextElementSibling;
+                        }
+                        header.classList.toggle('d-none', !anyVisible && term.length > 0);
+                    });
+                    if (noResults) noResults.classList.toggle('d-none', visible > 0 || !term);
+                });
+            }
+        }
+
+        function updateSliderLabel(slider) {
+            const val = parseInt(slider.value);
+            const label = slider.closest('.adv-amenity-item')?.querySelector('.amenity-priority-label');
+            if (label) {
+                const cfg = PRIORITY_LABELS[val] || PRIORITY_LABELS[0];
+                label.textContent = cfg.text;
+                label.className = 'amenity-priority-label ' + cfg.cls;
+            }
+        }
+
+        // --- Guest Match API ---
+        async function applyAdvancedFilters() {
+            const overlay = document.getElementById('advLoadingOverlay');
+            if (overlay) overlay.classList.remove('d-none');
+
+            // Collect visible apartment IDs (max 50)
+            const cards = document.querySelectorAll('.apartment-card[data-apartment-id]');
+            const apartmentIds = [];
+            cards.forEach(card => {
+                if (apartmentIds.length < 50) {
+                    apartmentIds.push(parseInt(card.dataset.apartmentId));
+                }
+            });
+
+            if (apartmentIds.length === 0) {
+                if (overlay) overlay.classList.add('d-none');
+                return;
+            }
+
+            // Build payload (includes housing basics)
+            syncHousingBasicsFromUI();
+            saveState();
+
+            const payload = {
+                neighborhood_rankings: advancedState.neighborhoodRankings.map(n => parseInt(n.id)),
+                building_amenity_prefs: advancedState.buildingAmenityPrefs,
+                apartment_amenity_prefs: advancedState.apartmentAmenityPrefs,
+                apartment_ids: apartmentIds,
+                max_budget: advancedState.maxBudget || null,
+                min_bedrooms: advancedState.minBedrooms || null,
+                max_bedrooms: advancedState.maxBedrooms || null,
+                min_bathrooms: advancedState.minBathrooms || null,
+                max_bathrooms: advancedState.maxBathrooms || null,
+                desired_move_in_date: advancedState.moveInDate || null,
+                has_pets: advancedState.hasPets
+            };
+
+            try {
+                const response = await fetch('/apartments/api/guest-match/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': CSRF_TOKEN
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    console.error('Guest match error:', err);
+                    return;
+                }
+
+                const data = await response.json();
+                advancedState.matchScores = data.scores || {};
+                advancedState.isActive = true;
+
+                // Render match badges on cards
+                renderMatchBadges();
+
+                // Auto-sort by match %
+                sortByMatchScore();
+
+            } catch(e) {
+                console.error('Advanced filter error:', e);
+            } finally {
+                if (overlay) overlay.classList.add('d-none');
+            }
+        }
+
+        function renderMatchBadges() {
+            // Remove existing badges
+            document.querySelectorAll('.match-badge').forEach(b => b.remove());
+
+            const scores = advancedState.matchScores;
+            if (!scores || Object.keys(scores).length === 0) return;
+
+            document.querySelectorAll('.apartment-card[data-apartment-id]').forEach(card => {
+                const id = card.dataset.apartmentId;
+                if (scores[id] !== undefined) {
+                    const score = scores[id];
+                    const badge = document.createElement('div');
+                    let cls = 'match-low';
+                    if (score >= 75) cls = 'match-high';
+                    else if (score >= 50) cls = 'match-medium';
+                    badge.className = `match-badge ${cls}`;
+                    badge.innerHTML = `${score}%`;
+                    // Find the card's image container or first child for positioning
+                    const cardInner = card.querySelector('.card') || card.firstElementChild;
+                    if (cardInner) {
+                        cardInner.style.position = 'relative';
+                        cardInner.prepend(badge);
+                    }
+                }
+            });
+        }
+
+        function sortByMatchScore() {
+            const grid = document.getElementById('apartmentsGrid');
+            if (!grid) return;
+            const scores = advancedState.matchScores;
+            if (!scores || Object.keys(scores).length === 0) return;
+
+            // Set sort select to Match %
+            const sortSelect = document.getElementById('sortSelect');
+            if (sortSelect) sortSelect.value = 'match_score';
+
+            // Sort card elements by score descending
+            const cards = Array.from(grid.querySelectorAll('.apartment-card[data-apartment-id]'));
+            cards.sort((a, b) => {
+                const scoreA = scores[a.dataset.apartmentId] || 0;
+                const scoreB = scores[b.dataset.apartmentId] || 0;
+                return scoreB - scoreA;
+            });
+            cards.forEach(card => grid.appendChild(card));
+        }
+
+        function handleSavePrefs() {
+            if (!hasAnyPrefs()) {
+                alert('Set some preferences first!');
+                return;
+            }
+
+            if (IS_AUTHENTICATED) {
+                // Save to DB, then also apply scoring so user sees results immediately
+                savePrefsToServer(true);
+            } else {
+                // Show the save CTA modal (must create account first)
+                const modal = new bootstrap.Modal(document.getElementById('savePrefsModal'));
+                modal.show();
+            }
+        }
+
+        function handleApply() {
+            if (!hasAnyPrefs()) {
+                alert('Set some preferences first!');
+                return;
+            }
+
+            if (IS_AUTHENTICATED) {
+                // Just score — don't save to DB
+                applyAdvancedFilters();
+            } else {
+                // Show soft prompt: encourage account creation, but allow skip
+                const modal = new bootstrap.Modal(document.getElementById('applyGuestModal'));
+                modal.show();
+            }
+        }
+
+        async function savePrefsToServer(andApply = false) {
+            try {
+                syncHousingBasicsFromUI();
+                const payload = {
+                    neighborhood_rankings: advancedState.neighborhoodRankings.map(n => parseInt(n.id)),
+                    building_amenity_prefs: advancedState.buildingAmenityPrefs,
+                    apartment_amenity_prefs: advancedState.apartmentAmenityPrefs,
+                    max_budget: advancedState.maxBudget || null,
+                    min_bedrooms: advancedState.minBedrooms || null,
+                    max_bedrooms: advancedState.maxBedrooms || null,
+                    min_bathrooms: advancedState.minBathrooms || null,
+                    max_bathrooms: advancedState.maxBathrooms || null,
+                    desired_move_in_date: advancedState.moveInDate || null,
+                    has_pets: advancedState.hasPets
+                };
+
+                const response = await fetch('/apartments/api/save-advanced-prefs/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': CSRF_TOKEN
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showToast('✅ Preferences saved to your profile!');
+                    localStorage.removeItem(STORAGE_KEY);
+                    // Also apply scoring so user sees results immediately
+                    if (andApply) {
+                        await applyAdvancedFilters();
+                    }
+                } else {
+                    showToast('❌ ' + (data.error || 'Failed to save'), 'danger');
+                }
+            } catch(e) {
+                console.error('Save error:', e);
+                showToast('❌ Network error. Please try again.', 'danger');
+            }
+        }
+
+        // --- Clear ---
+        function clearAdvancedFilters() {
+            advancedState.neighborhoodRankings = [];
+            advancedState.buildingAmenityPrefs = {};
+            advancedState.apartmentAmenityPrefs = {};
+            advancedState.maxBudget = '';
+            advancedState.minBedrooms = '';
+            advancedState.maxBedrooms = '';
+            advancedState.minBathrooms = '';
+            advancedState.maxBathrooms = '';
+            advancedState.moveInDate = '';
+            advancedState.hasPets = false;
+            advancedState.hasRoommates = false;
+            advancedState.matchScores = {};
+            advancedState.isActive = false;
+            localStorage.removeItem(STORAGE_KEY);
+
+            // Reset UI
+            const availableList = document.getElementById('advAvailableNeighborhoods');
+            const selectedList = document.getElementById('advSelectedNeighborhoods');
+            if (availableList) {
+                availableList.querySelectorAll('.adv-neighborhood-item').forEach(i => i.style.display = '');
+            }
+            if (selectedList) {
+                selectedList.querySelectorAll('.adv-neighborhood-item').forEach(i => i.remove());
+                const emptyMsg = document.getElementById('advEmptyRankMsg');
+                if (emptyMsg) emptyMsg.style.display = '';
+            }
+
+            document.querySelectorAll('.adv-amenity-slider').forEach(s => {
+                s.value = 0;
+                updateSliderLabel(s);
+            });
+
+            // Reset housing basics inputs
+            document.getElementById('advMaxBudget').value = '';
+            document.getElementById('advMoveInDate').value = '';
+            document.getElementById('advMinBeds').value = '';
+            document.getElementById('advMaxBeds').value = '';
+            document.getElementById('advMinBaths').value = '';
+            document.getElementById('advMaxBaths').value = '';
+            document.getElementById('advPetsNo').checked = true;
+            document.getElementById('advRoommatesNo').checked = true;
+
+            // Remove badges
+            document.querySelectorAll('.match-badge').forEach(b => b.remove());
+            updateActiveIndicator();
+        }
+
+        // --- Toast helper ---
+        function showToast(message, type = 'success') {
+            const container = document.querySelector('.container-fluid') || document.body;
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type === 'danger' ? 'danger' : 'success'} alert-dismissible fade show position-fixed shadow-lg`;
+            toast.style.cssText = 'top:20px;right:20px;z-index:9999;max-width:400px;border-radius:12px;';
+            toast.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        // --- Init ---
+        document.addEventListener('DOMContentLoaded', function() {
+            loadState();
+            loadProfilePrefs();  // Authenticated: profile wins over localStorage
+            initNeighborhoodRanking();
+            initAmenitySliders();
+            restoreHousingBasicsToUI();
+            updateActiveIndicator();
+
+            // Button handlers
+            document.getElementById('btnApplyAdvanced')?.addEventListener('click', handleApply);
+            document.getElementById('btnSavePrefs')?.addEventListener('click', handleSavePrefs);
+            document.getElementById('btnClearAdvanced')?.addEventListener('click', clearAdvancedFilters);
+            document.getElementById('btnMinimizeAdvanced')?.addEventListener('click', toggleMinimizeAdvanced);
+            document.getElementById('btnMinimizeBottom')?.addEventListener('click', toggleMinimizeAdvanced);
+
+            // Guest "Skip & See Matches" handler
+            document.getElementById('btnSkipAndApply')?.addEventListener('click', function() {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('applyGuestModal'));
+                if (modal) modal.hide();
+                applyAdvancedFilters();
+            });
+
+            // Mode toggle buttons
+            document.getElementById('btnModeQuick')?.addEventListener('click', () => setMode('quick'));
+            document.getElementById('btnModeAdvanced')?.addEventListener('click', () => setMode('advanced'));
+
+            // Clicking the greyed-out quick filters switches back to Quick mode
+            document.getElementById('quickFilterReactivate')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setMode('quick');
+            });
+
+            // Housing basics change handlers — auto-save
+            ['advMaxBudget', 'advMoveInDate', 'advMinBeds', 'advMaxBeds', 'advMinBaths', 'advMaxBaths'].forEach(id => {
+                document.getElementById(id)?.addEventListener('change', () => {
+                    syncHousingBasicsFromUI();
+                    saveState();
+                });
+            });
+            document.querySelectorAll('input[name="advHasPets"], input[name="advRoommates"]').forEach(radio => {
+                radio.addEventListener('change', () => {
+                    syncHousingBasicsFromUI();
+                    saveState();
+                });
+            });
+
+            // If state was restored and has prefs, auto-switch to advanced mode
+            if (advancedState.isActive) {
+                setMode('advanced');
+            }
+
+            // Re-score after AJAX filter refresh
+            const origPerformSearch = window.performSearch || performSearch;
+            if (typeof performSearch === 'function') {
+                const _origSearch = performSearch;
+                // Monkey-patch to re-apply badges after AJAX search
+                // We use a MutationObserver instead for cleanliness
+            }
+
+            // Observe grid changes to re-apply match badges
+            const grid = document.getElementById('apartmentsGrid');
+            if (grid) {
+                const observer = new MutationObserver(() => {
+                    if (advancedState.isActive && Object.keys(advancedState.matchScores).length > 0) {
+                        setTimeout(renderMatchBadges, 100);
+                    }
+                });
+                observer.observe(grid, { childList: true });
+            }
+        });
+    })();
 </script>
 {% endblock %}
