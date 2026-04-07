@@ -75,6 +75,14 @@ class PersonalInfoForm(forms.ModelForm):
         initial=None
     )
     
+    has_been_evicted = forms.TypedChoiceField(
+        choices=BOOLEAN_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        coerce=lambda x: str(x) == 'True',
+        required=False,
+        initial=None
+    )
+    
     class Meta:
         model = PersonalInfoData
         fields = [
@@ -86,12 +94,12 @@ class PersonalInfoForm(forms.ModelForm):
             'current_address_years', 'current_address_months',
             'housing_status', 'current_monthly_rent', 'is_rental_property',
             'landlord_name', 'landlord_phone', 'landlord_email',
-            'desired_address', 'desired_unit', 'desired_move_in_date',
             'referral_source', 'has_pets',
             'reference1_name', 'reference1_phone',
             'reference2_name', 'reference2_phone',
             'has_filed_bankruptcy', 'bankruptcy_explanation',
-            'has_criminal_conviction', 'conviction_explanation'
+            'has_criminal_conviction', 'conviction_explanation',
+            'has_been_evicted', 'eviction_explanation',
         ]
         
         widgets = {
@@ -143,14 +151,7 @@ class PersonalInfoForm(forms.ModelForm):
             'landlord_phone': forms.TextInput(attrs={'class': 'form-control'}),
             'landlord_email': forms.EmailInput(attrs={'class': 'form-control'}),
             
-            # Desired property
-            'desired_address': forms.TextInput(attrs={'class': 'form-control'}),
-            'desired_unit': forms.TextInput(attrs={'class': 'form-control'}),
-            'desired_move_in_date': forms.DateInput(attrs={
-                'class': 'form-control', 
-                'type': 'date'
-            }),
-            
+
             # Additional info
             'referral_source': forms.TextInput(attrs={
                 'class': 'form-control', 
@@ -187,9 +188,6 @@ class PersonalInfoForm(forms.ModelForm):
             'landlord_name': "Landlord's Name",
             'landlord_phone': "Landlord's Phone",
             'landlord_email': "Landlord's Email",
-            'desired_address': 'Desired Address *',
-            'desired_unit': 'Desired Unit *',
-            'desired_move_in_date': 'Move-in Date *',
             'referral_source': 'How did you hear about us? *',
             'has_pets': 'I have pets',
             'reference1_name': 'Reference #1 Name *',

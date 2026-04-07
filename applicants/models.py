@@ -62,6 +62,10 @@ class Applicant(models.Model):
     _email = models.EmailField(default="john@example.com", db_column="email")
     _phone_number = models.CharField(max_length=20, default="555-555-5555", db_column="phone_number")
 
+    # Additional name fields (synced to Application)
+    middle_name = models.CharField(max_length=100, blank=True, null=True)
+    suffix = models.CharField(max_length=20, blank=True, null=True)
+
     @property
     def first_name(self):
         if self.user and self.user.first_name:
@@ -169,7 +173,7 @@ class Applicant(models.Model):
     
     housing_status = models.CharField(
         max_length=10,
-        choices=[("rent", "Rent"), ("own", "Own")],
+        choices=[("Rent", "Rent"), ("Own", "Own")],
         blank=True,
         null=True,
     ) 
@@ -569,7 +573,7 @@ class PreviousAddress(models.Model):
     # Housing status and landlord info (same as current address)
     housing_status = models.CharField(
         max_length=10,
-        choices=[("rent", "Rent"), ("own", "Own")],
+        choices=[("Rent", "Rent"), ("Own", "Own")],
         blank=True,
         null=True,
     )

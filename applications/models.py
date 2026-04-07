@@ -322,45 +322,120 @@ class PersonalInfoData(models.Model):
     bankruptcy_explanation = models.TextField(blank=True, null=True)
     has_criminal_conviction = models.BooleanField(null=True, blank=True, default=None)
     conviction_explanation = models.TextField(blank=True, null=True)
+    has_been_evicted = models.BooleanField(null=True, blank=True, default=None)
+    eviction_explanation = models.TextField(blank=True, null=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def get_completion_status(self):
-        """Weighted completion for Section 1 - Comprehensive version"""
+    @property
+    def current_address(self):
+        """Assemble full current address from component fields."""
+        parts = []
+        if self.street_address_1:
+            parts.append(self.street_address_1)
+        if self.street_address_2:
+            parts.append(self.street_address_2)
+        if self.city:
+            parts.append(self.city)
+        if self.state and self.zip_code:
+            parts.append(f"{self.state} {self.zip_code}")
+        elif self.state:
+            parts.append(self.state)
+        elif self.zip_code:
+            parts.append(self.zip_code)
+        return ', '.join(parts) if parts else None
+
+    def get_field_status(self):
+        """Returns grouped field status for drill-down display (unweighted)"""
         def is_filled(val):
             if val is None: return False
             if isinstance(val, str): return bool(val.strip())
             return True
 
-        # Base required fields
-        weights = {
-            'first_name': 10, 'last_name': 10, 'email': 10, 'phone_cell': 5,
-            'date_of_birth': 5, 'ssn': 5,
-            'street_address_1': 5, 'city': 5, 'state': 5, 'zip_code': 5,
-            'current_address_years': 3, 'current_address_months': 2,
-            'housing_status': 5, 'referral_source': 5,
-            'reference1_name': 5, 'reference1_phone': 5,
-            'has_pets': 5  # This counts as answered if answered
-        }
-        
-        # Add conditional landlord fields if renting
+        groups = [
+            ('Identity', [
+                ('first_name', 'First Name'),
+                ('last_name', 'Last Name'),
+                ('email', 'Email'),
+                ('phone_cell', 'Phone'),
+                ('date_of_birth', 'Date of Birth'),
+                ('ssn', 'SSN'),
+            ]),
+            ('Current Address', [
+                ('street_address_1', 'Street Address'),
+                ('city', 'City'),
+                ('state', 'State'),
+                ('zip_code', 'Zip Code'),
+                ('current_address_years', 'Years at Address'),
+                ('current_address_months', 'Months at Address'),
+                ('housing_status', 'Housing Status'),
+            ]),
+            ('References & Other', [
+                ('referral_source', 'Referral Source'),
+                ('reference1_name', 'Reference 1 Name'),
+                ('reference1_phone', 'Reference 1 Phone'),
+                ('has_pets', 'Pet Information'),
+            ]),
+            ('Legal & Additional References', [
+                ('reference2_name', 'Reference 2 Name'),
+                ('reference2_phone', 'Reference 2 Phone'),
+                ('has_filed_bankruptcy', 'Bankruptcy History'),
+                ('has_criminal_conviction', 'Criminal Conviction History'),
+                ('has_been_evicted', 'Eviction History'),
+            ]),
+        ]
+
+        # Conditional: explanation fields only if the boolean is True
+        legal_group = next(g for g in groups if g[0] == 'Legal & Additional References')
+        if self.has_filed_bankruptcy is True:
+            legal_group[1].append(('bankruptcy_explanation', 'Bankruptcy Explanation'))
+        if self.has_criminal_conviction is True:
+            legal_group[1].append(('conviction_explanation', 'Conviction Explanation'))
+        if self.has_been_evicted is True:
+            legal_group[1].append(('eviction_explanation', 'Eviction Explanation'))
+
+        # Conditional: landlord fields only if renting
         if self.housing_status == 'Rent':
-            weights.update({
-                'current_monthly_rent': 5,
-                'landlord_name': 5,
-                'landlord_phone': 2,
-                'landlord_email': 3
-            })
-            
-        score = 0
-        total_weight = sum(weights.values())
-        
-        for field, weight in weights.items():
-            if is_filled(getattr(self, field)):
-                score += weight
-                
-        return round((score / total_weight) * 100) if total_weight > 0 else 0
+            groups.append(('Landlord Info', [
+                ('current_monthly_rent', 'Monthly Rent'),
+                ('landlord_name', 'Landlord Name'),
+                ('landlord_phone', 'Landlord Phone'),
+                ('landlord_email', 'Landlord Email'),
+            ]))
+
+        result = []
+        for group_name, fields in groups:
+            group_fields = []
+            for field_name, label in fields:
+                group_fields.append({
+                    'label': label,
+                    'filled': is_filled(getattr(self, field_name)),
+                })
+            result.append({'group': group_name, 'fields': group_fields})
+
+        # Related objects
+        prev_count = self.previous_addresses.count()
+        pet_count = self.pets.count()
+        result.append({
+            'group': 'Related Records',
+            'fields': [
+                {'label': f'Previous Addresses ({prev_count} added)', 'filled': prev_count > 0},
+                {'label': f'Pets ({pet_count} added)', 'filled': self.has_pets is False or pet_count > 0},
+            ]
+        })
+
+        return result
+
+    def get_completion_status(self):
+        """Unweighted completion: filled_fields / total_fields"""
+        total, filled = 0, 0
+        for group in self.get_field_status():
+            for field in group['fields']:
+                total += 1
+                if field['filled']:
+                    filled += 1
+        return round((filled / total) * 100) if total > 0 else 0
 
 
 class Pet(models.Model):
@@ -470,8 +545,8 @@ class IncomeData(models.Model):
     id_type = models.CharField(max_length=50, blank=True, null=True) # passport, driver_license, state_id
     id_number = models.CharField(max_length=100, blank=True, null=True)
     id_state = models.CharField(max_length=50, blank=True, null=True)
-    id_front_image = models.FileField(upload_to='application_docs/id_images/', null=True, blank=True)
-    id_back_image = models.FileField(upload_to='application_docs/id_images/', null=True, blank=True)
+    id_front_image = CloudinaryField('image', folder='application_docs/id_images', null=True, blank=True)
+    id_back_image = CloudinaryField('image', folder='application_docs/id_images', null=True, blank=True)
 
     # Flags for additional data
     has_multiple_jobs = models.BooleanField(null=True, blank=True, default=None)
@@ -481,28 +556,107 @@ class IncomeData(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def get_completion_status(self):
-        """Weighted completion for Section 2"""
+    def get_field_status(self):
+        """Returns grouped field status for drill-down display (unweighted)"""
         def is_filled(val):
             if val is None: return False
             if isinstance(val, str): return bool(val.strip())
             return True
 
-        weights = {'employment_type': 10, 'currently_employed': 10}
-        
+        groups = [
+            ('Employment Basics', [
+                ('employment_type', 'Employment Type'),
+                ('currently_employed', 'Currently Employed'),
+            ]),
+        ]
+
         if self.employment_type == 'student':
-            weights.update({'school_name': 30, 'year_of_graduation': 20, 'school_phone': 10, 'school_address': 20})
+            groups.append(('Student Details', [
+                ('school_name', 'School Name'),
+                ('year_of_graduation', 'Expected Graduation'),
+                ('school_phone', 'School Phone'),
+                ('school_address', 'School Address'),
+            ]))
         else:
-            weights.update({'employer': 30, 'job_title': 20, 'annual_income': 20, 'supervisor_name': 10})
-            
-        score = 0
-        total_weight = sum(weights.values())
-        
-        for field, weight in weights.items():
-            if is_filled(getattr(self, field)):
-                score += weight
-                
-        return round((score / total_weight) * 100) if total_weight > 0 else 0
+            job_fields = [
+                ('employer', 'Employer'),
+                ('job_title', 'Job Title'),
+                ('annual_income', 'Annual Income'),
+                ('start_date', 'Start Date'),
+                ('supervisor_name', 'Supervisor Name'),
+                ('supervisor_phone', 'Supervisor Phone'),
+                ('supervisor_email', 'Supervisor Email'),
+            ]
+            # end_date only relevant if not currently employed
+            if self.currently_employed is False:
+                job_fields.append(('end_date', 'End Date'))
+            groups.append(('Job Details', job_fields))
+
+        # Identification group
+        id_fields = [
+            ('id_type', 'ID Type'),
+            ('id_number', 'ID Number'),
+            ('id_state', 'Issuing State'),
+            ('id_front_image', 'ID Front Image'),
+        ]
+        # Back image only required for non-passport IDs
+        if self.id_type and self.id_type != 'passport':
+            id_fields.append(('id_back_image', 'ID Back Image'))
+        groups.append(('Identification', id_fields))
+
+        result = []
+        for group_name, fields in groups:
+            group_fields = []
+            for field_name, label in fields:
+                group_fields.append({
+                    'label': label,
+                    'filled': is_filled(getattr(self, field_name)),
+                })
+            result.append({'group': group_name, 'fields': group_fields})
+
+        # Related objects — conditional on flags
+        jobs_count = self.additional_jobs.count()
+        income_count = self.additional_income.count()
+        assets_count = self.assets.count()
+
+        result.append({
+            'group': 'Additional Financial Info',
+            'fields': [
+                {'label': f'Additional Jobs ({jobs_count} added)',
+                 'filled': self.has_multiple_jobs is False or jobs_count > 0},
+                {'label': f'Additional Income ({income_count} added)',
+                 'filled': self.has_additional_income is False or income_count > 0},
+                {'label': f'Assets ({assets_count} added)',
+                 'filled': self.has_assets is False or assets_count > 0},
+            ]
+        })
+
+        # Documents & Verification
+        supporting_count = self.supporting_documents.count()
+        result.append({
+            'group': 'Documents & Verification',
+            'fields': [
+                {'label': 'Pay Stub 1 (Most Recent)', 'filled': is_filled(self.paystub_1)},
+                {'label': 'Pay Stub 2 (2nd Most Recent)', 'filled': is_filled(self.paystub_2)},
+                {'label': 'Pay Stub 3 (3rd Most Recent)', 'filled': is_filled(self.paystub_3)},
+                {'label': 'Bank Statement 1 (Most Recent)', 'filled': is_filled(self.bank_statement_1)},
+                {'label': 'Bank Statement 2 (2nd Most Recent)', 'filled': is_filled(self.bank_statement_2)},
+                {'label': f'Supporting Documents ({supporting_count} uploaded)',
+                 'filled': supporting_count > 0},
+            ]
+        })
+
+        return result
+
+    def get_completion_status(self):
+        """Unweighted completion: filled_fields / total_fields"""
+        total, filled = 0, 0
+        for group in self.get_field_status():
+            for field in group['fields']:
+                total += 1
+                if field['filled']:
+                    filled += 1
+        return round((filled / total) * 100) if total > 0 else 0
 
 
 class AdditionalEmployment(models.Model):
@@ -538,6 +692,16 @@ class AssetInfo(models.Model):
     description = models.TextField(blank=True, null=True)
 
 
+class SupportingDocument(models.Model):
+    """Flexible multi-upload for other supporting documentation (offer letters, tax returns, etc.)"""
+    income_data = models.ForeignKey(IncomeData, on_delete=models.CASCADE, related_name='supporting_documents')
+    file = models.FileField(upload_to='application_docs/supporting/')
+    label = models.CharField(max_length=200, blank=True, null=True, help_text='Optional label for this document')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.label or self.file.name
+
 class LegalDocuments(models.Model):
     """Section 3 - Legal Documents with E-signatures"""
     application = models.OneToOneField(Application, on_delete=models.CASCADE, related_name='legal_docs')
@@ -559,12 +723,25 @@ class LegalDocuments(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def get_field_status(self):
+        """Returns grouped field status for drill-down display (unweighted)"""
+        return [{
+            'group': 'Required Legal Forms',
+            'fields': [
+                {'label': 'NY Discrimination Notice', 'filled': self.discrimination_form_signed},
+                {'label': 'Broker Disclosure Form', 'filled': self.brokers_form_signed},
+            ]
+        }]
+
     def get_completion_status(self):
-        """Simple completion for Section 3"""
-        score = 0
-        if self.discrimination_form_signed: score += 50
-        if self.brokers_form_signed: score += 50
-        return score
+        """Unweighted completion: filled_fields / total_fields"""
+        total, filled = 0, 0
+        for group in self.get_field_status():
+            for field in group['fields']:
+                total += 1
+                if field['filled']:
+                    filled += 1
+        return round((filled / total) * 100) if total > 0 else 0
 
 
 class ApplicationPayment(models.Model):
@@ -591,6 +768,21 @@ class ApplicationPayment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def get_field_status(self):
+        """Returns grouped field status for drill-down display (unweighted)"""
+        return [{
+            'group': 'Payment',
+            'fields': [
+                {'label': 'Application Fee', 'filled': self.status == 'completed'},
+            ]
+        }]
+
     def get_completion_status(self):
-        """Payment completion"""
-        return 100 if self.status == 'completed' else 0
+        """Unweighted completion: filled_fields / total_fields"""
+        total, filled = 0, 0
+        for group in self.get_field_status():
+            for field in group['fields']:
+                total += 1
+                if field['filled']:
+                    filled += 1
+        return round((filled / total) * 100) if total > 0 else 0

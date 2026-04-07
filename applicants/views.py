@@ -141,10 +141,9 @@ def applicants_list(request):
     return render(request, "applicants/applicants_list.html", context)
 
 
+@login_required
 def get_applicant_data(request, applicant_id):
     # API endpoint for applicant data export
-    if not request.user.is_authenticated:
-         return JsonResponse({"error": "Unauthorized"}, status=401)
 
     try:
         applicant = Applicant.objects.get(id=applicant_id)

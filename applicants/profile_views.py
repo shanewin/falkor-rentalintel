@@ -108,11 +108,11 @@ def profile_step1(request):
                 # Update housing_status based on the manual checkbox
                 is_rental = request.POST.get('is_rental_checkbox') == 'on'
                 if is_rental:
-                    applicant.housing_status = 'rent'
+                    applicant.housing_status = 'Rent'
                     applicant.save()
                 elif 'is_rental_checkbox' in request.POST:
                     # Only set to 'own' if the checkbox was present but unchecked
-                    applicant.housing_status = 'own'
+                    applicant.housing_status = 'Own'
                     applicant.save()
                 
                 # Handle profile photo upload (same logic as progressive_profile)
@@ -178,54 +178,53 @@ def profile_step1(request):
                             print(f"Error processing crop data: {e}")
                     return original_file
                 
-                # Check for passport upload
-                if 'passport_document' in request.FILES:
-                    crop_data = request.POST.get('crop_data_passport', '')
-                    image_file = process_cropped_image(crop_data, request.FILES['passport_document'])
-                    IdentificationDocument.objects.update_or_create(
+                # Only process the selected ID type from dropdown
+                selected_id_type = request.POST.get('selected_id_type', '')
+                
+                if selected_id_type == 'passport':
+                    if 'passport_document' in request.FILES:
+                        crop_data = request.POST.get('crop_data_passport', '')
+                        image_file = process_cropped_image(crop_data, request.FILES['passport_document'])
+                        IdentificationDocument.objects.update_or_create(
+                            applicant=applicant,
+                            id_type='passport',
+                            side='single',
+                            defaults={'document_image': image_file}
+                        )
+                
+                elif selected_id_type == 'driver_license':
+                    driver_doc, created = IdentificationDocument.objects.get_or_create(
                         applicant=applicant,
-                        id_type='passport',
-                        side='single',
-                        defaults={'document_image': image_file}
+                        id_type='driver_license',
+                        defaults={'side': 'front'}
                     )
+                    if 'driver_license_front' in request.FILES:
+                        crop_data = request.POST.get('crop_data_driver_front', '')
+                        image_file = process_cropped_image(crop_data, request.FILES['driver_license_front'])
+                        driver_doc.document_image_front = image_file
+                        driver_doc.save()
+                    if 'driver_license_back' in request.FILES:
+                        crop_data = request.POST.get('crop_data_driver_back', '')
+                        image_file = process_cropped_image(crop_data, request.FILES['driver_license_back'])
+                        driver_doc.document_image_back = image_file
+                        driver_doc.save()
                 
-                # Handle driver license uploads (front and back in same record)
-                driver_doc, created = IdentificationDocument.objects.get_or_create(
-                    applicant=applicant,
-                    id_type='driver_license',
-                    defaults={'side': 'front'}  # Default side, but we'll store both images
-                )
-                
-                if 'driver_license_front' in request.FILES:
-                    crop_data = request.POST.get('crop_data_driver_front', '')
-                    image_file = process_cropped_image(crop_data, request.FILES['driver_license_front'])
-                    driver_doc.document_image_front = image_file
-                    driver_doc.save()
-                
-                if 'driver_license_back' in request.FILES:
-                    crop_data = request.POST.get('crop_data_driver_back', '')
-                    image_file = process_cropped_image(crop_data, request.FILES['driver_license_back'])
-                    driver_doc.document_image_back = image_file
-                    driver_doc.save()
-                
-                # Handle state ID uploads (front and back in same record)
-                state_doc, created = IdentificationDocument.objects.get_or_create(
-                    applicant=applicant,
-                    id_type='state_id',
-                    defaults={'side': 'front'}  # Default side, but we'll store both images
-                )
-                
-                if 'state_id_front' in request.FILES:
-                    crop_data = request.POST.get('crop_data_state_front', '')
-                    image_file = process_cropped_image(crop_data, request.FILES['state_id_front'])
-                    state_doc.document_image_front = image_file
-                    state_doc.save()
-                
-                if 'state_id_back' in request.FILES:
-                    crop_data = request.POST.get('crop_data_state_back', '')
-                    image_file = process_cropped_image(crop_data, request.FILES['state_id_back'])
-                    state_doc.document_image_back = image_file
-                    state_doc.save()
+                elif selected_id_type == 'state_id':
+                    state_doc, created = IdentificationDocument.objects.get_or_create(
+                        applicant=applicant,
+                        id_type='state_id',
+                        defaults={'side': 'front'}
+                    )
+                    if 'state_id_front' in request.FILES:
+                        crop_data = request.POST.get('crop_data_state_front', '')
+                        image_file = process_cropped_image(crop_data, request.FILES['state_id_front'])
+                        state_doc.document_image_front = image_file
+                        state_doc.save()
+                    if 'state_id_back' in request.FILES:
+                        crop_data = request.POST.get('crop_data_state_back', '')
+                        image_file = process_cropped_image(crop_data, request.FILES['state_id_back'])
+                        state_doc.document_image_back = image_file
+                        state_doc.save()
                 
                 # Handle previous address submissions (same logic as progressive_profile)
                 previous_addresses_data = []
@@ -245,7 +244,7 @@ def profile_step1(request):
                             ),
                             'years': request.POST.get(f'prev_address_years_{i}', ''),
                             'months': request.POST.get(f'prev_address_months_{i}', ''),
-                            'housing_status': request.POST.get(f'prev_housing_status_{i}', 'own'),
+                            'housing_status': request.POST.get(f'prev_housing_status_{i}', 'Own'),
                             'landlord_name': request.POST.get(f'prev_landlord_name_{i}', '').strip(),
                             'landlord_phone': request.POST.get(f'prev_landlord_phone_{i}', '').strip(),
                             'landlord_email': request.POST.get(f'prev_landlord_email_{i}', '').strip(),

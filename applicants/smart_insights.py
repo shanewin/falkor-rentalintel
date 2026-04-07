@@ -261,10 +261,10 @@ class SmartInsights:
             analysis['concerns'].append(f"Limited Housing History Verified ({years_fmt:.1f} years)")
         
         # Housing status
-        if applicant.housing_status == 'rent':
+        if applicant.housing_status == 'Rent':
             analysis['history_score'] += 15
             analysis['strengths'].append("Current renter (understands rental obligations)")
-        elif applicant.housing_status == 'own':
+        elif applicant.housing_status == 'Own':
             analysis['history_score'] += 10
             analysis['strengths'].append("Current homeowner")
         elif applicant.housing_status == 'family':

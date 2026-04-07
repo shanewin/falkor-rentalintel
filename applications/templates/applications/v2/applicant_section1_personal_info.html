@@ -251,6 +251,20 @@
                                 <label for="{{ form.conviction_explanation.id_for_label }}" class="form-label small text-muted">Conviction Explanation</label>
                                 {{ form.conviction_explanation }}
                             </div>
+
+                            <label class="form-label fw-bold d-block mt-4">I have been evicted from a rental property</label>
+                            {% for radio in form.has_been_evicted %}
+                            <div class="form-check form-check-inline">
+                                {{ radio.tag }}
+                                <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                    {{ radio.choice_label }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                            <div id="eviction-explanation" class="mb-3 mt-2 {% if not form.has_been_evicted.value == True %}d-none{% endif %}">
+                                <label for="{{ form.eviction_explanation.id_for_label }}" class="form-label small text-muted">Eviction Explanation</label>
+                                {{ form.eviction_explanation }}
+                            </div>
                         </div>
 
                         <!-- Additional Information -->
@@ -334,7 +348,7 @@
         }
         
         if (housingStatus) {
-            $(housingStatus).on('change', toggleLandlord);
+            housingStatus.addEventListener('change', toggleLandlord);
             toggleLandlord();
         }
 
@@ -499,7 +513,7 @@
                 if (this.value === 'True') {
                     petsSection.classList.remove('d-none');
                     addPetBtn.classList.remove('d-none');
-                    if (petCount === 0) addPet(); // Add first pet if none exist
+                    if (petCount === 0) window.addPet(); // Add first pet if none exist
                 } else {
                     petsSection.classList.add('d-none');
                     addPetBtn.classList.add('d-none');
@@ -663,6 +677,20 @@
                     convictionExpl.classList.remove('d-none');
                 } else {
                     convictionExpl.classList.add('d-none');
+                }
+            });
+        });
+
+        // Eviction Toggle
+        const evictionRadios = document.querySelectorAll('input[name="has_been_evicted"]');
+        const evictionExpl = document.getElementById('eviction-explanation');
+
+        evictionRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'True') {
+                    evictionExpl.classList.remove('d-none');
+                } else {
+                    evictionExpl.classList.add('d-none');
                 }
             });
         });

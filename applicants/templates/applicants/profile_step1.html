@@ -236,7 +236,7 @@ function setupRentalCheckbox() {
             rentalExtras.classList.toggle('d-none', !isRental);
         }
         if (housingStatusField) {
-            housingStatusField.value = isRental ? 'rent' : 'own';
+            housingStatusField.value = isRental ? 'Rent' : 'Own';
         }
         if (!isRental && monthlyRentInput) {
             monthlyRentInput.value = monthlyRentInput.value.replace(/,/g, '');
@@ -250,7 +250,7 @@ function setupRentalCheckbox() {
     }
 
     // Set initial state based on existing data
-    const shouldShowRental = (housingStatusField && housingStatusField.value === 'rent') || (checkbox && checkbox.checked);
+    const shouldShowRental = (housingStatusField && housingStatusField.value === 'Rent') || (checkbox && checkbox.checked);
     if (checkbox) {
         checkbox.checked = shouldShowRental;
     }
@@ -262,55 +262,37 @@ function setupRentalCheckbox() {
 
 // Identification document uploads functionality
 function setupIdentificationUploads() {
-    const checkboxes = document.querySelectorAll('.id-type-checkbox');
-    
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const uploadSection = document.getElementById(this.value + '_upload');
-            if (uploadSection) {
-                if (this.checked) {
-                    uploadSection.style.display = 'block';
-                    
-                    // Initialize Universal Image Cropper for this section's upload fields
-                    initializeIdentificationCroppers(this.value);
-                } else {
-                    uploadSection.style.display = 'none';
-                }
+    const dropdown = document.getElementById('id_select_id_type');
+    if (!dropdown) return;
 
-                if (this.value === 'driver_license') {
-                    toggleDriverLicenseFields(this.checked);
-                }
-            } else if (this.value === 'driver_license') {
-                toggleDriverLicenseFields(this.checked);
-            }
+    function toggleIdSections(selectedType) {
+        // Hide all upload sections
+        document.querySelectorAll('.id-upload-section').forEach(section => {
+            section.style.display = 'none';
         });
-    });
-    
-    // Also check for already checked items and initialize their croppers
-    checkboxes.forEach(checkbox => {
-        if (checkbox.checked) {
-            initializeIdentificationCroppers(checkbox.value);
-            if (checkbox.value === 'driver_license') {
-                toggleDriverLicenseFields(true);
+        
+        // Show/hide ID number and state fields
+        const detailFields = document.querySelectorAll('.id-detail-field');
+        detailFields.forEach(field => {
+            field.classList.toggle('d-none', !selectedType);
+        });
+        
+        // Show the selected upload section
+        if (selectedType) {
+            const uploadSection = document.getElementById(selectedType + '_upload');
+            if (uploadSection) {
+                uploadSection.style.display = 'block';
+                initializeIdentificationCroppers(selectedType);
             }
         }
+    }
+
+    dropdown.addEventListener('change', function() {
+        toggleIdSections(this.value);
     });
 
-    // If the applicant has driver license fields prefilled but checkbox not checked, show fields and check the box
-    const driverNumber = document.getElementById('id_driver_license_number');
-    const driverState = document.getElementById('id_driver_license_state');
-    const driverCheckbox = document.getElementById('id_driver_license');
-    if ((driverNumber && driverNumber.value) || (driverState && driverState.value)) {
-        if (driverCheckbox) {
-            driverCheckbox.checked = true;
-        }
-        toggleDriverLicenseFields(true);
-    }
-}
-
-function toggleDriverLicenseFields(visible) {
-    const fields = document.querySelectorAll('.driver-license-field');
-    fields.forEach(field => field.classList.toggle('d-none', !visible));
+    // Set initial state
+    toggleIdSections(dropdown.value);
 }
 
 
@@ -451,21 +433,23 @@ function loadExistingIdentificationDocuments() {
         const hasImages = docData.single || docData.front || docData.back;
         
         if (hasImages) {
-            const checkbox = document.getElementById(`id_${docType}`);
-            if (checkbox) {
-                // Check the checkbox
-                checkbox.checked = true;
+            const dropdown = document.getElementById('id_select_id_type');
+            if (dropdown) {
+                // Set dropdown to this type (first one found wins)
+                if (!dropdown.value) {
+                    dropdown.value = docType;
+                }
                 
                 // Show the upload section
                 const uploadSection = document.getElementById(`${docType}_upload`);
-                if (uploadSection) {
+                if (uploadSection && dropdown.value === docType) {
                     uploadSection.style.display = 'block';
+                    
+                    // Show ID detail fields
+                    document.querySelectorAll('.id-detail-field').forEach(f => f.classList.remove('d-none'));
                 
                 // Initialize croppers for this section
                 initializeIdentificationCroppers(docType);
-                if (docType === 'driver_license') {
-                    toggleDriverLicenseFields(true);
-                }
                 
                 // Load existing images
                 setTimeout(() => {
@@ -681,15 +665,15 @@ function setupPreviousAddresses() {
                     
                     <div class="id-type-checkboxes">
                         <div class="form-check mb-3">
-                            <input class="form-check-input id-type-checkbox" type="checkbox" id="prev_is_rental_${index}" name="prev_is_rental_${index}" ${data.housing_status === 'rent' ? 'checked' : ''} style="width: 1.25em; height: 1.25em; accent-color: #ffcc00;">
+                            <input class="form-check-input id-type-checkbox" type="checkbox" id="prev_is_rental_${index}" name="prev_is_rental_${index}" ${data.housing_status === 'Rent' ? 'checked' : ''} style="width: 1.25em; height: 1.25em; accent-color: #ffcc00;">
                             <label class="form-check-label" for="prev_is_rental_${index}" style="margin-left: 8px; padding-top: 2px;">
                                 Was this a rental?
                             </label>
                         </div>
                     </div>
-                    <input type="hidden" name="prev_housing_status_${index}" value="${data.housing_status || 'own'}">
+                    <input type="hidden" name="prev_housing_status_${index}" value="${data.housing_status || 'Own'}">
                     
-                    <div class="prev-landlord-fields ${data.housing_status === 'rent' ? '' : 'd-none'}" id="prev_landlord_fields_${index}">
+                    <div class="prev-landlord-fields ${data.housing_status === 'Rent' ? '' : 'd-none'}" id="prev_landlord_fields_${index}">
                         <div class="row">
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">Landlord Name</label>
@@ -729,10 +713,10 @@ function setupPreviousAddresses() {
             checkbox.addEventListener('change', function() {
                 if (this.checked) {
                     landlordFields.classList.remove('d-none');
-                    housingStatusField.value = 'rent';
+                    housingStatusField.value = 'Rent';
                 } else {
                     landlordFields.classList.add('d-none');
-                    housingStatusField.value = 'own';
+                    housingStatusField.value = 'Own';
                     if (monthlyRentInput) monthlyRentInput.value = monthlyRentInput.value.replace(/,/g, '');
                 }
             });

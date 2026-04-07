@@ -13,7 +13,8 @@
         <div class="position-relative" style="height: 160px; overflow: hidden;">
             {% with first_image=application.apartment.all_images.0 fallback_img=application.apartment.id|get_fallback_image %}
             <img src="{% if first_image %}{{ first_image.large_url }}{% else %}{{ fallback_img }}{% endif %}" 
-                 class="w-100 h-100 object-fit-cover" alt="Property">
+                 class="w-100 h-100 object-fit-cover" alt="Property"
+                 onerror="this.src='{{ fallback_img }}';this.onerror=null;">
             {% endwith %}
             <div class="position-absolute bottom-0 start-0 w-100 p-3" style="background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);">
                 <h6 class="text-white mb-0 fw-bold">{{ application.apartment.building.name }}</h6>
@@ -21,20 +22,89 @@
             </div>
         </div>
         {% endif %}
-        <div class="p-3">
-            <div class="d-flex justify-content-between mb-2 small">
-                <span class="text-muted">Monthly Rent</span>
-                <span class="fw-bold">${{ application.apartment.rent_price|floatformat:0 }}</span>
+        <div class="px-3 pt-3 pb-2">
+            <!-- Key Facts -->
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: #f0f0f0 !important;">
+                <span class="text-muted small">Monthly Rent</span>
+                <span class="fw-bold text-dark">${{ application.apartment.rent_price|floatformat:0 }}</span>
             </div>
-            <div class="d-flex justify-content-between mb-2 small">
-                <span class="text-muted">Layout</span>
-                <span class="fw-bold">{{ application.apartment.bedrooms|default:"Studio" }} Bed / {{ application.apartment.bathrooms|default:"1" }} Bath</span>
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: #f0f0f0 !important;">
+                <span class="text-muted small">Layout</span>
+                <span class="fw-bold text-dark">{{ application.apartment.bedrooms|default:"Studio" }} Bed / {{ application.apartment.bathrooms|default:"1" }} Bath</span>
             </div>
             {% if application.apartment.building.neighborhood %}
-            <div class="d-flex justify-content-between small">
-                <span class="text-muted">Neighborhood</span>
-                <span class="fw-bold">{{ application.apartment.building.neighborhood.name }}</span>
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: #f0f0f0 !important;">
+                <span class="text-muted small">Neighborhood</span>
+                <span class="fw-bold text-dark">{{ application.apartment.building.get_neighborhood_display }}</span>
             </div>
+            {% endif %}
+
+            {% if show_detailed_info %}
+            {% if application.apartment.building.pet_policy %}
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: #f0f0f0 !important;">
+                <span class="text-muted small"><i class="fas fa-paw me-1 text-warning"></i>Pet Policy</span>
+                <span class="fw-bold text-dark">{{ application.apartment.building.get_pet_policy_display }}</span>
+            </div>
+            {% endif %}
+            {% if application.apartment.building.walk_score %}
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: #f0f0f0 !important;">
+                <span class="text-muted small"><i class="fas fa-walking me-1 text-warning"></i>Walk Score</span>
+                <span class="fw-bold text-dark">{{ application.apartment.building.walk_score }}</span>
+            </div>
+            {% endif %}
+            {% if application.apartment.building.transit_score %}
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: #f0f0f0 !important;">
+                <span class="text-muted small"><i class="fas fa-bus me-1 text-warning"></i>Transit Score</span>
+                <span class="fw-bold text-dark">{{ application.apartment.building.transit_score }}</span>
+            </div>
+            {% endif %}
+
+            <!-- Amenities -->
+            {% if application.apartment.building.amenities.exists or application.apartment.amenities.exists %}
+            <div class="mt-3 mb-2">
+                <h6 class="text-uppercase fw-bold text-muted mb-3" style="font-size: 0.65rem; letter-spacing: 1px;"><i class="fas fa-concierge-bell me-1"></i>Amenities</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for amenity in application.apartment.building.amenities.all %}
+                        {% with priority=application.applicant|get_amenity_priority:amenity %}
+                        <span class="badge rounded-pill {% if priority > 1 %}{{ priority|priority_class }}{% else %}bg-light text-dark border{% endif %} py-1 px-3" style="font-size: 0.72rem; font-weight: 500;">
+                            <i class="fas {{ amenity.icon|default:'fa-check' }} me-1 text-warning"></i>{{ amenity.name }}
+                        </span>
+                        {% endwith %}
+                    {% endfor %}
+                    {% for amenity in application.apartment.amenities.all %}
+                        {% with priority=application.applicant|get_amenity_priority:amenity %}
+                        <span class="badge rounded-pill {% if priority > 1 %}{{ priority|priority_class }}{% else %}bg-warning-subtle text-dark border border-warning-subtle{% endif %} py-1 px-3" style="font-size: 0.72rem; font-weight: 500;">
+                            <i class="fas {{ amenity.icon|default:'fa-check' }} me-1"></i>{{ amenity.name }}
+                        </span>
+                        {% endwith %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Property Descriptions -->
+            {% if application.apartment.description or application.apartment.building.description %}
+            <hr class="my-3" style="border-color: #e9ecef;">
+            {% if application.apartment.description %}
+            <div class="mb-3">
+                <h6 class="text-uppercase fw-bold text-muted mb-2" style="font-size: 0.65rem; letter-spacing: 1px;"><i class="fas fa-info-circle me-1"></i>About the Apartment</h6>
+                <div class="property-description-text small text-secondary lh-lg" id="sidebarPropertyDescription" style="max-height: 80px; overflow: hidden; position: relative;">
+                    {{ application.apartment.description|safe }}
+                </div>
+            </div>
+            {% endif %}
+            {% if application.apartment.building.description %}
+            <div class="mb-3">
+                <h6 class="text-uppercase fw-bold text-muted mb-2" style="font-size: 0.65rem; letter-spacing: 1px;"><i class="fas fa-building me-1"></i>About {{ application.apartment.building.name }}</h6>
+                <div class="property-description-text small text-secondary lh-lg" id="sidebarBuildingDescription" style="max-height: 80px; overflow: hidden; position: relative;">
+                    {{ application.apartment.building.description|safe }}
+                </div>
+            </div>
+            {% endif %}
+            <button class="btn btn-link btn-sm p-0 text-decoration-none text-dark fw-bold" id="sidebarShowMoreBtn" onclick="toggleSidebarDescription()">
+                <i class="bi bi-chevron-down me-1"></i>Show More
+            </button>
+            {% endif %}
             {% endif %}
         </div>
         {% else %}
@@ -48,6 +118,7 @@
 </div>
 {% endif %}
 
+{% if not hide_progress_steps %}
 <!-- Application Progress -->
 <div class="card shadow-sm mb-4 border-0">
     <div class="card-header bg-dark text-white py-3">
@@ -103,129 +174,11 @@
         </div>
     </div>
 </div>
-
-{% if show_detailed_info %}
-{% if application.apartment %}
-<!-- Property Overview -->
-{% if application.apartment.description or application.apartment.building.description %}
-<div class="card shadow-sm mb-4 border-0">
-    <div class="card-header bg-dark text-white">
-        <h5 class="mb-0"><i class="bi bi-info-circle me-2 text-warning"></i>Property Overview</h5>
-    </div>
-    <div class="card-body">
-        {% if application.apartment.description %}
-        <div class="mb-3">
-            <h6 class="text-uppercase small fw-bold text-muted mb-2">About the Apartment</h6>
-            <div class="property-description-text small" id="sidebarPropertyDescription" style="max-height: 120px; overflow: hidden; position: relative;">
-                {{ application.apartment.description|safe }}
-            </div>
-        </div>
-        {% endif %}
-
-        {% if application.apartment.building.description %}
-        <div class="mb-3">
-            <h6 class="text-uppercase small fw-bold text-muted mb-2">About {{ application.apartment.building.name }}</h6>
-            <div class="property-description-text small" id="sidebarBuildingDescription" style="max-height: 120px; overflow: hidden; position: relative;">
-                {{ application.apartment.building.description|safe }}
-            </div>
-        </div>
-        {% endif %}
-
-        <button class="btn btn-link btn-sm p-0 text-decoration-none text-dark fw-bold" id="sidebarShowMoreBtn" onclick="toggleSidebarDescription()">
-            <i class="bi bi-chevron-down me-1"></i>Show More
-        </button>
-    </div>
-</div>
 {% endif %}
 
-<!-- Building Amenities -->
-{% if application.apartment.building.amenities.exists %}
-<div class="card shadow-sm mb-4 border-0">
-    <div class="card-header bg-dark text-white">
-        <h5 class="mb-0"><i class="bi bi-building me-2 text-warning"></i>Building Amenities</h5>
-    </div>
-    <div class="card-body">
-        <div class="row g-2">
-            {% for amenity in application.apartment.building.amenities.all %}
-                {% with priority=application.applicant|get_amenity_priority:amenity %}
-                <div class="col-12">
-                    <div class="d-flex align-items-center justify-content-between p-2 rounded hover-bg-light">
-                        <div class="d-flex align-items-center">
-                            <i class="fas {{ amenity.icon|default:'fa-check' }} me-3 text-warning" style="width: 20px; text-align: center;"></i>
-                            <span class="small">{{ amenity.name }}</span>
-                        </div>
-                        {% if priority > 1 %}
-                            <span class="badge {{ priority|priority_class }}">{{ priority|priority_label }} Match</span>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endwith %}
-            {% endfor %}
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<!-- Apartment Amenities -->
-{% if application.apartment.amenities.exists %}
-<div class="card shadow-sm mb-4 border-0">
-    <div class="card-header bg-dark text-white">
-        <h5 class="mb-0"><i class="bi bi-house me-2 text-warning"></i>Apartment Amenities</h5>
-    </div>
-    <div class="card-body">
-        <div class="row g-2">
-            {% for amenity in application.apartment.amenities.all %}
-                {% with priority=application.applicant|get_amenity_priority:amenity %}
-                <div class="col-12">
-                    <div class="d-flex align-items-center justify-content-between p-2 rounded hover-bg-light">
-                        <div class="d-flex align-items-center">
-                            <i class="fas {{ amenity.icon|default:'fa-check' }} me-3 text-warning" style="width: 20px; text-align: center;"></i>
-                            <span class="small">{{ amenity.name }}</span>
-                        </div>
-                        {% if priority > 1 %}
-                            <span class="badge {{ priority|priority_class }}">{{ priority|priority_label }} Match</span>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endwith %}
-            {% endfor %}
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<!-- Building Features -->
-{% if application.apartment.building.walk_score or application.apartment.building.transit_score or application.apartment.building.pet_policy %}
-<div class="card shadow-sm mb-4 border-0">
-    <div class="card-header bg-dark text-white">
-        <h5 class="mb-0"><i class="bi bi-info-circle me-2 text-warning"></i>Building Features</h5>
-    </div>
-    <div class="card-body">
-        {% if application.apartment.building.walk_score %}
-        <div class="d-flex justify-content-between mb-2 small">
-            <span><i class="bi bi-walking me-2 text-muted"></i>Walk Score</span>
-            <span class="fw-bold">{{ application.apartment.building.walk_score }}</span>
-        </div>
-        {% endif %}
-        {% if application.apartment.building.transit_score %}
-        <div class="d-flex justify-content-between mb-2 small">
-            <span><i class="bi bi-bus me-2 text-muted"></i>Transit Score</span>
-            <span class="fw-bold">{{ application.apartment.building.transit_score }}</span>
-        </div>
-        {% endif %}
-        {% if application.apartment.building.pet_policy %}
-        <div class="d-flex justify-content-between small">
-            <span><i class="bi bi-paw me-2 text-muted"></i>Pet Policy</span>
-            <span class="fw-bold">{{ application.apartment.building.get_pet_policy_display }}</span>
-        </div>
-        {% endif %}
-    </div>
-</div>
-{% endif %}
-{% endif %}
 
 <!-- Your Broker -->
-{% if application.broker %}
+{% if application.broker and not hide_broker_card %}
 <div class="card shadow-sm mb-4 border-0 text-center">
     <div class="card-header bg-dark text-white">
         <h5 class="mb-0"><i class="bi bi-person-badge me-2 text-warning"></i>Your Broker</h5>
@@ -249,7 +202,6 @@
         </div>
     </div>
 </div>
-{% endif %}
 {% endif %}
 
 <!-- Support Card -->

@@ -1,6 +1,10 @@
 {% extends 'applications/applicant_base.html' %}
 {% load static %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+{% endblock %}
+
 {% block title %}Section 2: Income & Employment{% endblock %}
 
 {% block header_title %}Income & Employment{% endblock %}
@@ -50,21 +54,26 @@
                         {% endif %}
                     </div>
 
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="{{ form.employment_length.id_for_label }}" class="form-label">Length of Employment</label>
-                            {{ form.employment_length }}
+                    <div class="mb-3">
+                        <label class="form-label d-block fw-bold">Are you currently employed here?</label>
+                        {% for radio in form.currently_employed %}
+                        <div class="form-check form-check-inline">
+                            {{ radio.tag }}
+                            <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                {{ radio.choice_label }}
+                            </label>
                         </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="row g-3" id="employment-dates-row">
                         <div class="col-md-6">
-                            <label class="form-label d-block">Currently Employed Here?</label>
-                            {% for radio in form.currently_employed %}
-                            <div class="form-check form-check-inline">
-                                {{ radio.tag }}
-                                <label class="form-check-label" for="{{ radio.id_for_label }}">
-                                    {{ radio.choice_label }}
-                                </label>
-                            </div>
-                            {% endfor %}
+                            <label for="{{ form.start_date.id_for_label }}" class="form-label">Start Date</label>
+                            {{ form.start_date }}
+                        </div>
+                        <div class="col-md-6" id="end-date-container" style="display: none;">
+                            <label for="{{ form.end_date.id_for_label }}" class="form-label">End Date</label>
+                            {{ form.end_date }}
                         </div>
                     </div>
                 </div>
@@ -143,15 +152,173 @@
                     </div>
                 </div>
 
-                <!-- Proof of Income -->
-                <h6 class="fw-bold mb-3 border-bottom pb-2 mt-4">Proof of Income</h6>
+                <!-- Pay Stubs (3 consecutive weeks, required) -->
+                <h6 class="fw-bold mb-3 border-bottom pb-2 mt-4"><i class="bi bi-receipt me-2 text-warning"></i>Pay Stubs <span class="text-danger">*</span></h6>
+                <p class="text-muted small mb-3">Please upload your 3 most recent consecutive pay stubs.</p>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label for="{{ form.paystub_1.id_for_label }}" class="form-label">Most Recent</label>
+                        {{ form.paystub_1 }}
+                        {% if form.instance.paystub_1 %}
+                            <div class="mt-1"><a href="{{ form.instance.paystub_1.url }}" target="_blank" class="text-success small"><i class="bi bi-check-circle"></i> Uploaded</a></div>
+                        {% endif %}
+                        <div class="form-text small">PDF, JPG, or PNG. Max 5MB.</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="{{ form.paystub_2.id_for_label }}" class="form-label">2nd Most Recent</label>
+                        {{ form.paystub_2 }}
+                        {% if form.instance.paystub_2 %}
+                            <div class="mt-1"><a href="{{ form.instance.paystub_2.url }}" target="_blank" class="text-success small"><i class="bi bi-check-circle"></i> Uploaded</a></div>
+                        {% endif %}
+                        <div class="form-text small">PDF, JPG, or PNG. Max 5MB.</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="{{ form.paystub_3.id_for_label }}" class="form-label">3rd Most Recent</label>
+                        {{ form.paystub_3 }}
+                        {% if form.instance.paystub_3 %}
+                            <div class="mt-1"><a href="{{ form.instance.paystub_3.url }}" target="_blank" class="text-success small"><i class="bi bi-check-circle"></i> Uploaded</a></div>
+                        {% endif %}
+                        <div class="form-text small">PDF, JPG, or PNG. Max 5MB.</div>
+                    </div>
+                </div>
+
+                <!-- Bank Statements (2 most recent months, required) -->
+                <h6 class="fw-bold mb-3 border-bottom pb-2 mt-4"><i class="bi bi-bank me-2 text-warning"></i>Bank Statements <span class="text-danger">*</span></h6>
+                <p class="text-muted small mb-3">Please upload your 2 most recent bank statements (full statements).</p>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label for="{{ form.bank_statement_1.id_for_label }}" class="form-label">Most Recent Statement</label>
+                        {{ form.bank_statement_1 }}
+                        {% if form.instance.bank_statement_1 %}
+                            <div class="mt-1"><a href="{{ form.instance.bank_statement_1.url }}" target="_blank" class="text-success small"><i class="bi bi-check-circle"></i> Uploaded</a></div>
+                        {% endif %}
+                        <div class="form-text small">PDF, JPG, or PNG. Max 5MB.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.bank_statement_2.id_for_label }}" class="form-label">2nd Most Recent Statement</label>
+                        {{ form.bank_statement_2 }}
+                        {% if form.instance.bank_statement_2 %}
+                            <div class="mt-1"><a href="{{ form.instance.bank_statement_2.url }}" target="_blank" class="text-success small"><i class="bi bi-check-circle"></i> Uploaded</a></div>
+                        {% endif %}
+                        <div class="form-text small">PDF, JPG, or PNG. Max 5MB.</div>
+                    </div>
+                </div>
+
+                <!-- Other Supporting Documentation (optional, multi-upload) -->
+                <h6 class="fw-bold mb-3 border-bottom pb-2 mt-4"><i class="bi bi-folder-plus me-2 text-info"></i>Other Supporting Documentation <span class="text-muted small fw-normal">(Optional)</span></h6>
+                <p class="text-muted small mb-3">Upload any additional documents such as offer letters, tax returns, or benefit statements.</p>
                 <div class="mb-4">
-                    <label for="{{ form.proof_of_income.id_for_label }}" class="form-label">Upload Pay Stubs or Offer Letter</label>
-                    {{ form.proof_of_income }}
-                    <div class="form-text small">Accepted formats: PDF, JPG, PNG. Max size: 5MB.</div>
-                    {% if form.proof_of_income.errors %}
-                        <div class="text-danger small">{{ form.proof_of_income.errors }}</div>
+                    {% if supporting_documents %}
+                        <div class="mb-3">
+                            {% for doc in supporting_documents %}
+                                <div class="d-flex align-items-center justify-content-between bg-light rounded p-2 mb-2">
+                                    <div>
+                                        <i class="bi bi-file-earmark-text me-2"></i>
+                                        <a href="{{ doc.file.url }}" target="_blank">{{ doc.label|default:doc.file.name }}</a>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-supporting-doc" data-doc-id="{{ doc.id }}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            {% endfor %}
+                        </div>
                     {% endif %}
+                    <div id="supporting-docs-uploads">
+                        <div class="supporting-doc-row mb-2">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-5">
+                                    <label class="form-label small">Document Label</label>
+                                    <input type="text" name="supporting_doc_label[]" class="form-control form-control-sm" placeholder="e.g. 2024 Tax Return">
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label small">File</label>
+                                    <input type="file" name="supporting_doc_file[]" accept=".pdf,.jpg,.jpeg,.png" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="button" class="btn btn-sm btn-outline-danger w-100 remove-doc-row" style="display: none;">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" id="add-supporting-doc" class="btn btn-sm btn-outline-secondary mt-2">
+                        <i class="bi bi-plus-circle me-1"></i> Add Another Document
+                    </button>
+                </div>
+
+                <!-- Photo ID -->
+                <h6 class="fw-bold mb-3 border-bottom pb-2 mt-4"><i class="bi bi-person-badge me-2 text-warning"></i>Photo Identification</h6>
+                <p class="text-muted small mb-3">Please upload a valid government-issued photo ID.</p>
+                <div class="mb-4">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="{{ form.id_type.id_for_label }}" class="form-label">ID Type *</label>
+                            {{ form.id_type }}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.id_number.id_for_label }}" class="form-label">ID Number</label>
+                            {{ form.id_number }}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.id_state.id_for_label }}" class="form-label">Issuing State</label>
+                            {{ form.id_state }}
+                        </div>
+                    </div>
+                <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Front of ID *</label>
+                            <div class="row align-items-center">
+                                <div class="col-auto">
+                                    <div class="id-front-container position-relative">
+                                        {% if form.instance.id_front_image %}
+                                            <img src="{{ form.instance.id_front_image.url }}" alt="ID Front" class="preview-image" style="width: 200px; height: 125px; object-fit: cover; border-radius: 4px;">
+                                        {% else %}
+                                            <div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" style="width: 200px; height: 125px;">
+                                                <i class="bi bi-person-badge" style="font-size: 3rem; color: #6c757d;"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <p class="text-muted small mb-3">Upload a clear photo of the front of your ID</p>
+                                    <div class="d-flex gap-2 mb-3 image-cropper-buttons">
+                                        <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('id_id_front_image').click()">
+                                            <i class="bi bi-camera"></i> Upload Front
+                                        </button>
+                                    </div>
+                                    <input type="file" name="id_front_image" id="id_id_front_image" accept="image/*" style="display: none;" class="form-control">
+                                    <input type="hidden" id="crop-data-id-front" name="crop_data_id_front" value="">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6" id="id-back-image-wrapper">
+                            <label class="form-label fw-bold">Back of ID *</label>
+                            <div class="row align-items-center">
+                                <div class="col-auto">
+                                    <div class="id-back-container position-relative">
+                                        {% if form.instance.id_back_image %}
+                                            <img src="{{ form.instance.id_back_image.url }}" alt="ID Back" class="preview-image" style="width: 200px; height: 125px; object-fit: cover; border-radius: 4px;">
+                                        {% else %}
+                                            <div class="image-placeholder bg-light rounded border border-2 border-secondary d-flex align-items-center justify-content-center" style="width: 200px; height: 125px;">
+                                                <i class="bi bi-person-badge" style="font-size: 3rem; color: #6c757d;"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <p class="text-muted small mb-3">Upload a clear photo of the back of your ID</p>
+                                    <div class="d-flex gap-2 mb-3 image-cropper-buttons">
+                                        <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('id_id_back_image').click()">
+                                            <i class="bi bi-camera"></i> Upload Back
+                                        </button>
+                                    </div>
+                                    <input type="file" name="id_back_image" id="id_id_back_image" accept="image/*" style="display: none;" class="form-control">
+                                    <input type="hidden" id="crop-data-id-back" name="crop_data_id_back" value="">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Form Actions -->
@@ -175,8 +342,30 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<script src="{% static 'js/image-cropper.js' %}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Employment date toggle: show End Date only when "Not currently employed"
+        const currentlyEmployedRadios = document.querySelectorAll('input[name="currently_employed"]');
+        const endDateContainer = document.getElementById('end-date-container');
+
+        function toggleEndDate() {
+            if (!endDateContainer) return;
+            const selected = document.querySelector('input[name="currently_employed"]:checked');
+            if (selected && selected.value === 'False') {
+                endDateContainer.style.display = '';
+            } else {
+                endDateContainer.style.display = 'none';
+            }
+        }
+
+        currentlyEmployedRadios.forEach(radio => {
+            radio.addEventListener('change', toggleEndDate);
+        });
+        toggleEndDate(); // Set initial state
+
+        // Additional income toggle
         const additionalIncomeRadios = document.querySelectorAll('input[name="has_additional_income"]');
         const additionalIncomeSection = document.getElementById('additional-income-section');
 
@@ -189,6 +378,107 @@
                 }
             });
         });
+
+        // Photo ID: hide back image for passport
+        const idTypeSelect = document.getElementById('id_id_type');
+        const backImageWrapper = document.getElementById('id-back-image-wrapper');
+
+        function toggleBackImage() {
+            if (!idTypeSelect || !backImageWrapper) return;
+            if (idTypeSelect.value === 'passport') {
+                backImageWrapper.style.display = 'none';
+            } else {
+                backImageWrapper.style.display = '';
+            }
+        }
+
+        if (idTypeSelect) {
+            idTypeSelect.addEventListener('change', toggleBackImage);
+            toggleBackImage(); // set initial state
+        }
+
+        // Initialize Image Croppers for ID uploads
+        if (window.setupImageCropper) {
+            const frontCropper = window.setupImageCropper('#id_id_front_image', '.id-front-container', '#crop-data-id-front', {
+                aspectRatio: 1.6,
+                outputWidth: 600,
+                outputHeight: 375,
+                outputQuality: 0.9,
+                modalTitle: 'Crop ID (Front)',
+                cropButtonText: 'Crop & Zoom',
+                previewButtonText: 'View Full Size',
+                isDocument: true,
+                saveCropData: true
+            });
+
+            const backCropper = window.setupImageCropper('#id_id_back_image', '.id-back-container', '#crop-data-id-back', {
+                aspectRatio: 1.6,
+                outputWidth: 600,
+                outputHeight: 375,
+                outputQuality: 0.9,
+                modalTitle: 'Crop ID (Back)',
+                cropButtonText: 'Crop & Zoom',
+                previewButtonText: 'View Full Size',
+                isDocument: true,
+                saveCropData: true
+            });
+
+            // Load existing images into croppers
+            {% if form.instance.id_front_image %}
+            if (frontCropper) frontCropper.loadExistingImage('{{ form.instance.id_front_image.url }}');
+            {% endif %}
+            {% if form.instance.id_back_image %}
+            if (backCropper) backCropper.loadExistingImage('{{ form.instance.id_back_image.url }}');
+            {% endif %}
+        }
+
+        // Supporting Documents: Add/Remove rows
+        const addDocBtn = document.getElementById('add-supporting-doc');
+        const uploadsContainer = document.getElementById('supporting-docs-uploads');
+
+        if (addDocBtn && uploadsContainer) {
+            addDocBtn.addEventListener('click', function() {
+                const newRow = document.createElement('div');
+                newRow.className = 'supporting-doc-row mb-2';
+                newRow.innerHTML = `
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-5">
+                            <label class="form-label small">Document Label</label>
+                            <input type="text" name="supporting_doc_label[]" class="form-control form-control-sm" placeholder="e.g. 2024 Tax Return">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label small">File</label>
+                            <input type="file" name="supporting_doc_file[]" accept=".pdf,.jpg,.jpeg,.png" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-sm btn-outline-danger w-100 remove-doc-row">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                uploadsContainer.appendChild(newRow);
+
+                // Show remove buttons on all rows except the first
+                updateRemoveButtons();
+            });
+
+            uploadsContainer.addEventListener('click', function(e) {
+                const removeBtn = e.target.closest('.remove-doc-row');
+                if (removeBtn) {
+                    removeBtn.closest('.supporting-doc-row').remove();
+                    updateRemoveButtons();
+                }
+            });
+
+            function updateRemoveButtons() {
+                const rows = uploadsContainer.querySelectorAll('.supporting-doc-row');
+                rows.forEach((row, index) => {
+                    const btn = row.querySelector('.remove-doc-row');
+                    if (btn) btn.style.display = rows.length > 1 ? '' : 'none';
+                });
+            }
+        }
     });
 </script>
 {% endblock %}

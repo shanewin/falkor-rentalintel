@@ -114,123 +114,150 @@
     <div class="row">
         <!-- Sidebar Column -->
         <div class="col-lg-3">
-            {% include 'applications/v2/_application_sidebar.html' with show_detailed_info=True %}
-            
-            <!-- Smart Insights Score Card -->
-            {% if insights %}
-            <div class="card mt-4 shadow border-0 overflow-hidden">
-                <div class="card-header bg-dark text-white py-3">
-                    <h6 class="mb-0 fw-bold"><i class="fas fa-brain me-2"></i>Smart Insights Score</h6>
-                </div>
-                <div class="card-body text-center py-4" style="background-color: #f8f9fa;">
-                    <div class="display-4 fw-bold mb-1 {% if insights.overall_score >= 80 %}text-success{% elif insights.overall_score >= 60 %}text-primary{% elif insights.overall_score >= 40 %}text-warning{% else %}text-danger{% endif %}">
-                        {{ insights.overall_score }}
-                    </div>
-                    <div class="text-uppercase small fw-bold text-muted mb-3">Overall Score</div>
-                    <div class="badge {% if insights.overall_score >= 80 %}bg-success{% elif insights.overall_score >= 60 %}bg-primary{% elif insights.overall_score >= 40 %}bg-warning text-dark{% else %}bg-danger{% endif %} px-3 py-2 fs-6">
-                        {% if insights.overall_score >= 80 %}Highly Qualified
-                        {% elif insights.overall_score >= 60 %}Qualified
-                        {% elif insights.overall_score >= 40 %}Needs Review
-                        {% else %}High Risk{% endif %}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
+            {% include 'applications/v2/_application_sidebar.html' with show_detailed_info=True hide_broker_card=True hide_progress_steps=True %}
+
         </div>
 
         <!-- Main Content Column -->
         <div class="col-lg-6">
             
-            <!-- Smart Insights Summary -->
-            {% if insights %}
-            <div class="card mb-4 shadow border-0">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold"><i class="fas fa-lightbulb text-warning me-2"></i>AI Capability Assessment</h5>
-                </div>
-                <div class="card-body">
-                    <div class="p-3 mb-3 rounded-3 {% if insights.overall_score >= 60 %}bg-success-subtle{% else %}bg-warning-subtle{% endif %}">
-                        <p class="mb-0 fs-5">{{ insights.summary|safe }}</p>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <h6 class="fw-bold text-uppercase small text-muted"><i class="fas fa-exclamation-triangle me-2"></i>Risk Factors</h6>
-                            {% if insights.red_flags %}
-                                <ul class="list-unstyled mb-0">
-                                {% for flag in insights.red_flags %}
-                                    <li class="mb-2 small">{{ flag }}</li>
-                                {% endfor %}
-                                </ul>
-                            {% else %}
-                                <p class="text-success small mb-0"><i class="fas fa-check-circle me-1"></i> No immediate red flags identified.</p>
-                            {% endif %}
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <h6 class="fw-bold text-uppercase small text-muted"><i class="fas fa-clipboard-check me-2"></i>Broker Recommendations</h6>
-                            <ul class="list-unstyled mb-0">
-                            {% for rec in insights.recommendations %}
-                                <li class="mb-2 small">{{ rec }}</li>
-                            {% endfor %}
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
 
-            <!-- Section Progress Overview -->
+
+            <!-- Application Progress Timeline -->
             <div class="card mb-4 shadow border-0">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold"><i class="fas fa-tasks me-2"></i>Journey Milestones</h5>
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-route me-2"></i>Application Progress</h5>
+                    <span class="badge bg-dark rounded-pill px-3 py-2">{{ progress_percent|floatformat:0 }}% Complete</span>
                 </div>
-                <div class="card-body">
-                    <div class="row">
+                <div class="card-body px-4 py-4">
+                    <!-- Overall progress bar -->
+                    <div class="mb-4">
+                        <div class="progress" style="height: 8px; border-radius: 4px;">
+                            <div class="progress-bar" role="progressbar" 
+                                 style="width: {{ progress_percent|default:0 }}%; background: linear-gradient(90deg, #22c55e, #4ade80); border-radius: 4px;" 
+                                 aria-valuenow="{{ progress_percent|default:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+
+                    <!-- Vertical Timeline -->
+                    <div class="position-relative">
                         {% for section in sections %}
-                        <div class="col-md-6 mb-3">
-                            <div class="d-flex align-items-center p-3 border rounded-3 {% if section.status == 'COMPLETED' %}bg-success-subtle border-success-subtle{% elif section.status == 'IN_PROGRESS' or section.get_progress_percentage > 0 %}bg-warning-subtle border-warning-subtle{% else %}bg-light border-light{% endif %}" style="transition: all 0.2s ease;">
-                                <div class="me-3 position-relative">
-                                    <div class="rounded-circle d-flex align-items-center justify-content-center shadow-sm" 
-                                         style="width: 50px; height: 50px; background-color: {% if section.status == 'COMPLETED' %}#22c55e{% elif section.status == 'IN_PROGRESS' or section.get_progress_percentage > 0 %}#ffe502{% else %}#f8f9fa{% endif %}; color: {% if section.status == 'COMPLETED' %}#ffffff{% else %}#1a1a1a{% endif %}; transition: all 0.3s ease;">
-                                        <i class="fas
-                                            {% if section.section_number == 1 %}fa-user
-                                            {% elif section.section_number == 2 %}fa-dollar-sign
-                                            {% elif section.section_number == 3 %}fa-gavel
-                                            {% elif section.section_number == 4 %}fa-eye
-                                            {% elif section.section_number == 5 %}fa-credit-card
-                                            {% endif %} fa-lg {% if section.status == 'IN_PROGRESS' or section.get_progress_percentage > 0 and section.status != 'COMPLETED' %}fa-beat-fade{% endif %}" style="--fa-animation-duration: 2s;"></i>
+                        <div class="d-flex mb-0 position-relative">
+                            <!-- Timeline spine -->
+                            <div class="d-flex flex-column align-items-center me-4" style="min-width: 52px;">
+                                <!-- Icon circle -->
+                                <div class="rounded-circle d-flex align-items-center justify-content-center shadow-sm position-relative" 
+                                     style="width: 52px; height: 52px; flex-shrink: 0; z-index: 2;
+                                            background: {% if section.status == 'COMPLETED' %}linear-gradient(135deg, #22c55e, #16a34a){% elif section.status == 'IN_PROGRESS' or section.get_progress_percentage > 0 %}linear-gradient(135deg, #ffe502, #f59e0b){% else %}#f1f5f9{% endif %};
+                                            color: {% if section.status == 'COMPLETED' %}#fff{% elif section.status == 'IN_PROGRESS' or section.get_progress_percentage > 0 %}#1a1a1a{% else %}#94a3b8{% endif %};">
+                                    <i class="fas
+                                        {% if section.section_number == 1 %}fa-user
+                                        {% elif section.section_number == 2 %}fa-dollar-sign
+                                        {% elif section.section_number == 3 %}fa-gavel
+                                        {% elif section.section_number == 4 %}fa-eye
+                                        {% elif section.section_number == 5 %}fa-credit-card
+                                        {% endif %} {% if section.status == 'IN_PROGRESS' %}fa-beat-fade{% endif %}" style="font-size: 1.1rem; --fa-animation-duration: 2s;"></i>
+                                </div>
+                                <!-- Connecting line -->
+                                {% if not forloop.last %}
+                                <div style="width: 3px; flex-grow: 1; min-height: 20px; 
+                                            background: {% if section.status == 'COMPLETED' %}#22c55e{% else %}#e2e8f0{% endif %};
+                                            border-radius: 2px;"></div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Content -->
+                            <div class="flex-grow-1 {% if not forloop.last %}pb-4{% endif %}" style="padding-top: 4px;">
+                                <div class="d-flex justify-content-between align-items-start" 
+                                     style="cursor: pointer;" 
+                                     onclick="toggleSection({{ section.section_number }})">
+                                    <div>
+                                        <div class="text-uppercase fw-bold text-muted" style="font-size: 0.6rem; letter-spacing: 1.5px;">Step {{ section.section_number }}</div>
+                                        <h6 class="fw-bold mb-1 {% if section.status == 'COMPLETED' %}text-success{% elif section.status == 'IN_PROGRESS' or section.get_progress_percentage > 0 %}text-dark{% else %}text-muted{% endif %}">
+                                            {% if section.section_number == 1 %}Personal Information
+                                            {% elif section.section_number == 2 %}Income & Employment
+                                            {% elif section.section_number == 3 %}Legal Documents
+                                            {% elif section.section_number == 4 %}Review Application
+                                            {% elif section.section_number == 5 %}Payment & Submit
+                                            {% endif %}
+                                            <i id="section-chevron-{{ section.section_number }}" class="fas fa-chevron-right ms-2" style="font-size: 0.6rem; opacity: 0.5; transition: transform 0.2s;"></i>
+                                        </h6>
                                     </div>
-                                    {% if section.status == 'IN_PROGRESS' or section.get_progress_percentage > 0 and section.status != 'COMPLETED' %}
-                                        <div class="position-absolute bottom-0 end-0 bg-white rounded-circle d-flex align-items-center justify-content-center shadow-sm border border-warning" style="width: 20px; height: 20px;">
-                                            <i class="fas fa-spinner fa-spin text-warning" style="font-size: 10px;"></i>
-                                        </div>
-                                    {% elif section.status == 'COMPLETED' %}
-                                        <div class="position-absolute bottom-0 end-0 bg-white rounded-circle d-flex align-items-center justify-content-center shadow-sm border border-success" style="width: 20px; height: 20px;">
-                                            <i class="fas fa-check text-success" style="font-size: 10px;"></i>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                                <div class="flex-grow-1">
-                                    <div class="fw-bold small text-uppercase text-muted">Step {{ section.section_number }}</div>
-                                    <div class="fw-bold">
-                                        {% if section.section_number == 1 %}Personal Information
-                                        {% elif section.section_number == 2 %}Income & Employment
-                                        {% elif section.section_number == 3 %}Legal Documents
-                                        {% elif section.section_number == 4 %}Review Application
-                                        {% elif section.section_number == 5 %}Payment & Submit
-                                        {% endif %}
+                                    <div class="text-end">
+                                        <span class="badge rounded-pill px-3 py-2 {% if section.status == 'COMPLETED' %}bg-success{% elif section.status == 'IN_PROGRESS' or section.get_progress_percentage > 0 %}bg-warning text-dark{% else %}bg-light text-muted border{% endif %}" style="font-size: 0.75rem;">
+                                            {% if section.status == 'COMPLETED' %}<i class="fas fa-check me-1"></i>{% endif %}
+                                            {{ section.get_progress_percentage }}%
+                                        </span>
                                     </div>
                                 </div>
-                                <div class="text-end">
-                                    <span class="badge {% if section.status == 'COMPLETED' %}bg-success{% elif section.status == 'IN_PROGRESS' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
-                                        {{ section.get_progress_percentage }}%
-                                    </span>
+                                <!-- Mini progress bar per section -->
+                                {% if section.get_progress_percentage > 0 and section.status != 'COMPLETED' %}
+                                <div class="progress mt-2" style="height: 4px; border-radius: 2px;">
+                                    <div class="progress-bar bg-warning" role="progressbar" style="width: {{ section.get_progress_percentage }}%; border-radius: 2px;"></div>
                                 </div>
+                                {% elif section.status == 'COMPLETED' %}
+                                <div class="progress mt-2" style="height: 4px; border-radius: 2px;">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: 100%; border-radius: 2px;"></div>
+                                </div>
+                                {% else %}
+                                <div class="progress mt-2" style="height: 4px; border-radius: 2px;">
+                                    <div class="progress-bar bg-light" role="progressbar" style="width: 0%; border-radius: 2px;"></div>
+                                </div>
+                                {% endif %}
+                                <!-- Drill-down panel (hidden by default) -->
+                                <div id="section-detail-{{ section.section_number }}" style="display: none; margin-top: 10px; padding: 12px; background: #fafafa; border-radius: 8px; border: 1px solid #f0f0f0;"></div>
                             </div>
                         </div>
                         {% endfor %}
                     </div>
                 </div>
             </div>
+
+            <script>
+            (function() {
+                const sectionDetails = JSON.parse('{{ section_details_json|escapejs }}');
+
+                window.toggleSection = function(num) {
+                    const panel = document.getElementById('section-detail-' + num);
+                    const chevron = document.getElementById('section-chevron-' + num);
+
+                    if (panel.style.display === 'none') {
+                        const data = sectionDetails[num];
+                        if (!data || (data.length === 1 && data[0].fields.length === 0)) {
+                            panel.innerHTML = '<div class="text-muted small py-1">' +
+                                '<i class="fas fa-info-circle me-1"></i>' +
+                                'Read-only review step — no fields to track</div>';
+                        } else {
+                            let html = '';
+                            data.forEach(function(g) {
+                                html += '<div class="text-uppercase fw-bold text-muted mt-2 mb-1" ' +
+                                        'style="font-size:0.6rem; letter-spacing:1px;">' + g.group + '</div>';
+                                g.fields.forEach(function(f) {
+                                    var icon = f.filled
+                                        ? '<i class="fas fa-check-circle text-success me-2"></i>'
+                                        : '<i class="far fa-circle me-2" style="opacity:0.3; color:#94a3b8;"></i>';
+                                    var cls = f.filled ? '' : 'text-muted';
+                                    html += '<div class="d-flex align-items-center py-1 small ' + cls + '">' +
+                                            icon + f.label + '</div>';
+                                });
+                            });
+                            panel.innerHTML = html;
+                        }
+                        panel.style.display = 'block';
+                        if (chevron) {
+                            chevron.classList.remove('fa-chevron-right');
+                            chevron.classList.add('fa-chevron-down');
+                        }
+                    } else {
+                        panel.style.display = 'none';
+                        if (chevron) {
+                            chevron.classList.remove('fa-chevron-down');
+                            chevron.classList.add('fa-chevron-right');
+                        }
+                    }
+                };
+            })();
+            </script>
 
             <!-- Income Verification -->
             {% if income_verification %}
@@ -277,162 +304,6 @@
             </div>
             {% endif %}
 
-            <!-- Document Analysis Section -->
-            <div class="card mb-4 shadow">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-robot"></i> Document Management & AI Analysis</h5>
-                </div>
-                <div class="card-body">
-                    
-                    <!-- File Upload for Broker Analysis -->
-                    <div class="alert alert-info">
-                        <h6><i class="fas fa-info-circle"></i> Broker Document Upload</h6>
-                        <p class="mb-2">Upload documents for AI analysis. Applicants can upload their own documents through their interface.</p>
-                    </div>
-                    
-                    <form method="post" enctype="multipart/form-data" class="mb-4">
-                        {% csrf_token %}
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="document_type" class="form-label">Document Type</label>
-                                    <select name="document_type" id="document_type" class="form-select" required>
-                                        <option value="">Select document type...</option>
-                                        <option value="Pay Stub">Pay Stub</option>
-                                        <option value="Bank Statement">Bank Statement</option>
-                                        <option value="Tax Return">Tax Return</option>
-                                        <option value="Employment Letter">Employment Letter</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="file" class="form-label">Upload PDF Document</label>
-                                    <input type="file" name="file" id="file" class="form-control" accept=".pdf" required>
-                                    <div class="form-text">Only PDF files are accepted</div>
-                                </div>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-upload me-2"></i>Upload for Analysis
-                        </button>
-                    </form>
-
-                    <hr>
-
-                    <!-- Uploaded Documents with Analysis Results -->
-                    <h6><i class="fas fa-file-alt me-2"></i>Document Analysis Results</h6>
-                    {% if uploaded_files %}
-                        {% for file in uploaded_files %}
-                            <div class="card mb-3">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <span>
-                                        <i class="fas fa-file-pdf text-danger me-2"></i>
-                                        <strong>{{ file.document_type|default:"Unknown Document" }}</strong>
-                                    </span>
-                                    <small class="text-muted">{{ file.uploaded_at|date:"M d, Y g:i A" }}</small>
-                                </div>
-                                <div class="card-body">
-                                    <!-- File Actions -->
-                                    <div class="mb-3">
-                                        <a href="{{ file.file.url }}" target="_blank" class="btn btn-outline-primary btn-sm">
-                                            <i class="fas fa-eye me-1"></i>View
-                                        </a>
-                                        <a href="{{ file.file.url }}" download class="btn btn-outline-secondary btn-sm">
-                                            <i class="fas fa-download me-1"></i>Download
-                                        </a>
-                                        
-                                        <!-- AI Analysis Button -->
-                                        <form action="{% url 'analyze_uploaded_file' file.id %}" method="post" class="d-inline">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-info btn-sm">
-                                                <i class="fas fa-robot me-1"></i>Start Analysis
-                                            </button>
-                                        </form>
-
-                                        <!-- Delete Button -->
-                                        <form action="{% url 'delete_uploaded_file' file.id %}" method="post" class="d-inline" 
-                                              onsubmit="return confirm('Are you sure you want to delete this file?')">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-outline-danger btn-sm">
-                                                <i class="fas fa-trash me-1"></i>Delete
-                                            </button>
-                                        </form>
-                                    </div>
-
-                                    <!-- Task Progress Status -->
-                                    {% if file.celery_task_id and not file.analysis_results %}
-                                        <div class="alert alert-info mb-3" id="task-status-{{ file.id }}">
-                                            <div class="d-flex align-items-center">
-                                                <div class="spinner-border spinner-border-sm me-2" role="status">
-                                                    <span class="visually-hidden">Loading...</span>
-                                                </div>
-                                                <div class="flex-grow-1">
-                                                    <strong>AI Analysis in Progress...</strong>
-                                                    <div class="progress mt-2" style="height: 20px;">
-                                                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                                                             role="progressbar" style="width: 10%" 
-                                                             id="progress-bar-{{ file.id }}">10%</div>
-                                                    </div>
-                                                    <small class="text-muted" id="status-message-{{ file.id }}">Starting analysis...</small>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    {% endif %}
-
-                                    <!-- AI Analysis Results -->
-                                    {% if file.analysis_results %}
-                                        {% with analysis=file.analysis_results %}
-                                        <div class="alert 
-                                            {% if analysis.status == 'Complete' %}alert-success
-                                            {% elif analysis.status == 'Needs Manual Review' %}alert-warning
-                                            {% else %}alert-danger{% endif %} mb-0">
-                                            
-                                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                                <h6 class="mb-0">
-                                                    <i class="fas fa-robot me-2"></i>AI Analysis Results
-                                                </h6>
-                                                <span class="badge 
-                                                    {% if analysis.status == 'Complete' %}bg-success
-                                                    {% elif analysis.status == 'Needs Manual Review' %}bg-warning text-dark
-                                                    {% else %}bg-danger{% endif %}">
-                                                    {{ analysis.status }}
-                                                </span>
-                                            </div>
-
-                                            {% if analysis.summary %}
-                                                <p class="mb-2"><strong>Summary:</strong></p>
-                                                <p class="mb-2">{{ analysis.summary }}</p>
-                                            {% endif %}
-
-                                            {% if analysis.reasoning %}
-                                                <p class="mb-2"><strong>Reasoning:</strong></p>
-                                                <p class="mb-2">{{ analysis.reasoning }}</p>
-                                            {% endif %}
-
-                                            {% if analysis.modification_check %}
-                                                <p class="mb-0"><strong>Security Check:</strong> {{ analysis.modification_check }}</p>
-                                            {% endif %}
-                                        </div>
-                                        {% endwith %}
-                                    {% else %}
-                                        <div class="alert alert-light mb-0">
-                                            <i class="fas fa-info-circle me-2"></i>
-                                            Click "Start Analysis" to run AI-powered document analysis
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="alert alert-light">
-                            <i class="fas fa-info-circle me-2"></i>
-                            No documents uploaded yet. Documents uploaded by applicants will appear here for analysis.
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
 
         </div>
 
@@ -517,6 +388,407 @@
 
         </div>
     </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Document Management & AI Analysis — Full-Width Section        -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="card mt-4 mb-4 shadow border-0 overflow-hidden">
+        <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold"><i class="fas fa-folder-open me-2"></i>Document Management & AI Analysis</h5>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #ffe502, #f59e0b); color: #1a1a1a; font-weight: 600;">
+                    {{ doc_inventory_filled }}/{{ doc_inventory_total }} Required
+                </span>
+                <button class="btn btn-sm btn-outline-light" type="button" 
+                        data-bs-toggle="collapse" data-bs-target="#brokerUploadForm">
+                    <i class="fas fa-plus me-1"></i>Upload
+                </button>
+            </div>
+        </div>
+
+        <!-- Smart Insights Strip -->
+        {% if insights %}
+        <div class="border-bottom" style="background: linear-gradient(135deg, #fafbfc, #f1f5f9);">
+            <div class="d-flex align-items-center px-4 py-3 gap-4">
+                <!-- Score Badge -->
+                <div class="text-center" style="min-width: 80px;">
+                    <div class="fw-bold mb-0 {% if insights.overall_score >= 80 %}text-success{% elif insights.overall_score >= 60 %}text-primary{% elif insights.overall_score >= 40 %}text-warning{% else %}text-danger{% endif %}" style="font-size: 2rem; line-height: 1;">
+                        {{ insights.overall_score }}
+                    </div>
+                    <div class="badge mt-1 {% if insights.overall_score >= 80 %}bg-success{% elif insights.overall_score >= 60 %}bg-primary{% elif insights.overall_score >= 40 %}bg-warning text-dark{% else %}bg-danger{% endif %}" style="font-size: 0.65rem;">
+                        {% if insights.overall_score >= 80 %}Highly Qualified
+                        {% elif insights.overall_score >= 60 %}Qualified
+                        {% elif insights.overall_score >= 40 %}Needs Review
+                        {% else %}High Risk{% endif %}
+                    </div>
+                </div>
+
+                <div class="vr" style="opacity: 0.15;"></div>
+
+                <!-- Key Metrics -->
+                <div class="d-flex flex-wrap gap-3 flex-grow-1" style="font-size: 0.8rem;">
+                    <!-- Affordability -->
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-dollar-sign {% if insights.affordability.can_afford %}text-success{% else %}text-warning{% endif %}"></i>
+                        <div>
+                            <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Affordability</div>
+                            <div class="fw-semibold">
+                                {% if insights.affordability.income_multiple > 0 %}
+                                    {{ insights.affordability.income_multiple|floatformat:1 }}x Income
+                                    {% if insights.affordability.can_afford %}
+                                        <i class="fas fa-check-circle text-success ms-1" style="font-size: 0.7rem;"></i>
+                                    {% endif %}
+                                {% else %}
+                                    No data
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Employment -->
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-briefcase text-primary"></i>
+                        <div>
+                            <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Employment</div>
+                            <div class="fw-semibold">
+                                {% if insights.employment_stability.employment_length != 'Unknown' %}
+                                    {{ insights.employment_stability.employment_length }}
+                                {% else %}
+                                    Not provided
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Confidence -->
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-signal {% if insights.confidence_level == 'High' %}text-success{% elif insights.confidence_level == 'Medium' %}text-primary{% else %}text-muted{% endif %}"></i>
+                        <div>
+                            <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Confidence</div>
+                            <div class="fw-semibold">{{ insights.confidence_level }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Red Flags -->
+                    <div class="d-flex align-items-center gap-2">
+                        {% if insights.red_flags %}
+                            <i class="fas fa-exclamation-triangle text-danger"></i>
+                            <div>
+                                <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Red Flags</div>
+                                <div class="fw-semibold text-danger">{{ insights.red_flags|length }} Found</div>
+                            </div>
+                        {% else %}
+                            <i class="fas fa-shield-alt text-success"></i>
+                            <div>
+                                <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Red Flags</div>
+                                <div class="fw-semibold text-success">None</div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Collapsible Upload Form -->
+        <div class="collapse border-bottom" id="brokerUploadForm" style="background: #f8fafc;">
+            <div class="px-4 py-3">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label for="document_type" class="form-label small fw-bold mb-1">Document Type</label>
+                            <select name="document_type" id="document_type" class="form-select form-select-sm" required
+                                    onchange="toggleDocumentLabel(this)">
+                                <option value="">Select type...</option>
+                                <option value="Pay Stub">Pay Stub</option>
+                                <option value="Bank Statement">Bank Statement</option>
+                                <option value="Supporting Document">Supporting Document</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3" id="documentLabelWrap" style="display:none;">
+                            <label for="document_label" class="form-label small fw-bold mb-1">Label</label>
+                            <input type="text" name="document_label" id="document_label" 
+                                   class="form-control form-control-sm" 
+                                   placeholder="e.g. Tax Return, Offer Letter">
+                        </div>
+                        <div class="col-md-4" id="fileInputCol">
+                            <label for="file" class="form-label small fw-bold mb-1">Choose File</label>
+                            <input type="file" name="file" id="file" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png" required>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-sm w-100 fw-bold" style="background: linear-gradient(135deg, #ffe502, #f59e0b); color: #1a1a1a; border: none;">
+                                <i class="fas fa-upload me-1"></i>Upload
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-text small mt-1">
+                        Pay Stubs &amp; Bank Statements fill required slots. AI analysis runs on all uploads.
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Document Checklist Progress Strip -->
+        <div class="px-4 py-3" style="background: linear-gradient(135deg, #f8fafc, #f1f5f9); border-bottom: 1px solid #e2e8f0;">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-clipboard-check me-2 text-muted"></i>
+                    <span class="fw-bold small text-uppercase text-muted" style="letter-spacing: 1px;">Document Checklist</span>
+                </div>
+                <span class="small text-muted">{% widthratio doc_inventory_filled doc_inventory_total 100 %}% complete</span>
+            </div>
+            <div class="progress mb-3" style="height: 6px; border-radius: 3px;">
+                <div class="progress-bar" role="progressbar" 
+                     style="width: {% widthratio doc_inventory_filled doc_inventory_total 100 %}%; background: linear-gradient(90deg, #22c55e, #4ade80); border-radius: 3px;"></div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                {% for doc in doc_inventory %}
+                {% if doc.required %}
+                <span class="badge rounded-pill px-2 py-1 {% if doc.filed %}bg-success-subtle text-success{% else %}bg-light text-muted border{% endif %}" style="font-size: 0.7rem;">
+                    {% if doc.filed %}<i class="fas fa-check-circle me-1"></i>{% else %}<i class="far fa-circle me-1" style="opacity:0.4;"></i>{% endif %}
+                    {{ doc.label }}
+                </span>
+                {% endif %}
+                {% endfor %}
+                {% for doc in doc_inventory %}
+                {% if not doc.required and doc.filed %}
+                <span class="badge rounded-pill px-2 py-1 bg-info-subtle text-info" style="font-size: 0.7rem;">
+                    <i class="fas fa-paperclip me-1"></i>{{ doc.label|truncatechars:25 }}
+                </span>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Unified Document List with Inline AI Expansion -->
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                    <thead>
+                        <tr style="background: #f8fafc;">
+                            <th class="border-0 ps-4 py-3 text-muted text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Document</th>
+                            <th class="border-0 py-3 text-muted text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Category</th>
+                            <th class="border-0 py-3 text-muted text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Status</th>
+                            <th class="border-0 py-3 text-muted text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Source</th>
+                            <th class="border-0 py-3 text-muted text-uppercase text-end pe-4" style="font-size: 0.7rem; letter-spacing: 0.5px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for doc in doc_inventory %}
+                        <tr class="{% if doc.filed %}{% else %}{% endif %}" style="{% if not doc.filed %}opacity: 0.65;{% endif %}">
+                            <td class="border-0 ps-4 py-3">
+                                <div class="d-flex align-items-center">
+                                    {% if doc.filed %}
+                                        {% if doc.analysis %}
+                                        <i class="fas fa-file-circle-check me-2" style="color: #22c55e; font-size: 1.1rem;"></i>
+                                        {% else %}
+                                        <i class="fas fa-file-alt me-2" style="color: #22c55e; font-size: 1.1rem;"></i>
+                                        {% endif %}
+                                    {% else %}
+                                        <i class="far fa-file me-2 text-muted" style="font-size: 1.1rem; opacity: 0.4;"></i>
+                                    {% endif %}
+                                    <div>
+                                        <span class="fw-semibold {% if not doc.filed %}text-muted{% endif %}">{{ doc.label }}</span>
+                                        {% if doc.uploaded_at %}
+                                        <div class="text-muted" style="font-size: 0.7rem;">Uploaded {{ doc.uploaded_at|date:"M d, Y g:i A" }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="border-0 py-3">
+                                <span class="badge rounded-pill px-2 py-1
+                                    {% if doc.category == 'pay_stub' %}bg-primary-subtle text-primary
+                                    {% elif doc.category == 'bank_statement' %}bg-warning-subtle text-warning
+                                    {% elif doc.category == 'supporting' %}bg-info-subtle text-info
+                                    {% else %}bg-light text-muted{% endif %}" style="font-size: 0.7rem;">
+                                    {% if doc.category == 'pay_stub' %}Pay Stub
+                                    {% elif doc.category == 'bank_statement' %}Bank Statement
+                                    {% elif doc.category == 'supporting' %}Supporting
+                                    {% else %}Required{% endif %}
+                                </span>
+                            </td>
+                            <td class="border-0 py-3">
+                                {% if doc.filed %}
+                                    {% if doc.analysis %}
+                                        {% if doc.analysis.status == 'Complete' %}
+                                        <span class="badge bg-success rounded-pill px-2 py-1" style="font-size: 0.7rem;">
+                                            <i class="fas fa-check-circle me-1"></i>Analyzed
+                                        </span>
+                                        {% elif doc.analysis.status == 'Needs Manual Review' %}
+                                        <span class="badge bg-warning text-dark rounded-pill px-2 py-1" style="font-size: 0.7rem;">
+                                            <i class="fas fa-exclamation-circle me-1"></i>Review Needed
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-danger rounded-pill px-2 py-1" style="font-size: 0.7rem;">
+                                            <i class="fas fa-times-circle me-1"></i>{{ doc.analysis.status }}
+                                        </span>
+                                        {% endif %}
+                                    {% elif doc.celery_task_id %}
+                                        <span class="badge bg-info-subtle text-info rounded-pill px-2 py-1" style="font-size: 0.7rem;">
+                                            <i class="fas fa-spinner fa-spin me-1"></i>Analyzing...
+                                        </span>
+                                    {% else %}
+                                        <span class="text-success fw-semibold" style="font-size: 0.8rem;">
+                                            <i class="fas fa-check me-1"></i>Uploaded
+                                        </span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted" style="font-size: 0.8rem;">
+                                        <i class="far fa-clock me-1"></i>Awaiting
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="border-0 py-3">
+                                {% if doc.source == 'broker' %}
+                                    <span class="badge rounded-pill px-2 py-1" style="font-size: 0.65rem; background: linear-gradient(135deg, #ffe502, #f59e0b); color: #1a1a1a;">
+                                        <i class="fas fa-user-tie me-1"></i>Broker
+                                    </span>
+                                {% elif doc.source == 'applicant' and doc.filed %}
+                                    <span class="badge bg-light text-muted rounded-pill px-2 py-1 border" style="font-size: 0.65rem;">
+                                        <i class="fas fa-user me-1"></i>Applicant
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted" style="font-size: 0.75rem;">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="border-0 py-3 text-end pe-4">
+                                {% if doc.filed %}
+                                <div class="d-flex justify-content-end gap-1">
+                                    {% if doc.url %}
+                                    <a href="{{ doc.url }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.75rem;" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{{ doc.url }}" download class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.75rem;" title="Download">
+                                        <i class="fas fa-download"></i>
+                                    </a>
+                                    {% endif %}
+                                    {% if doc.analysis or doc.celery_task_id %}
+                                    <button class="btn btn-sm py-0 px-2 {% if doc.analysis %}btn-outline-primary{% else %}btn-outline-info{% endif %}" style="font-size: 0.75rem;"
+                                            onclick="toggleAnalysis('analysis-row-{{ forloop.counter }}')" title="AI Analysis">
+                                        <i class="fas fa-robot"></i>
+                                    </button>
+                                    {% endif %}
+                                    {% if doc.upload_id %}
+                                    <form action="{% url 'delete_uploaded_file' doc.upload_id %}" method="post" class="d-inline delete-doc-form">
+                                        {% csrf_token %}
+                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 delete-doc-btn" style="font-size: 0.75rem;" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                    <span class="text-muted" style="font-size: 0.75rem;">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <!-- Inline AI Analysis Row (hidden by default) -->
+                        {% if doc.analysis or doc.celery_task_id %}
+                        <tr id="analysis-row-{{ forloop.counter }}" style="display: none;">
+                            <td colspan="5" class="border-0 px-4 pb-4 pt-0" style="background: #fafbfc;">
+                                {% if doc.celery_task_id and not doc.analysis %}
+                                <div class="rounded-3 p-3" style="background: #eff6ff; border: 1px solid #bfdbfe;">
+                                    <div class="d-flex align-items-center">
+                                        <div class="spinner-border spinner-border-sm me-2 text-primary" role="status"></div>
+                                        <strong class="small">AI Analysis in Progress...</strong>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                {% if doc.analysis %}
+                                <div class="rounded-3 p-3" style="background: {% if doc.analysis.status == 'Complete' %}#f0fdf4; border: 1px solid #bbf7d0{% elif doc.analysis.status == 'Needs Manual Review' %}#fefce8; border: 1px solid #fef08a{% else %}#fef2f2; border: 1px solid #fecaca{% endif %};">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            {% if doc.analysis.summary %}
+                                            <div class="mb-3">
+                                                <div class="fw-bold small text-uppercase text-muted mb-1" style="font-size: 0.65rem; letter-spacing: 1px;">Summary</div>
+                                                <p class="mb-0 small">{{ doc.analysis.summary }}</p>
+                                            </div>
+                                            {% endif %}
+
+                                            {% if doc.analysis.reasoning %}
+                                            <div class="mb-0">
+                                                <div class="fw-bold small text-uppercase text-muted mb-1" style="font-size: 0.65rem; letter-spacing: 1px;">Reasoning</div>
+                                                <p class="mb-0 small">{{ doc.analysis.reasoning }}</p>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-4">
+                                            {% if doc.analysis.modification_check %}
+                                            <div class="mb-3">
+                                                <div class="fw-bold small text-uppercase text-muted mb-2" style="font-size: 0.65rem; letter-spacing: 1px;">
+                                                    <i class="fas fa-shield-alt me-1"></i>Security Check
+                                                </div>
+                                                {% if doc.analysis.modification_check.tampering_suspected != None %}
+                                                <div class="d-flex flex-column gap-2">
+                                                    <span class="badge rounded-pill px-2 py-1 {% if doc.analysis.modification_check.tampering_suspected %}bg-danger{% else %}bg-success{% endif %}" style="font-size: 0.7rem; width: fit-content;">
+                                                        {% if doc.analysis.modification_check.tampering_suspected %}
+                                                            <i class="fas fa-exclamation-triangle me-1"></i>Tampering Detected
+                                                        {% else %}
+                                                            <i class="fas fa-check-circle me-1"></i>No Tampering
+                                                        {% endif %}
+                                                    </span>
+                                                    {% if doc.analysis.modification_check.severity %}
+                                                    <span class="badge rounded-pill px-2 py-1
+                                                        {% if doc.analysis.modification_check.severity == 'low' %}bg-success-subtle text-success
+                                                        {% elif doc.analysis.modification_check.severity == 'medium' %}bg-warning-subtle text-warning
+                                                        {% else %}bg-danger-subtle text-danger{% endif %}" style="font-size: 0.7rem; width: fit-content;">
+                                                        Severity: {{ doc.analysis.modification_check.severity|title }}
+                                                    </span>
+                                                    {% endif %}
+                                                    {% if doc.analysis.modification_check.metadata_check %}
+                                                    <span class="badge rounded-pill px-2 py-1 bg-light text-muted border" style="font-size: 0.65rem; width: fit-content;">
+                                                        <i class="fas fa-fingerprint me-1"></i>Metadata Verified
+                                                    </span>
+                                                    {% endif %}
+                                                </div>
+                                                {% else %}
+                                                <p class="mb-0 small text-muted">{{ doc.analysis.modification_check }}</p>
+                                                {% endif %}
+                                            </div>
+                                            {% endif %}
+
+                                            {% if doc.analysis.income_analysis %}
+                                            <div>
+                                                <div class="fw-bold small text-uppercase text-muted mb-1" style="font-size: 0.65rem; letter-spacing: 1px;">
+                                                    <i class="fas fa-chart-line me-1"></i>Income Analysis
+                                                </div>
+                                                <p class="mb-0 small">{{ doc.analysis.income_analysis }}</p>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteDocModal" tabindex="-1">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body text-center py-4">
+                    <i class="fas fa-exclamation-triangle text-danger mb-3" style="font-size: 2.5rem;"></i>
+                    <h6 class="fw-bold">Delete Document?</h6>
+                    <p class="text-muted small mb-0">This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-4">
+                    <button type="button" class="btn btn-sm btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-sm btn-danger px-4" id="confirmDeleteBtn">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <!-- Revoke Application Modal -->
@@ -678,6 +950,27 @@ function copyApplicationLink() {
     document.body.removeChild(tempTextarea);
 }
 
+// Toggle label input for Supporting Document type
+function toggleDocumentLabel(select) {
+    const labelWrap = document.getElementById('documentLabelWrap');
+    const fileCol = document.getElementById('fileInputCol');
+    if (select.value === 'Supporting Document') {
+        labelWrap.style.display = '';
+        fileCol.className = 'col-md-4';
+    } else {
+        labelWrap.style.display = 'none';
+        fileCol.className = 'col-md-6';
+    }
+}
+
+// Toggle inline AI analysis expansion row
+function toggleAnalysis(rowId) {
+    const row = document.getElementById(rowId);
+    if (row) {
+        row.style.display = row.style.display === 'none' ? '' : 'none';
+    }
+}
+
 // Start polling for all files with active tasks
 document.addEventListener('DOMContentLoaded', function() {
     {% for file in uploaded_files %}
@@ -685,6 +978,22 @@ document.addEventListener('DOMContentLoaded', function() {
             pollTaskStatus({{ file.id }});
         {% endif %}
     {% endfor %}
+
+    // Delete confirmation modal
+    let pendingDeleteForm = null;
+    document.querySelectorAll('.delete-doc-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            pendingDeleteForm = this.closest('form');
+            const modal = new bootstrap.Modal(document.getElementById('deleteDocModal'));
+            modal.show();
+        });
+    });
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        if (pendingDeleteForm) {
+            pendingDeleteForm.submit();
+        }
+    });
 });
 </script>
 

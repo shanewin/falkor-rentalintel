@@ -110,8 +110,8 @@
                                 <div class="card-body">
                                     {% if income_data %}
                                         <p class="mb-1"><strong>Employment:</strong> {{ income_data.get_employment_type_display }}</p>
-                                        <p class="mb-1"><strong>Company:</strong> {{ income_data.company_name }}</p>
-                                        <p class="mb-1"><strong>Position:</strong> {{ income_data.position }}</p>
+                                        <p class="mb-1"><strong>Company:</strong> {{ income_data.employer }}</p>
+                                        <p class="mb-1"><strong>Position:</strong> {{ income_data.job_title }}</p>
                                         <p class="mb-1"><strong>Annual Income:</strong> ${{ income_data.annual_income|floatformat:2 }}</p>
                                         <p class="mb-1"><strong>Supervisor:</strong> {{ income_data.supervisor_name }}</p>
                                         <p class="mb-0"><strong>Start Date:</strong> {{ income_data.start_date }}</p>
@@ -120,7 +120,7 @@
                                         <h6 class="mt-3 text-muted">Additional Employment:</h6>
                                         <ul class="list-unstyled mb-0 small">
                                             {% for job in additional_jobs %}
-                                            <li><i class="fas fa-briefcase me-1 text-muted"></i> {{ job.company_name }} - {{ job.position }} (${{ job.annual_income|floatformat:2 }}/year)</li>
+                                            <li><i class="fas fa-briefcase me-1 text-muted"></i> {{ job.employer }} - {{ job.job_title }} (${{ job.annual_income|floatformat:2 }}/year)</li>
                                             {% endfor %}
                                         </ul>
                                         {% endif %}

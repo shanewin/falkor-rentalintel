@@ -2,11 +2,12 @@ from users.models import User
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
+from django.conf import settings
 from .forms import PersonalInfoForm, PreviousAddressForm, IncomeForm
 from .models import (
     UploadedFile, Application, ApplicationActivity, ApplicationSection, 
     PersonalInfoData, PreviousAddress, SectionStatus, IncomeData,
-    Pet, PetPhoto
+    Pet, PetPhoto, LegalDocuments, ApplicationPayment
 )
 from django.core.files.base import ContentFile
 import base64
@@ -15,6 +16,7 @@ from apartments.models import Apartment
 from applicants.apartment_matching import ApartmentMatchingService
 from applicants.smart_insights import SmartInsights
 import cloudinary.uploader
+from .access_control import validate_application_access
 # Import activity tracking
 from applicants.signals import trigger_document_uploaded
 from django.contrib import messages 
@@ -59,17 +61,9 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 
-# ✅ DISPLAY APPLICATION DETAILS FOR BROKER/APPLICANT
+# application_detail function removed — was dead code with zero auth.
+# The URL name 'application_detail' now points directly to v2_application_overview.
 import json
-
-def application_detail(request, application_id):
-    application = get_object_or_404(Application, id=application_id)
-    uploaded_files = application.uploaded_files.all()
-
-    return render(request, "applications/application_detail.html", {
-        "application": application,
-        "uploaded_files": uploaded_files,
-    })
 
 
 
@@ -159,6 +153,7 @@ def application_list(request):
         'pending_applications': pending_applications,
         'approved_applications': approved_applications,
         'unique_properties': unique_properties,
+        'is_applicant': request.user.is_applicant if hasattr(request.user, 'is_applicant') else False,
     }
 
     return render(request, "applications/application_list.html", context)
@@ -166,13 +161,19 @@ def application_list(request):
 
 
 
+@login_required
 def delete_uploaded_file(request, file_id):
     uploaded_file = get_object_or_404(UploadedFile, id=file_id)
 
-    # ✅ Superusers, Brokers, and Applicants can delete files
+    # ✅ Superusers, Brokers, and the owning Applicant can delete files
+    is_owner_applicant = (
+        uploaded_file.application.applicant and 
+        uploaded_file.application.applicant.user == request.user
+    )
     if not (request.user.is_superuser or 
-            request.user == uploaded_file.application.broker or 
-            request.user == uploaded_file.application.applicant):
+            request.user == uploaded_file.application.broker or
+            (request.user.is_staff and request.user.is_broker) or
+            is_owner_applicant):
         messages.error(request, "You are not authorized to delete this file.")
         return redirect("application_detail", application_id=uploaded_file.application.id)
 
@@ -379,6 +380,7 @@ def test_sms_send(request):
     return redirect('applications_list')
 
 
+@login_required
 def analyze_uploaded_file(request, file_id):
     uploaded_file = get_object_or_404(UploadedFile, id=file_id)
     application = uploaded_file.application
@@ -1069,21 +1071,16 @@ def v2_section1_personal_info(request, application_id):
     """Section 1 - Personal Information"""
     application = get_object_or_404(Application, id=application_id)
     
-    # Check if this is token-based access (for applicants via UUID link)
-    token = request.GET.get('token')
-    is_applicant_access = False
+    # Centralized access control
     is_preview = request.GET.get('preview') == 'true'
-    
-    # Validate access: valid token OR authenticated as the correct applicant
-    if token and token == str(application.unique_link):
-        is_applicant_access = True
-    elif request.user.is_authenticated and application.applicant and application.applicant.user == request.user:
-        is_applicant_access = True
-    elif not is_preview:
-        # Regular broker/staff access - check authentication
-        if not request.user.is_authenticated:
-            return redirect('login')
-        # (Implicitly allows access if authenticated and not applicant, assuming broker permission checked elsewhere or allowed)
+    if not is_preview:
+        access_type, error = validate_application_access(request, application)
+        if error:
+            return error
+        is_applicant_access = (access_type == 'applicant')
+    else:
+        is_applicant_access = False
+    token = request.GET.get('token')
     
     # Get or create PersonalInfoData
     personal_info, created = PersonalInfoData.objects.get_or_create(
@@ -1120,12 +1117,16 @@ def v2_section1_personal_info(request, application_id):
             'reason_for_moving': 'reason_for_moving',
             'desired_move_in_date': 'desired_move_in_date',
             'has_pets': 'has_pets',
+            'has_been_evicted': 'has_been_evicted',
+            'eviction_explanation': 'eviction_explanation',
         }
         
         # Apply prefill data to personal_info instance ONLY if the field is currently empty
         for profile_field, app_field in field_mapping.items():
-            if profile_field in prefill_data and prefill_data[profile_field]:
-                if not getattr(personal_info, app_field):
+            if profile_field in prefill_data and prefill_data[profile_field] is not None:
+                current_val = getattr(personal_info, app_field)
+                # For booleans, None means "not answered" — False is a valid answer
+                if current_val is None or (not isinstance(current_val, bool) and not current_val):
                     setattr(personal_info, app_field, prefill_data[profile_field])
         
         # Always save to ensure consistency (idempotent if no changes)
@@ -1154,15 +1155,21 @@ def v2_section1_personal_info(request, application_id):
         # Clone Pets if they don't exist yet
         if not personal_info.pets.exists() and 'pets' in prefill_data:
             for pet_data in prefill_data['pets']:
-                Pet.objects.create(
+                pet = Pet.objects.create(
                     personal_info=personal_info,
                     name=pet_data.get('name'),
                     pet_type=pet_data.get('pet_type'),
                     quantity=pet_data.get('quantity', 1),
                     description=pet_data.get('description'),
                 )
-                # Note: We're not cloning photos by URL here because it requires re-uploading
-                # In a real sync, we might copy Cloudinary assets. For now, we clone the metadata.
+                # Clone pet photos via Cloudinary reference copy
+                for photo_data in pet_data.get('photos', []):
+                    public_id = photo_data.get('public_id') if isinstance(photo_data, dict) else None
+                    if public_id:
+                        PetPhoto.objects.create(
+                            pet=pet,
+                            image=public_id,  # CloudinaryField accepts public_id directly
+                        )
     
     # Get application section
     section = ApplicationSection.objects.get(
@@ -1276,11 +1283,6 @@ def v2_section1_personal_info(request, application_id):
             messages.error(request, "Please correct the errors below.")
     else:
         form = PersonalInfoForm(instance=personal_info)
-        
-        # Pre-fill desired address fields from manual application data if no apartment
-        if not application.apartment and application.manual_building_address:
-            form.initial['desired_address'] = application.manual_building_address
-            form.initial['desired_unit'] = application.manual_unit_number
         
         # Mark section as in progress if not already
         if section.status == SectionStatus.NOT_STARTED:
@@ -1414,23 +1416,16 @@ def v2_application_overview(request, application_id):
     """Router view that determines appropriate interface based on access type"""
     application = get_object_or_404(Application, id=application_id)
     
-    # Check if this is token-based access (for applicants via UUID link)
-    token = request.GET.get('token')
+    # Centralized access control
+    access_type, error = validate_application_access(request, application)
+    if error:
+        return error
     
-    if token:
-        # Token access - redirect to applicant interface
-        if token == str(application.unique_link):
-            return applicant_application_interface(request, application_id)
-        else:
-            messages.error(request, "Invalid access token.")
-            return redirect('applications_list')
-    
-    # Check if this is an authenticated applicant viewing their own application
-    if request.user.is_authenticated and application.applicant and application.applicant.user == request.user:
+    if access_type == 'applicant':
         return applicant_application_interface(request, application_id)
-    
-    # No token and not the applicant - redirect to broker management interface
-    return broker_application_management(request, application_id)
+    else:
+        # broker or superuser
+        return broker_application_management(request, application_id)
 
 
 def applicant_application_interface(request, application_id):
@@ -1508,6 +1503,7 @@ def applicant_application_interface(request, application_id):
     return render(request, 'applications/v2/applicant_application_overview.html', context)
 
 
+@login_required
 def broker_application_management(request, application_id):
     """Broker-focused management dashboard for application oversight"""
     application = get_object_or_404(Application, id=application_id)
@@ -1535,7 +1531,46 @@ def broker_application_management(request, application_id):
         
         if document_type and uploaded_file:
             try:
-                # Create uploaded file record
+                # === Bridge broker upload to applicant IncomeData slots ===
+                from .models import SupportingDocument
+                income_data, _ = IncomeData.objects.get_or_create(
+                    application=application,
+                    defaults={'employment_type': 'employed'}
+                )
+                
+                slot_filled = False
+                slot_field = None
+                
+                if document_type == 'Pay Stub':
+                    for field_name in ['paystub_1', 'paystub_2', 'paystub_3']:
+                        if not getattr(income_data, field_name):
+                            slot_field = field_name
+                            break
+                    if slot_field:
+                        setattr(income_data, slot_field, uploaded_file)
+                        income_data.save()
+                        slot_filled = True
+                        
+                elif document_type == 'Bank Statement':
+                    for field_name in ['bank_statement_1', 'bank_statement_2']:
+                        if not getattr(income_data, field_name):
+                            slot_field = field_name
+                            break
+                    if slot_field:
+                        setattr(income_data, slot_field, uploaded_file)
+                        income_data.save()
+                        slot_filled = True
+                        
+                elif document_type == 'Supporting Document':
+                    doc_label = request.POST.get('document_label', '').strip() or 'Broker Upload'
+                    SupportingDocument.objects.create(
+                        income_data=income_data,
+                        file=uploaded_file,
+                        label=doc_label
+                    )
+                    slot_filled = True
+                
+                # Always create UploadedFile record for AI analysis tracking
                 file_record = UploadedFile.objects.create(
                     application=application,
                     file=uploaded_file,
@@ -1562,7 +1597,19 @@ def broker_application_management(request, application_id):
                         request=request
                     )
                 
-                messages.success(request, f"Document '{document_type}' uploaded successfully!")
+                if slot_filled:
+                    messages.success(request, f"'{document_type}' uploaded and linked to application! AI analysis started.")
+                else:
+                    messages.warning(request, f"All {document_type} slots are filled. Uploaded for AI analysis only.")
+                
+                # Auto-trigger AI analysis
+                try:
+                    from .tasks import analyze_document_async
+                    task = analyze_document_async.delay(file_record.id)
+                    file_record.celery_task_id = task.id
+                    file_record.save()
+                except Exception:
+                    pass  # Analysis will need to be triggered manually
                 
             except Exception as e:
                 messages.error(request, f"Error uploading file: {str(e)}")
@@ -1652,6 +1699,123 @@ def broker_application_management(request, application_id):
             except (ValueError, TypeError):
                 pass  # Handle conversion errors gracefully
 
+    # Build field-level drill-down data for timeline
+    import json as json_module
+    section_details = {}
+    model_map = {
+        1: ('personal_info', PersonalInfoData),
+        2: ('income_info', IncomeData),
+        3: ('legal_docs', LegalDocuments),
+        5: ('payment', ApplicationPayment),
+    }
+
+    for section_num, (attr, ModelClass) in model_map.items():
+        data_model = getattr(application, attr, None)
+        if data_model and hasattr(data_model, 'get_field_status'):
+            section_details[section_num] = data_model.get_field_status()
+        else:
+            # Section not started — show expected fields as all-missing
+            try:
+                temp = ModelClass()
+                if hasattr(temp, 'get_field_status'):
+                    status = temp.get_field_status()
+                    for group in status:
+                        for field in group['fields']:
+                            field['filled'] = False
+                    section_details[section_num] = status
+            except Exception:
+                section_details[section_num] = None
+
+    # Section 4 = Review (no fields to track)
+    section_details[4] = [{'group': 'Review', 'fields': []}]
+
+    # Build unified document inventory (applicant + broker docs)
+    income_data = getattr(application, 'income_info', None)
+    doc_inventory = []
+    
+    # Build mapping of UploadedFile records by document_type for AI analysis linking
+    uploaded_by_type = {}
+    for uf in uploaded_files:
+        dtype = uf.document_type or 'Other'
+        if dtype not in uploaded_by_type:
+            uploaded_by_type[dtype] = []
+        uploaded_by_type[dtype].append(uf)
+    
+    # Counters for sequential slot matching
+    paystub_uf_index = 0
+    bank_uf_index = 0
+    paystub_uploads = uploaded_by_type.get('Pay Stub', [])
+    bank_uploads = uploaded_by_type.get('Bank Statement', [])
+    
+    # Applicant-uploaded structured docs from IncomeData
+    if income_data:
+        for field_name, label, category in [
+            ('paystub_1', 'Pay Stub 1 (Most Recent)', 'pay_stub'),
+            ('paystub_2', 'Pay Stub 2 (2nd Most Recent)', 'pay_stub'),
+            ('paystub_3', 'Pay Stub 3 (3rd Most Recent)', 'pay_stub'),
+            ('bank_statement_1', 'Bank Statement 1 (Most Recent)', 'bank_statement'),
+            ('bank_statement_2', 'Bank Statement 2 (2nd Most Recent)', 'bank_statement'),
+        ]:
+            file_field = getattr(income_data, field_name)
+            is_filed = bool(file_field)
+            
+            # Try to match a corresponding UploadedFile for AI analysis
+            linked_upload = None
+            if is_filed:
+                if category == 'pay_stub' and paystub_uf_index < len(paystub_uploads):
+                    linked_upload = paystub_uploads[paystub_uf_index]
+                    paystub_uf_index += 1
+                elif category == 'bank_statement' and bank_uf_index < len(bank_uploads):
+                    linked_upload = bank_uploads[bank_uf_index]
+                    bank_uf_index += 1
+            
+            doc_inventory.append({
+                'label': label,
+                'category': category,
+                'source': 'broker' if linked_upload else ('applicant' if is_filed else None),
+                'filed': is_filed,
+                'url': file_field.url if is_filed else None,
+                'required': True,
+                'analysis': linked_upload.analysis_results if linked_upload else None,
+                'upload_id': linked_upload.id if linked_upload else None,
+                'uploaded_at': linked_upload.uploaded_at if linked_upload else None,
+                'celery_task_id': linked_upload.celery_task_id if linked_upload else None,
+            })
+        
+        # Supporting documents (optional — from applicant or broker)
+        from .models import SupportingDocument
+        supporting_docs = SupportingDocument.objects.filter(income_data=income_data)
+        supporting_uploads = uploaded_by_type.get('Supporting Document', [])
+        sup_idx = 0
+        for doc in supporting_docs:
+            linked_upload = supporting_uploads[sup_idx] if sup_idx < len(supporting_uploads) else None
+            if linked_upload:
+                sup_idx += 1
+            doc_inventory.append({
+                'label': doc.label or doc.file.name,
+                'category': 'supporting',
+                'source': 'broker' if linked_upload else 'applicant',
+                'filed': True,
+                'url': doc.file.url if doc.file else None,
+                'required': False,
+                'analysis': linked_upload.analysis_results if linked_upload else None,
+                'upload_id': linked_upload.id if linked_upload else None,
+                'uploaded_at': linked_upload.uploaded_at if linked_upload else None,
+                'celery_task_id': linked_upload.celery_task_id if linked_upload else None,
+            })
+    else:
+        # Income data not yet created — show all as missing
+        for lbl in ['Pay Stub 1', 'Pay Stub 2', 'Pay Stub 3', 'Bank Statement 1', 'Bank Statement 2']:
+            doc_inventory.append({
+                'label': lbl, 'category': 'required', 'source': None,
+                'filed': False, 'url': None, 'required': True,
+                'analysis': None, 'upload_id': None, 'uploaded_at': None,
+                'celery_task_id': None,
+            })
+    
+    doc_inventory_filled = sum(1 for d in doc_inventory if d['filed'])
+    doc_inventory_total = sum(1 for d in doc_inventory if d['required'])
+
     context = {
         'application': application,
         'sections': sections,
@@ -1665,32 +1829,18 @@ def broker_application_management(request, application_id):
         'income_verification': income_verification,
         'insights': insights,
         'current_step': application.current_section,
+        'section_details_json': json_module.dumps(section_details),
+        'doc_inventory': doc_inventory,
+        'doc_inventory_filled': doc_inventory_filled,
+        'doc_inventory_total': doc_inventory_total,
     }
     
     return render(request, 'applications/v2/broker_management.html', context)
 
 
-def v2_section_navigation(request, application_id, section_number):
-    """Navigate directly to a specific section"""
-    application = get_object_or_404(Application, id=application_id)
-    
-    # Check if user can access this section
-    # (You might want to add logic to prevent jumping ahead)
-    
-    section_views = {
-        1: 'v2_section1',
-        2: 'v2_section2',
-        3: 'v2_section3',
-        4: 'v2_section4',
-        5: 'v2_section5',
-    }
-    
-    view_name = section_views.get(section_number)
-    if view_name:
-        return redirect(view_name, application_id=application.id)
-    else:
-        messages.error(request, "Invalid section number")
-        return redirect('application_detail', application_id=application.id)
+
+# v2_section_navigation removed — had zero auth, broken URL name references,
+# and was not used in any template or JS.
 
 
 # Placeholder views for other sections
@@ -1699,38 +1849,27 @@ def v2_section2_income(request, application_id):
     """Section 2 - Income & Employment"""
     application = get_object_or_404(Application, id=application_id)
     
-    # Check if this is token-based access (for applicants via UUID link)
-    token = request.GET.get('token')
-    is_applicant_access = False
+    # Centralized access control
     is_preview = request.GET.get('preview') == 'true'
-    
-    # Validate access: valid token OR authenticated as the correct applicant
-    if token and token == str(application.unique_link):
-        is_applicant_access = True
-    elif request.user.is_authenticated and application.applicant and application.applicant.user == request.user:
-        is_applicant_access = True
-    elif not is_preview:
-        # Regular broker/staff access - check authentication
-        if not request.user.is_authenticated:
-            return redirect('login')
+    if not is_preview:
+        access_type, error = validate_application_access(request, application)
+        if error:
+            return error
+        is_applicant_access = (access_type == 'applicant')
+    else:
+        is_applicant_access = False
+    token = request.GET.get('token')
     
     # Get or create IncomeData
     income_data, created = IncomeData.objects.get_or_create(
         application=application,
         defaults={
             'employment_type': 'employed',  # Default choice
-            'employer': '',
-            'job_title': '',
-            'annual_income': 0.00,
-            'supervisor_name': '',
-            'supervisor_email': '',
-            'supervisor_phone': '',
-            'start_date': timezone.now().date(),
         }
     )
     
-    # Pre-fill with applicant profile data if this is a newly created income_data
-    if created and application.applicant:
+    # Pre-fill with applicant profile data (runs on every load, fills only empty fields)
+    if application.applicant:
         from .services import ApplicationDataService
         prefill_data = ApplicationDataService.get_prefill_data_for_applicant(application.applicant)
         
@@ -1762,19 +1901,39 @@ def v2_section2_income(request, application_id):
         }
         field_mapping.update(id_field_mapping)
         
-        # Apply prefill data to income_data instance
+        # Apply prefill data ONLY if the field is currently empty (matches Section 1 pattern)
+        changed = False
         for profile_field, app_field in field_mapping.items():
             if profile_field in prefill_data and prefill_data[profile_field]:
-                value = prefill_data[profile_field]
-                
-                if value:
-                    setattr(income_data, app_field, value)
+                current_value = getattr(income_data, app_field, None)
+                # Only fill if empty — don't overwrite user-entered data
+                # For numeric fields, treat 0 as empty (default from get_or_create)
+                is_empty = not current_value
+                if isinstance(current_value, (int, float)) and current_value == 0:
+                    is_empty = True
+                if is_empty:
+                    setattr(income_data, app_field, prefill_data[profile_field])
+                    changed = True
         
-        # Save if any data was filled
-        if (any(getattr(income_data, field) for field in field_mapping.values() if field)) or created:
+        if changed:
             income_data.save()
-            
-            # Map sub-records from profile to application related models
+        
+        # Copy ID images — just reference the same Cloudinary asset (both fields are CloudinaryField)
+        if not income_data.id_front_image or not income_data.id_back_image:
+            id_doc = application.applicant.identification_documents.first()
+            if id_doc:
+                images_changed = False
+                if not income_data.id_front_image and id_doc.document_image_front:
+                    income_data.id_front_image = id_doc.document_image_front
+                    images_changed = True
+                if not income_data.id_back_image and id_doc.document_image_back:
+                    income_data.id_back_image = id_doc.document_image_back
+                    images_changed = True
+                if images_changed:
+                    income_data.save()
+        
+        # Clone sub-records only on first creation (idempotent via get_or_create)
+        if created:
             from .models import AdditionalEmployment, AdditionalIncome, AssetInfo
             
             # Copy Jobs
@@ -1832,17 +1991,62 @@ def v2_section2_income(request, application_id):
         )
     
     if request.method == 'POST':
-        form = IncomeForm(request.POST, instance=income_data)
+        form = IncomeForm(request.POST, request.FILES, instance=income_data)
         
         if form.is_valid():
             with transaction.atomic():
                 # Save income data
                 income_data = form.save()
                 
+                # Process cropped ID images
+                import json, base64
+                from django.core.files.base import ContentFile
+                
+                def process_cropped_image(crop_data_json, original_file):
+                    if crop_data_json:
+                        try:
+                            crop_info = json.loads(crop_data_json)
+                            if crop_info.get('cropped') and crop_info.get('croppedImage'):
+                                image_data = crop_info['croppedImage']
+                                if 'base64,' in image_data:
+                                    fmt, imgstr = image_data.split('base64,')
+                                    ext = fmt.split('/')[-1].split(';')[0]
+                                    return ContentFile(base64.b64decode(imgstr), name=f'cropped_id.{ext}')
+                        except Exception as e:
+                            print(f"Error processing crop data: {e}")
+                    return original_file
+                
+                # Handle cropped ID front image
+                if 'id_front_image' in request.FILES:
+                    crop_data = request.POST.get('crop_data_id_front', '')
+                    cropped = process_cropped_image(crop_data, request.FILES['id_front_image'])
+                    income_data.id_front_image = cropped
+                    income_data.save()
+                
+                # Handle cropped ID back image
+                if 'id_back_image' in request.FILES:
+                    crop_data = request.POST.get('crop_data_id_back', '')
+                    cropped = process_cropped_image(crop_data, request.FILES['id_back_image'])
+                    income_data.id_back_image = cropped
+                    income_data.save()
+                
                 # Handle dynamic sub-records (additional jobs, income, assets)
                 process_app_dynamic_jobs(request, income_data)
                 process_app_dynamic_income_sources(request, income_data)
                 process_app_dynamic_assets(request, income_data)
+                
+                # Process supporting documents (multi-upload)
+                from .models import SupportingDocument
+                doc_files = request.FILES.getlist('supporting_doc_file[]')
+                doc_labels = request.POST.getlist('supporting_doc_label[]')
+                for i, doc_file in enumerate(doc_files):
+                    if doc_file:
+                        label = doc_labels[i] if i < len(doc_labels) else ''
+                        SupportingDocument.objects.create(
+                            income_data=income_data,
+                            file=doc_file,
+                            label=label.strip() or None
+                        )
                 
                 # Update section status
                 section.status = SectionStatus.COMPLETED
@@ -1899,9 +2103,10 @@ def v2_section2_income(request, application_id):
             section.save()
     
     # Get dynamic sub-records for context/pre-fill
-    additional_employment = income_data.additional_employment.all()
+    additional_employment = income_data.additional_jobs.all()
     additional_income = income_data.additional_income.all()
     assets = income_data.assets.all()
+    supporting_documents = income_data.supporting_documents.all()
     
     context = {
         'application': application,
@@ -1910,6 +2115,7 @@ def v2_section2_income(request, application_id):
         'additional_employment': additional_employment,
         'additional_income': additional_income,
         'assets': assets,
+        'supporting_documents': supporting_documents,
         'current_section': 2,
         'section_title': 'Income & Employment',
         'progress_percent': application.get_total_progress(),
@@ -2029,18 +2235,16 @@ def v2_section3_legal(request, application_id):
     """Section 3 - Legal Documents with E-signatures"""
     application = get_object_or_404(Application, id=application_id)
     
-    # Check access
-    token = request.GET.get('token')
-    is_applicant_access = False
+    # Centralized access control
     is_preview = request.GET.get('preview') == 'true'
-    
-    if token and token == str(application.unique_link):
-        is_applicant_access = True
-    elif request.user.is_authenticated and application.applicant and application.applicant.user == request.user:
-        is_applicant_access = True
-    elif not is_preview:
-        if not request.user.is_authenticated:
-            return redirect('login')
+    if not is_preview:
+        access_type, error = validate_application_access(request, application)
+        if error:
+            return error
+        is_applicant_access = (access_type == 'applicant')
+    else:
+        is_applicant_access = False
+    token = request.GET.get('token')
 
     # Get or create LegalDocuments record
     legal_docs, created = LegalDocuments.objects.get_or_create(
@@ -2125,6 +2329,12 @@ def v2_section3_legal(request, application_id):
 def v2_sign_document(request, application_id):
     """AJAX endpoint to record an e-signature"""
     application = get_object_or_404(Application, id=application_id)
+    
+    # Access control — only the applicant, assigned broker, or superuser can sign
+    access_type, error = validate_application_access(request, application)
+    if error:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+    
     legal_docs = get_object_or_404(LegalDocuments, application=application)
     
     doc_type = request.POST.get('doc_type')
@@ -2170,20 +2380,16 @@ def v2_section4_review(request, application_id):
     """Section 4 - Review all application data before payment"""
     application = get_object_or_404(Application, id=application_id)
     
-    # Check if this is token-based access (for applicants via UUID link)
-    token = request.GET.get('token')
-    is_applicant_access = False
+    # Centralized access control
     is_preview = request.GET.get('preview') == 'true'
-    
-    # Validate access: valid token OR authenticated as the correct applicant
-    if token and token == str(application.unique_link):
-        is_applicant_access = True
-    elif request.user.is_authenticated and application.applicant and application.applicant.user == request.user:
-        is_applicant_access = True
-    elif not is_preview:
-        # Regular broker/staff access - check authentication
-        if not request.user.is_authenticated:
-            return redirect('login')
+    if not is_preview:
+        access_type, error = validate_application_access(request, application)
+        if error:
+            return error
+        is_applicant_access = (access_type == 'applicant')
+    else:
+        is_applicant_access = False
+    token = request.GET.get('token')
     
     # Gather all application data for review
     personal_info = PersonalInfoData.objects.filter(application=application).first()
@@ -2229,8 +2435,8 @@ def v2_section4_review(request, application_id):
     # Validate Income Information (check essential fields)
     if income_data:
         missing_fields = []
-        if not income_data.company_name:
-            missing_fields.append('company name')
+        if not income_data.employer:
+            missing_fields.append('employer')
         if not income_data.annual_income or income_data.annual_income <= 0:
             missing_fields.append('valid annual income')
         
@@ -2350,19 +2556,12 @@ def v2_section5_payment(request, application_id):
     """Section 5 - Payment processing"""
     application = get_object_or_404(Application, id=application_id)
     
-    # Check if this is token-based access (for applicants via UUID link)
+    # Centralized access control
+    access_type, error = validate_application_access(request, application)
+    if error:
+        return error
+    is_applicant_access = (access_type == 'applicant')
     token = request.GET.get('token')
-    is_applicant_access = False
-    
-    # Validate access: valid token OR authenticated as the correct applicant
-    if token and token == str(application.unique_link):
-        is_applicant_access = True
-    elif request.user.is_authenticated and application.applicant and application.applicant.user == request.user:
-        is_applicant_access = True
-    else:
-        # Regular broker/staff access - check authentication
-        if not request.user.is_authenticated:
-            return redirect('login')
     
     # Check if payment already completed
     from .models import ApplicationPayment, PaymentStatus

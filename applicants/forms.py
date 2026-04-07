@@ -314,6 +314,7 @@ class ApplicantBasicInfoForm(forms.ModelForm):
     class Meta:
         model = Applicant
         fields = [
+            'middle_name', 'suffix',
             'street_address_1', 'street_address_2', 'city', 'state', 'zip_code',
             'current_address_years', 'current_address_months',
             'housing_status', 'current_landlord_name', 'current_landlord_phone', 'current_landlord_email',
@@ -591,8 +592,10 @@ class ApplicantBasicInfoForm(forms.ModelForm):
                     </div>
                     '''),
                     Row(
-                        Column(Field('first_name', placeholder="First Name"), css_class='col-md-6'),
-                        Column(Field('last_name', placeholder="Last Name"), css_class='col-md-6'),
+                        Column(Field('first_name', placeholder="First Name"), css_class='col-md-4'),
+                        Column(Field('middle_name', placeholder="Middle Name"), css_class='col-md-3'),
+                        Column(Field('last_name', placeholder="Last Name"), css_class='col-md-3'),
+                        Column(Field('suffix', placeholder="Suffix"), css_class='col-md-2'),
                     ),
                     Row(
                         Column(Field('phone_number', placeholder="(555) 555-5555"), css_class='col-md-6'),
@@ -640,42 +643,32 @@ class ApplicantBasicInfoForm(forms.ModelForm):
                     ),
                     HTML('''
                     <div class="mt-3">
-                        <label class="form-label">
-                            Select Identification Type(s)
+                        <label class="form-label" for="id_select_id_type">
+                            Select Identification Type
                             <i class="fas fa-question-circle text-muted ms-2" 
                                data-bs-toggle="tooltip" 
                                data-bs-placement="right" 
-                               title="At least one form of identification with photos is required for your application. Uploading multiple types (such as Driver's License AND Passport) will help us process your application faster and improve your chances of approval.">
+                               title="A valid government-issued photo ID is required for your application.">
                             </i>
                         </label>
-                        <div class="id-type-checkboxes">
-                            <div class="form-check mb-3">
-                                <input class="form-check-input id-type-checkbox" type="checkbox" value="passport" id="id_passport" style="width: 1.25em; height: 1.25em; accent-color: #ffcc00;">
-                                <label class="form-check-label" for="id_passport" style="margin-left: 8px; padding-top: 2px;">
-                                    <i class="fas fa-passport"></i> Passport
-                                </label>
-                            </div>
-                            <div class="form-check mb-3">
-                                <input class="form-check-input id-type-checkbox" type="checkbox" value="driver_license" id="id_driver_license" style="width: 1.25em; height: 1.25em; accent-color: #ffcc00;">
-                                <label class="form-check-label" for="id_driver_license" style="margin-left: 8px; padding-top: 2px;">
-                                    <i class="fas fa-id-card"></i> Driver's License
-                                </label>
-                            </div>
-                            <div class="form-check mb-3">
-                                <input class="form-check-input id-type-checkbox" type="checkbox" value="state_id" id="id_state_id" style="width: 1.25em; height: 1.25em; accent-color: #ffcc00;">
-                                <label class="form-check-label" for="id_state_id" style="margin-left: 8px; padding-top: 2px;">
-                                    <i class="fas fa-id-card-alt"></i> State ID
-                                </label>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <select class="form-select" id="id_select_id_type" name="selected_id_type">
+                                    <option value="">-- Select ID Type --</option>
+                                    <option value="passport">Passport</option>
+                                    <option value="driver_license">Driver's License</option>
+                                    <option value="state_id">State ID</option>
+                                </select>
                             </div>
                         </div>
                     </div>
                     '''),
                     Row(
-                        Column(Field('driver_license_number', placeholder="Driver's License Number"), css_class='col-md-4 driver-license-field d-none'),
-                        Column('driver_license_state', css_class='col-md-4 driver-license-field d-none'),
+                        Column(Field('driver_license_number', placeholder="ID Number"), css_class='col-md-4 id-detail-field d-none'),
+                        Column('driver_license_state', css_class='col-md-4 id-detail-field d-none'),
                     ),
                     HTML('''
-                    <!-- Upload sections that will be shown/hidden based on selection -->
+                    <!-- Upload sections toggled by dropdown -->
                     <div id="passport_upload" class="id-upload-section mt-3" style="display: none;">
                         <div class="card">
                             <div class="card-body">
@@ -711,7 +704,7 @@ class ApplicantBasicInfoForm(forms.ModelForm):
                             <div class="card-body">
                                 <h6 class="mb-3"><i class="fas fa-id-card"></i> Upload Driver's License</h6>
                                 
-                                <!-- Front of Driver's License -->
+                                <!-- Front -->
                                 <div class="mb-4">
                                     <label class="form-label fw-bold">Front of Driver's License</label>
                                     <div class="row align-items-center">
@@ -724,7 +717,7 @@ class ApplicantBasicInfoForm(forms.ModelForm):
                                             </div>
                                         </div>
                                         <div class="col">
-                                            <p class="text-muted small mb-3">Upload a clear photo of the front of your driver's license</p>
+                                            <p class="text-muted small mb-3">Upload a clear photo of the front</p>
                                             <div class="d-flex gap-2 mb-3 image-cropper-buttons">
                                                 <button type="button" class="btn btn-primary btn-sm"
                                                         onclick="document.getElementById('id_driver_license_front').click()">
@@ -738,7 +731,7 @@ class ApplicantBasicInfoForm(forms.ModelForm):
                                     </div>
                                 </div>
                                 
-                                <!-- Back of Driver's License -->
+                                <!-- Back -->
                                 <div class="mb-3">
                                     <label class="form-label fw-bold">Back of Driver's License</label>
                                     <div class="row align-items-center">
@@ -751,7 +744,7 @@ class ApplicantBasicInfoForm(forms.ModelForm):
                                             </div>
                                         </div>
                                         <div class="col">
-                                            <p class="text-muted small mb-3">Upload a clear photo of the back of your driver's license</p>
+                                            <p class="text-muted small mb-3">Upload a clear photo of the back</p>
                                             <div class="d-flex gap-2 mb-3 image-cropper-buttons">
                                                 <button type="button" class="btn btn-primary btn-sm"
                                                         onclick="document.getElementById('id_driver_license_back').click()">
@@ -773,7 +766,7 @@ class ApplicantBasicInfoForm(forms.ModelForm):
                             <div class="card-body">
                                 <h6 class="mb-3"><i class="fas fa-id-badge"></i> Upload State ID</h6>
                                 
-                                <!-- Front of State ID -->
+                                <!-- Front -->
                                 <div class="mb-4">
                                     <label class="form-label fw-bold">Front of State ID</label>
                                     <div class="row align-items-center">
@@ -786,7 +779,7 @@ class ApplicantBasicInfoForm(forms.ModelForm):
                                             </div>
                                         </div>
                                         <div class="col">
-                                            <p class="text-muted small mb-3">Upload a clear photo of the front of your state ID</p>
+                                            <p class="text-muted small mb-3">Upload a clear photo of the front</p>
                                             <div class="d-flex gap-2 mb-3 image-cropper-buttons">
                                                 <button type="button" class="btn btn-primary btn-sm"
                                                         onclick="document.getElementById('id_state_id_front').click()">
@@ -800,7 +793,7 @@ class ApplicantBasicInfoForm(forms.ModelForm):
                                     </div>
                                 </div>
                                 
-                                <!-- Back of State ID -->
+                                <!-- Back -->
                                 <div class="mb-3">
                                     <label class="form-label fw-bold">Back of State ID</label>
                                     <div class="row align-items-center">
@@ -813,7 +806,7 @@ class ApplicantBasicInfoForm(forms.ModelForm):
                                             </div>
                                         </div>
                                         <div class="col">
-                                            <p class="text-muted small mb-3">Upload a clear photo of the back of your state ID</p>
+                                            <p class="text-muted small mb-3">Upload a clear photo of the back</p>
                                             <div class="d-flex gap-2 mb-3 image-cropper-buttons">
                                                 <button type="button" class="btn btn-primary btn-sm"
                                                         onclick="document.getElementById('id_state_id_back').click()">
@@ -899,7 +892,7 @@ class ApplicantBasicInfoForm(forms.ModelForm):
                             HTML('''
                             <div class="id-type-checkboxes">
                                 <div class="form-check mb-3">
-                                    <input class="form-check-input id-type-checkbox" type="checkbox" id="is_rental_checkbox" name="is_rental_checkbox" {% if form.instance.housing_status == 'rent' %}checked{% endif %} style="width: 1.25em; height: 1.25em; accent-color: #ffcc00;">
+                                    <input class="form-check-input id-type-checkbox" type="checkbox" id="is_rental_checkbox" name="is_rental_checkbox" {% if form.instance.housing_status == 'Rent' %}checked{% endif %} style="width: 1.25em; height: 1.25em; accent-color: #ffcc00;">
                                     <label class="form-check-label" for="is_rental_checkbox" style="margin-left: 8px; padding-top: 2px;">
                                         Is this a Rental?
                                     </label>
@@ -1704,7 +1697,7 @@ class ApplicantForm(forms.ModelForm):
                     HTML('''
                     <div class="id-type-checkboxes">
                         <div class="form-check mb-3">
-                            <input class="form-check-input id-type-checkbox" type="checkbox" id="is_rental_checkbox" name="is_rental_checkbox" {% if form.instance.housing_status == 'rent' %}checked{% endif %} style="width: 1.25em; height: 1.25em; accent-color: #ffcc00;">
+                            <input class="form-check-input id-type-checkbox" type="checkbox" id="is_rental_checkbox" name="is_rental_checkbox" {% if form.instance.housing_status == 'Rent' %}checked{% endif %} style="width: 1.25em; height: 1.25em; accent-color: #ffcc00;">
                             <label class="form-check-label" for="is_rental_checkbox" style="margin-left: 8px; padding-top: 2px;">
                                 Is this a Rental?
                             </label>

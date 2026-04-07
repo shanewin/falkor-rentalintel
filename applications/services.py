@@ -36,11 +36,10 @@ class ApplicationDataService:
             'city': applicant.city,
             'state': applicant.state,
             'zip_code': applicant.zip_code,
-            'housing_status': applicant.housing_status.title() if applicant.housing_status else '',
+            'housing_status': applicant.housing_status or '',
             'current_monthly_rent': applicant.monthly_rent,
             'current_address_years': getattr(applicant, 'current_address_years', 0),
             'current_address_months': getattr(applicant, 'current_address_months', 0),
-            'housing_status': (applicant.housing_status.title() if applicant.housing_status else ''),
             
             # Previous Addresses
             'previous_addresses': [
@@ -68,7 +67,10 @@ class ApplicationDataService:
                     'pet_type': pet.pet_type,
                     'quantity': pet.quantity,
                     'description': pet.description,
-                    'photos': [photo.image.url for photo in pet.photos.all()]
+                    'photos': [
+                        {'url': photo.image.url, 'public_id': photo.image.public_id}
+                        for photo in pet.photos.all()
+                    ]
                 }
                 for pet in applicant.pets.all()
             ],
@@ -77,9 +79,11 @@ class ApplicationDataService:
             'landlord_name': applicant.current_landlord_name,
             'landlord_phone': applicant.current_landlord_phone,
             'landlord_email': applicant.current_landlord_email,
+            'reason_for_moving': applicant.reason_for_moving,
+            'has_been_evicted': applicant.evicted_before,
+            'eviction_explanation': applicant.eviction_explanation,
             
             # Housing Needs (Desired Property)
-            'desired_move_in_date': applicant.desired_move_in_date,
             'has_pets': applicant.has_pets,
             
             # Employment Status & Fields
@@ -100,6 +104,19 @@ class ApplicationDataService:
             'school_address': applicant.school_address,
             'school_phone': applicant.school_phone,
         }
+        
+        # Identification — pull from IdentificationDocument model (proper KYC) first
+        id_doc = applicant.identification_documents.first()
+        if id_doc:
+            prefill_data['id_type'] = id_doc.id_type  # 'passport', 'driver_license', 'state_id'
+            # Use document_number if available, otherwise fall back to legacy field
+            prefill_data['id_number'] = id_doc.document_number or applicant.driver_license_number
+            prefill_data['id_state'] = applicant.driver_license_state
+        elif applicant.driver_license_number:
+            # Fallback to legacy driver_license_* fields
+            prefill_data['id_type'] = 'driver_license'
+            prefill_data['id_number'] = applicant.driver_license_number
+            prefill_data['id_state'] = applicant.driver_license_state
         
         # Get data from most recent completed application if available
         recent_app = Application.objects.filter(
