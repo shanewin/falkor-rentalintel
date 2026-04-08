@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load json_filters %}
+{% load apartment_extras %}
 
 {% block content %}
 <div class="container mt-4">
@@ -166,8 +167,176 @@
 
                 </div>
             </div>
+
+            {% if application.apartment %}
+            <!-- ── Property Details: collapsible panel attached to header ── -->
+            <div id="propertyDetailsPanel" class="collapse show" style="border-top: 1px solid #f0f0f0;">
+                <div class="px-0 pt-0 pb-0" style="background: #fafafa;">
+                    <div class="row g-0 align-items-stretch">
+                        <!-- Photo Carousel -->
+                        <div class="col-lg-5" style="min-height: 220px; max-height: 260px; overflow: hidden; position: relative;">
+                            <div id="propPhotoCarousel" class="carousel slide h-100" data-bs-ride="carousel" data-bs-interval="3500">
+                                <div class="carousel-inner h-100">
+                                    {% with all_images=application.apartment.all_images fallback_img=application.apartment.id|get_fallback_image %}
+                                    {% if all_images %}
+                                        {% for img in all_images %}
+                                        <div class="carousel-item {% if forloop.first %}active{% endif %} h-100">
+                                            <img src="{{ img.large_url }}" class="d-block w-100 h-100" style="object-fit: cover;"
+                                                 alt="{{ application.apartment.building.name }}"
+                                                 onerror="this.src='{{ fallback_img }}';this.onerror=null;">
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <div class="carousel-item active h-100">
+                                            <img src="{{ fallback_img }}" class="d-block w-100 h-100" style="object-fit: cover;" alt="Property">
+                                        </div>
+                                    {% endif %}
+                                    {% endwith %}
+                                </div>
+                                {% if application.apartment.all_images.count > 1 %}
+                                <button class="carousel-control-prev" type="button" data-bs-target="#propPhotoCarousel" data-bs-slide="prev" style="width: 30px;">
+                                    <span class="carousel-control-prev-icon" style="width: 20px; height: 20px;"></span>
+                                </button>
+                                <button class="carousel-control-next" type="button" data-bs-target="#propPhotoCarousel" data-bs-slide="next" style="width: 30px;">
+                                    <span class="carousel-control-next-icon" style="width: 20px; height: 20px;"></span>
+                                </button>
+                                <div class="carousel-indicators" style="margin-bottom: 6px;">
+                                    {% for img in application.apartment.all_images %}
+                                    <button type="button" data-bs-target="#propPhotoCarousel" data-bs-slide-to="{{ forloop.counter0 }}"
+                                            {% if forloop.first %}class="active"{% endif %}
+                                            style="width: 6px; height: 6px; border-radius: 50%;"></button>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <div class="position-absolute bottom-0 start-0 w-100 px-3 py-2" style="background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); pointer-events: none;">
+                                    <div class="text-white fw-bold" style="font-size: 0.85rem;">{{ application.apartment.building.name }}</div>
+                                    <div class="text-white-50" style="font-size: 0.72rem;">Unit {{ application.apartment.unit_number }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Key Facts -->
+                        <div class="col-lg-3 px-4 py-3 border-start border-end" style="border-color: #ebebeb !important; background: #fff;">
+                            <div class="text-uppercase fw-bold text-muted mb-3" style="font-size: 0.6rem; letter-spacing: 1px; border-bottom: 1px solid #f0f0f0; padding-bottom: 8px;">Property Info</div>
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <div class="text-muted" style="font-size: 0.65rem; margin-bottom: 3px;">Monthly Rent</div>
+                                    <div class="fw-bold" style="font-size: 1.05rem; color: #1a1a1a;">${{ application.apartment.rent_price|floatformat:0 }}</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-muted" style="font-size: 0.65rem; margin-bottom: 3px;">Layout</div>
+                                    <div class="fw-semibold" style="font-size: 0.85rem; color: #1a1a1a;">{{ application.apartment.bedrooms|default:"Studio" }}bd / {{ application.apartment.bathrooms|default:"1" }}ba</div>
+                                </div>
+                                {% if application.apartment.building.neighborhood %}
+                                <div class="col-6">
+                                    <div class="text-muted" style="font-size: 0.65rem; margin-bottom: 3px;">Neighborhood</div>
+                                    <div class="fw-semibold" style="font-size: 0.82rem; color: #1a1a1a; line-height: 1.3;">{{ application.apartment.building.get_neighborhood_display }}</div>
+                                </div>
+                                {% endif %}
+                                {% if application.apartment.building.pet_policy %}
+                                <div class="col-6">
+                                    <div class="text-muted" style="font-size: 0.65rem; margin-bottom: 3px;"><i class="fas fa-paw me-1 text-warning"></i>Pets</div>
+                                    <div class="fw-semibold" style="font-size: 0.82rem; color: #1a1a1a;">{{ application.apartment.building.get_pet_policy_display }}</div>
+                                </div>
+                                {% endif %}
+                                {% if application.apartment.building.walk_score %}
+                                <div class="col-6">
+                                    <div class="text-muted" style="font-size: 0.65rem; margin-bottom: 3px;"><i class="fas fa-walking me-1 text-warning"></i>Walk Score</div>
+                                    <div class="fw-semibold" style="font-size: 0.85rem; color: #1a1a1a;">{{ application.apartment.building.walk_score }}<span class="text-muted fw-normal" style="font-size: 0.7rem;">/100</span></div>
+                                </div>
+                                {% endif %}
+                                {% if application.apartment.building.transit_score %}
+                                <div class="col-6">
+                                    <div class="text-muted" style="font-size: 0.65rem; margin-bottom: 3px;"><i class="fas fa-bus me-1 text-warning"></i>Transit</div>
+                                    <div class="fw-semibold" style="font-size: 0.85rem; color: #1a1a1a;">{{ application.apartment.building.transit_score }}<span class="text-muted fw-normal" style="font-size: 0.7rem;">/100</span></div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <!-- Amenities -->
+                        <div class="col-lg-4 px-4 py-3" style="background: #fff;">
+                            {% if application.apartment.building.amenities.exists %}
+                            <div class="mb-4">
+                                <div class="d-flex align-items-center gap-2 mb-2" style="border-bottom: 1px solid #f0f0f0; padding-bottom: 8px;">
+                                    <i class="fas fa-building" style="font-size: 0.65rem; color: #666;"></i>
+                                    <span class="text-uppercase fw-bold text-muted" style="font-size: 0.6rem; letter-spacing: 1px;">Building Amenities</span>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% for amenity in application.apartment.building.amenities.all %}
+                                    <span class="badge bg-light border rounded-pill px-2 py-1 shadow-sm" style="font-size: 0.7rem; color: #333; font-weight: 500;">
+                                        <i class="fas {{ amenity.icon|default:'fa-check' }} me-1" style="color: #666;"></i>{{ amenity.name }}
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% if application.apartment.amenities.exists %}
+                            <div>
+                                <div class="d-flex align-items-center gap-2 mb-2" style="border-bottom: 1px solid #fff5cc; padding-bottom: 8px;">
+                                    <i class="fas fa-door-open" style="font-size: 0.65rem; color: #b8860b;"></i>
+                                    <span class="text-uppercase fw-bold" style="font-size: 0.6rem; letter-spacing: 1px; color: #b8860b;">Unit Amenities</span>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% for amenity in application.apartment.amenities.all %}
+                                    <span class="badge rounded-pill px-2 py-1 shadow-sm" style="font-size: 0.7rem; background: #fffbe8; color: #7a5c00; border: 1px solid #ffe066; font-weight: 500;">
+                                        <i class="fas {{ amenity.icon|default:'fa-check' }} me-1" style="color: #c49a00;"></i>{{ amenity.name }}
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% if not application.apartment.building.amenities.exists and not application.apartment.amenities.exists %}
+                            <div class="text-muted small">No amenities listed.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% if application.apartment.description or application.apartment.building.description %}
+                <div class="px-5 py-4" style="background: #fafafa; border-top: 1px solid #eeeeee;">
+                    <div class="row g-5">
+                        {% if application.apartment.description %}
+                        <div class="col-lg-{% if application.apartment.building.description %}6{% else %}12{% endif %}">
+                            <div class="text-uppercase fw-bold mb-2" style="font-size: 0.58rem; letter-spacing: 1px; color: rgba(0,0,0,0.35);">About the Apartment</div>
+                            <p class="small text-secondary mb-0" style="line-height: 1.7;">{{ application.apartment.description }}</p>
+                        </div>
+                        {% endif %}
+                        {% if application.apartment.building.description %}
+                        <div class="col-lg-{% if application.apartment.description %}6{% else %}12{% endif %} {% if application.apartment.description %}border-start{% endif %}" style="border-color: #e8e8e8 !important;">
+                            <div class="text-uppercase fw-bold mb-2" style="font-size: 0.58rem; letter-spacing: 1px; color: rgba(0,0,0,0.35);">About {{ application.apartment.building.name }}</div>
+                            <p class="small text-secondary mb-0" style="line-height: 1.7;">{{ application.apartment.building.description }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <!-- Toggle bar at the bottom of the header card -->
+            <div class="d-flex align-items-center justify-content-center px-4 py-2"
+                 style="background: #f4f4f4; border-top: 1px solid #ececec; border-radius: 0 0 16px 16px; cursor: pointer;"
+                 onclick="togglePropertyDetails()" id="propertyToggleBar">
+                <span style="font-size: 0.72rem; font-weight: 600; color: rgba(0,0,0,0.4); text-transform: uppercase; letter-spacing: 1px;">
+                    <i class="fas fa-chevron-down me-1" id="propertyToggleChevron" style="transition: transform 0.25s; transform: rotate(180deg);"></i>
+                    Property Details
+                </span>
+            </div>
+            {% endif %}
+
         </div>
     </div>
+
+    <script>
+    function togglePropertyDetails() {
+        var panel = document.getElementById('propertyDetailsPanel');
+        var chevron = document.getElementById('propertyToggleChevron');
+        var isOpen = panel.classList.contains('show');
+        if (isOpen) {
+            bootstrap.Collapse.getInstance(panel).hide();
+            chevron.style.transform = 'rotate(0deg)';
+        } else {
+            bootstrap.Collapse.getOrCreateInstance(panel).show();
+            chevron.style.transform = 'rotate(180deg)';
+        }
+    }
+    </script>
 
     <style>
         /* ── Copy-to-clipboard contact buttons ── */
@@ -327,15 +496,15 @@
         </div>
         <!-- Right Column - Property Details + Application Content -->
         <div class="col-lg-9">
-            {% include 'applications/v2/_application_sidebar.html' with show_detailed_info=True hide_broker_card=True hide_progress_steps=True %}
+            {% include 'applications/v2/_application_sidebar.html' with show_detailed_info=True hide_broker_card=True hide_progress_steps=True hide_property_details=True %}
 
 
             <!-- Application Progress Timeline -->
 
             <div class="card mb-4 shadow border-0">
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 fw-bold"><i class="fas fa-route me-2"></i>Application Progress</h5>
-                    <span class="badge bg-dark rounded-pill px-3 py-2">{{ progress_percent|floatformat:0 }}% Complete</span>
+                <div class="card-header py-3 d-flex justify-content-between align-items-center" style="background: #1a1a1a;">
+                    <h5 class="mb-0 fw-bold text-white"><i class="fas fa-route me-2" style="color: #ffe502;"></i>Application Progress</h5>
+                    <span class="badge rounded-pill px-3 py-2" style="background: #ffe502; color: #1a1a1a; font-weight: 700;">{{ progress_percent|floatformat:0 }}% Complete</span>
                 </div>
                 <div class="card-body px-4 py-4">
                     <!-- Overall progress bar -->
@@ -511,34 +680,74 @@
                 </div>
             </div>
             {% endif %}
-
-
-        </div>
-
-    </div><!-- /row -->
-
-
-    <!-- ═══════════════════════════════════════════════════════════════ -->
-    <!-- Document Management & AI Analysis — Full-Width Section        -->
-    <!-- ═══════════════════════════════════════════════════════════════ -->
-
-    <div class="card mt-4 mb-4 shadow border-0 overflow-hidden">
-        <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 fw-bold"><i class="fas fa-folder-open me-2"></i>Document Management & AI Analysis</h5>
-            <div class="d-flex align-items-center gap-3">
-                <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #ffe502, #f59e0b); color: #1a1a1a; font-weight: 600;">
-                    {{ doc_inventory_filled }}/{{ doc_inventory_total }} Required
-                </span>
-                <button class="btn btn-sm btn-outline-light" type="button" 
-                        data-bs-toggle="collapse" data-bs-target="#brokerUploadForm">
-                    <i class="fas fa-plus me-1"></i>Upload
-                </button>
+            {% if insights %}
+            <!-- Pre-Qualification Summary -->
+            <div class="card mb-4 shadow border-0 overflow-hidden">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #1a1a1a, #2d2d2d);">
+                    <h5 class="mb-0 fw-bold text-white"><i class="fas fa-chart-line me-2" style="color: #ffe502;"></i>Pre-Qualification Summary</h5>
+                    <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #ffe502, #f59e0b); color: #1a1a1a; font-weight: 600; font-size: 0.75rem;">Profile-Based Estimate</span>
+                </div>
+                <div class="card-body px-4 py-3">
+                    <div class="d-flex align-items-center gap-4 flex-wrap">
+                        <div class="text-center" style="min-width: 80px;">
+                            <div class="fw-bold mb-0 {% if insights.overall_score >= 80 %}text-success{% elif insights.overall_score >= 60 %}text-primary{% elif insights.overall_score >= 40 %}text-warning{% else %}text-danger{% endif %}" style="font-size: 2rem; line-height: 1;">{{ insights.overall_score }}</div>
+                            <div class="badge mt-1 {% if insights.overall_score >= 80 %}bg-success{% elif insights.overall_score >= 60 %}bg-primary{% elif insights.overall_score >= 40 %}bg-warning text-dark{% else %}bg-danger{% endif %}" style="font-size: 0.65rem;">
+                                {% if insights.overall_score >= 80 %}Highly Qualified{% elif insights.overall_score >= 60 %}Qualified{% elif insights.overall_score >= 40 %}Needs Review{% else %}High Risk{% endif %}
+                            </div>
+                        </div>
+                        <div class="vr" style="opacity: 0.15;"></div>
+                        <div class="d-flex flex-wrap gap-4 flex-grow-1" style="font-size: 0.8rem;">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-dollar-sign {% if insights.affordability.can_afford %}text-success{% else %}text-warning{% endif %}"></i>
+                                <div>
+                                    <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Affordability</div>
+                                    <div class="fw-semibold">{% if insights.affordability.income_multiple > 0 %}{{ insights.affordability.income_multiple|floatformat:1 }}x Income{% if insights.affordability.can_afford %} <i class="fas fa-check-circle text-success" style="font-size: 0.7rem;"></i>{% endif %}{% else %}No data{% endif %}</div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-briefcase text-primary"></i>
+                                <div>
+                                    <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Employment</div>
+                                    <div class="fw-semibold">{% if insights.employment_stability.employment_length != 'Unknown' %}{{ insights.employment_stability.employment_length }}{% else %}Not provided{% endif %}</div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-signal {% if insights.confidence_level == 'High' %}text-success{% elif insights.confidence_level == 'Medium' %}text-primary{% else %}text-muted{% endif %}"></i>
+                                <div>
+                                    <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Confidence</div>
+                                    <div class="fw-semibold">{{ insights.confidence_level }}</div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                {% if insights.red_flags %}<i class="fas fa-exclamation-triangle text-danger"></i>
+                                    <div><div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Red Flags</div><div class="fw-semibold text-danger">{{ insights.red_flags|length }} Found</div></div>
+                                {% else %}<i class="fas fa-shield-alt text-success"></i>
+                                    <div><div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Red Flags</div><div class="fw-semibold text-success">None</div></div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-muted mb-0 mt-3" style="font-size: 0.72rem;"><i class="fas fa-info-circle me-1"></i>Estimates are based on the applicant's self-reported profile data, not verified documents.</p>
+                </div>
             </div>
-        </div>
+            {% endif %}
 
-        <!-- Smart Insights Strip -->
-        {% if insights %}
-        <div class="border-bottom" style="background: linear-gradient(135deg, #fafbfc, #f1f5f9);">
+            <!-- Supporting Documents -->
+            <div class="card mb-4 shadow border-0 overflow-hidden">
+                <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-folder-open me-2"></i>Supporting Documents</h5>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #ffe502, #f59e0b); color: #1a1a1a; font-weight: 600;">
+                            {{ doc_inventory_filled }}/{{ doc_inventory_total }} Required
+                        </span>
+                        <button class="btn btn-sm btn-outline-light" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#brokerUploadForm">
+                            <i class="fas fa-plus me-1"></i>Upload
+                        </button>
+                    </div>
+                </div>
+
+
             <div class="d-flex align-items-center px-4 py-3 gap-4">
                 <!-- Score Badge -->
                 <div class="text-center" style="min-width: 80px;">
