@@ -392,7 +392,46 @@ class ApplicantBasicInfoForm(forms.ModelForm):
 
     def save(self, commit=True):
         applicant = super().save(commit=commit)
-        
+
+        # -----------------------------------------------------------------------
+        # Explicitly persist property-backed fields.
+        # first_name, last_name, email, and phone_number are @property fields on
+        # the Applicant model that delegate reads/writes to the linked User object.
+        # Django's ModelForm.save() only touches db columns listed in Meta.fields,
+        # so it never calls the property setters — changes were silently discarded.
+        # -----------------------------------------------------------------------
+        first_name = self.cleaned_data.get('first_name')
+        last_name = self.cleaned_data.get('last_name')
+        email = self.cleaned_data.get('email')
+        phone_number = self.cleaned_data.get('phone_number')
+
+        if first_name:
+            applicant.first_name = first_name
+        if last_name:
+            applicant.last_name = last_name
+        if email:
+            applicant.email = email
+        if phone_number is not None:
+            applicant.phone_number = phone_number
+
+        # Also persist the shadow fields on the Applicant row so unlinked applicants
+        # (no User account yet) also get their data saved correctly.
+        shadow_fields = []
+        if first_name:
+            applicant._first_name = first_name
+            shadow_fields.append('_first_name')
+        if last_name:
+            applicant._last_name = last_name
+            shadow_fields.append('_last_name')
+        if email:
+            applicant._email = email
+            shadow_fields.append('_email')
+        if phone_number is not None:
+            applicant._phone_number = phone_number
+            shadow_fields.append('_phone_number')
+        if shadow_fields and commit:
+            applicant.save(update_fields=shadow_fields)
+
         # Save SMS preferences
         if self.request and self.request.user.is_authenticated:
             # We import here to avoid circular dependencies

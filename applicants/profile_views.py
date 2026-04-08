@@ -272,6 +272,40 @@ def profile_step1(request):
                         monthly_rent=addr_data['monthly_rent'] if addr_data['monthly_rent'] else None,
                     )
                 
+                # -----------------------------------------------------------------------
+                # Forward sync: push updated contact fields into open (unsubmitted)
+                # applications so the applicant sees their latest info everywhere.
+                # We only update applications that have NOT been submitted yet.
+                # -----------------------------------------------------------------------
+                from applications.models import Application, PersonalInfoData as AppPersonalInfo
+                open_applications = Application.objects.filter(
+                    applicant=applicant,
+                    submitted_by_applicant=False
+                )
+                sync_fields = {
+                    'first_name': applicant.first_name,
+                    'last_name': applicant.last_name,
+                    'email': applicant.email,
+                    'phone_cell': applicant.phone_number,
+                    'street_address_1': applicant.street_address_1,
+                    'street_address_2': applicant.street_address_2,
+                    'city': applicant.city,
+                    'state': applicant.state,
+                    'zip_code': applicant.zip_code,
+                }
+                for app in open_applications:
+                    try:
+                        pi = app.personal_info
+                        changed = False
+                        for app_field, new_val in sync_fields.items():
+                            if new_val and getattr(pi, app_field, None) != new_val:
+                                setattr(pi, app_field, new_val)
+                                changed = True
+                        if changed:
+                            pi.save()
+                    except AppPersonalInfo.DoesNotExist:
+                        pass
+
                 messages.success(request, "Basic information saved! Let's continue with your housing preferences.")
                 return redirect('profile_step2')
     else:
