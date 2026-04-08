@@ -10,6 +10,10 @@ app = Celery('realestate')
 # the configuration object to child processes.
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
+# Explicitly retain broker connection retry behavior on startup.
+# Required to avoid a breaking change in Celery 6.0.
+app.conf.broker_connection_retry_on_startup = True
+
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()
 
