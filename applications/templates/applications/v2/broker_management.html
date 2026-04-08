@@ -324,18 +324,38 @@
     </div>
 
     <script>
-    function togglePropertyDetails() {
-        var panel = document.getElementById('propertyDetailsPanel');
-        var chevron = document.getElementById('propertyToggleChevron');
-        var isOpen = panel.classList.contains('show');
-        if (isOpen) {
-            bootstrap.Collapse.getInstance(panel).hide();
-            chevron.style.transform = 'rotate(0deg)';
-        } else {
-            bootstrap.Collapse.getOrCreateInstance(panel).show();
-            chevron.style.transform = 'rotate(180deg)';
+    (function () {
+        var panel, chevron, collapseInstance;
+
+        function initPropertyToggle() {
+            panel   = document.getElementById('propertyDetailsPanel');
+            chevron = document.getElementById('propertyToggleChevron');
+            if (!panel) return;
+
+            // Create (or fetch) the Bootstrap Collapse instance once
+            collapseInstance = bootstrap.Collapse.getOrCreateInstance(panel, { toggle: false });
+
+            // Sync chevron whenever Bootstrap finishes showing/hiding
+            panel.addEventListener('shown.bs.collapse',  function () {
+                chevron.style.transform = 'rotate(180deg)';
+            });
+            panel.addEventListener('hidden.bs.collapse', function () {
+                chevron.style.transform = 'rotate(0deg)';
+            });
         }
-    }
+
+        window.togglePropertyDetails = function () {
+            if (!collapseInstance) return;
+            collapseInstance.toggle();
+        };
+
+        // Bootstrap must be ready before we call getOrCreateInstance
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initPropertyToggle);
+        } else {
+            initPropertyToggle();
+        }
+    })();
     </script>
 
     <style>
