@@ -42,5 +42,8 @@ EXPOSE 8000
 
 # Run migrations then start gunicorn
 # NOTE: Railway uses Dockerfile, not Procfile, so the Procfile 'release' step is ignored.
-# Migrations must run here instead.
-CMD python manage.py migrate --noinput && gunicorn realestate.wsgi:application --bind 0.0.0.0:8000
+# One-time fix: migration 0033 was recorded as applied but the column was never created.
+# Fake-reverse it, then re-apply so the column actually gets created.
+CMD python manage.py migrate applicants 0032 --fake --noinput && \
+    python manage.py migrate --noinput && \
+    gunicorn realestate.wsgi:application --bind 0.0.0.0:8000
