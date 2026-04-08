@@ -5,34 +5,47 @@
 {% block content %}
 <div class="container mt-4">
     
-    <!-- Enhanced Application Header -->
+    <!-- Redesigned Application Header -->
     <div class="application-header mb-4">
-        <div class="d-flex justify-content-between align-items-center">
-            <a href="{% url 'applications_list' %}" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> Back to Applications
-            </a>
-            <span class="badge bg-secondary">Application #{{ application.id }}</span>
-        </div>
-        
-        <div class="card mt-3 border-0 shadow" style="background: linear-gradient(135deg, #ffe502 0%, #ffb302 100%);">
-            <div class="card-body" style="color: #1a1a1a;">
-                <div class="row align-items-center">
-                    <!-- Applicant Info -->
-                    <div class="col-md-4">
-                        <div class="d-flex align-items-center">
-                            <div class="applicant-avatar me-3">
+        <div class="card border-0 overflow-hidden" style="border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.10);">
+
+            <!-- Top Bar: Navigation + Application ID + Status -->
+            <div class="d-flex justify-content-between align-items-center px-4 py-2" style="background: #1a1a1a; color: #fff; border-radius: 16px 16px 0 0;">
+                <a href="{% url 'applications_list' %}" class="btn btn-sm d-flex align-items-center gap-2" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.15); font-size: 0.8rem; padding: 4px 12px; border-radius: 20px; text-decoration: none; transition: background 0.2s;">
+                    <i class="fas fa-arrow-left" style="font-size: 0.7rem;"></i> All Applications
+                </a>
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size: 0.75rem; color: rgba(255,255,255,0.5); letter-spacing: 0.5px;">APPLICATION</span>
+                    <span style="font-size: 0.85rem; font-weight: 700; color: #ffe502;">#{{ application.id }}</span>
+                    <span class="badge rounded-pill ms-1" style="{% if application.status == 'NEW' or application.get_status_display == 'New' %}background: #ffe502; color: #1a1a1a;{% elif application.status == 'APPROVED' %}background: #22c55e; color: #fff;{% elif application.status == 'REJECTED' %}background: #ef4444; color: #fff;{% else %}background: rgba(255,255,255,0.15); color: #fff;{% endif %} font-size: 0.7rem; font-weight: 600; padding: 4px 10px;">
+                        {{ application.get_status_display }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Hero Body -->
+            <div class="px-4 py-4" style="background: #fff; border-top: 1px solid #f0f0f0;">
+                <div class="row align-items-center g-3">
+
+                    <!-- Left: Applicant Profile -->
+                    <div class="col-lg-4 col-md-5">
+                        <div class="d-flex align-items-center gap-3">
+                            <!-- Avatar -->
+                            <div style="flex-shrink: 0; position: relative;">
                                 {% if application.applicant and application.applicant.photos.exists %}
                                     {% with photo=application.applicant.photos.first %}
-                                        <img src="{{ photo.thumbnail_url }}" class="rounded-circle" style="width: 80px; height: 80px; object-fit: cover; border: 3px solid #1a1a1a; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                                        <img src="{{ photo.thumbnail_url }}" class="rounded-circle" style="width: 72px; height: 72px; object-fit: cover; border: 3px solid #ffe502; box-shadow: 0 2px 12px rgba(0,0,0,0.15);">
                                     {% endwith %}
                                 {% else %}
-                                    <div class="rounded-circle bg-white d-flex align-items-center justify-content-center" style="width: 80px; height: 80px; border: 3px solid #1a1a1a; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
-                                        <i class="fas fa-user text-secondary" style="font-size: 40px;"></i>
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 72px; height: 72px; background: linear-gradient(135deg, #ffe502, #ffb302); border: 3px solid #f0f0f0; box-shadow: 0 2px 12px rgba(0,0,0,0.1);">
+                                        <i class="fas fa-user" style="font-size: 28px; color: #1a1a1a;"></i>
                                     </div>
                                 {% endif %}
                             </div>
-                            <div>
-                                <h5 class="mb-1">
+                            <!-- Info -->
+                            <div style="min-width: 0;">
+                                <div style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(0,0,0,0.5); margin-bottom: 2px;">Applicant</div>
+                                <h5 class="mb-1 fw-bold text-truncate" style="color: #1a1a1a; font-size: 1.1rem; max-width: 220px;">
                                     {% if personal_info %}
                                         {{ personal_info.first_name }} {{ personal_info.last_name }}
                                     {% elif application.applicant %}
@@ -41,89 +54,284 @@
                                         <em>Applicant TBD</em>
                                     {% endif %}
                                 </h5>
-                                <p class="mb-0" style="opacity: 0.8;">
+                                <div class="d-flex flex-column gap-1">
                                     {% if personal_info and personal_info.email %}
-                                        <i class="fas fa-envelope me-1"></i> {{ personal_info.email }}
+                                        <button class="header-copy-btn" onclick="copyHeaderField(this, '{{ personal_info.email }}')"
+                                                title="Click to copy">
+                                            <i class="fas fa-envelope"></i>
+                                            <span class="header-copy-text text-truncate" style="max-width: 185px;">{{ personal_info.email }}</span>
+                                            <i class="fas fa-copy header-copy-icon"></i>
+                                        </button>
                                     {% elif application.applicant and application.applicant.email %}
-                                        <i class="fas fa-envelope me-1"></i> {{ application.applicant.email }}
+                                        <button class="header-copy-btn" onclick="copyHeaderField(this, '{{ application.applicant.email }}')"
+                                                title="Click to copy">
+                                            <i class="fas fa-envelope"></i>
+                                            <span class="header-copy-text text-truncate" style="max-width: 185px;">{{ application.applicant.email }}</span>
+                                            <i class="fas fa-copy header-copy-icon"></i>
+                                        </button>
                                     {% endif %}
-                                </p>
-                                {% if personal_info and personal_info.phone_cell %}
-                                    <p class="mb-0" style="opacity: 0.8;">
-                                        <i class="fas fa-phone me-1"></i> {{ personal_info.phone_cell }}
-                                    </p>
-                                {% elif application.applicant and application.applicant.phone_number %}
-                                    <p class="mb-0" style="opacity: 0.8;">
-                                        <i class="fas fa-phone me-1"></i> {{ application.applicant.phone_number }}
-                                    </p>
-                                {% endif %}
+                                    {% if personal_info and personal_info.phone_cell %}
+                                        <button class="header-copy-btn" onclick="copyHeaderField(this, '{{ personal_info.phone_cell }}')"
+                                                title="Click to copy">
+                                            <i class="fas fa-phone"></i>
+                                            <span class="header-copy-text">{{ personal_info.phone_cell|format_phone }}</span>
+                                            <i class="fas fa-copy header-copy-icon"></i>
+                                        </button>
+                                    {% elif application.applicant and application.applicant.phone_number %}
+                                        <button class="header-copy-btn" onclick="copyHeaderField(this, '{{ application.applicant.phone_number }}')"
+                                                title="Click to copy">
+                                            <i class="fas fa-phone"></i>
+                                            <span class="header-copy-text">{{ application.applicant.phone_number|format_phone }}</span>
+                                            <i class="fas fa-copy header-copy-icon"></i>
+                                        </button>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Property Info -->
-                    <div class="col-md-5">
-                        <div class="property-info">
-                            <h3 class="mb-2">
-                                <i class="fas fa-building me-2"></i>
-                                {% if application.apartment %}
-                                    {{ application.apartment.building.name }}
-                                {% else %}
-                                    {{ application.manual_building_name|default:"Property" }}
-                                {% endif %}
-                            </h3>
-                            <p class="mb-1" style="opacity: 0.85;">
-                                <i class="fas fa-map-marker-alt me-1"></i>
-                                {% if application.apartment %}
-                                    {{ application.apartment.building.street_address }}, 
-                                    {{ application.apartment.building.city }}, {{ application.apartment.building.state }} {{ application.apartment.building.zip_code }}
-                                {% else %}
-                                    {{ application.manual_building_address|default:"Address not specified" }}
-                                {% endif %}
-                            </p>
-                            <p class="mb-0">
-                                <strong>Unit:</strong> 
-                                {% if application.apartment %}
-                                    {{ application.apartment.unit_number }}
-                                {% else %}
-                                    {{ application.manual_unit_number|default:"Not specified" }}
-                                {% endif %}
-                                {% if application.apartment.rent %}
-                                    <span class="ms-3"><strong>Rent:</strong> ${{ application.apartment.rent|floatformat:0 }}/month</span>
-                                {% endif %}
-                                <span class="ms-3"><strong>App Fee:</strong> ${{ application.application_fee_amount|floatformat:0 }}</span>
-                            </p>
-                        </div>
+
+                    <!-- Vertical Divider (desktop) -->
+                    <div class="col-auto d-none d-md-block">
+                        <div style="width: 1px; height: 70px; background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.2), transparent);"></div>
                     </div>
-                    
-                    <!-- Status & Progress -->
-                    <div class="col-md-3 text-end">
-                        <div class="progress-info">
-                            <h2 class="mb-1">{{ progress_percent|floatformat:0 }}%</h2>
-                            <p class="mb-2" style="opacity: 0.8;">Complete</p>
-                            <span class="badge" style="background-color: #1a1a1a; color: #ffe502; font-weight: 600;">
-                                {{ application.get_status_display }}
+
+                    <!-- Center: Property Details -->
+                    <div class="col-lg col-md">
+                        <div style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(0,0,0,0.5); margin-bottom: 4px;">
+                            <i class="fas fa-building me-1"></i> Property
+                        </div>
+                        <h4 class="fw-bold mb-1" style="color: #1a1a1a; font-size: 1.15rem; line-height: 1.2;">
+                            {% if application.apartment %}
+                                {{ application.apartment.building.name }}
+                            {% else %}
+                                {{ application.manual_building_name|default:"Property" }}
+                            {% endif %}
+                        </h4>
+                        <div class="d-flex align-items-center gap-1 mb-2" style="font-size: 0.8rem; color: rgba(0,0,0,0.65);">
+                            <i class="fas fa-map-marker-alt" style="opacity: 0.7;"></i>
+                            {% if application.apartment %}
+                                <span>{% if application.apartment.building.street_address_1 %}{{ application.apartment.building.street_address_1 }}, {% endif %}{{ application.apartment.building.city }}, {{ application.apartment.building.state }} {{ application.apartment.building.zip_code }}</span>
+                            {% else %}
+                                <span>{{ application.manual_building_address|default:"Address not specified" }}</span>
+                            {% endif %}
+                        </div>
+                        <!-- Property Meta -->
+                        <div class="d-flex flex-wrap align-items-center gap-3">
+                            <!-- Unit: plain inline label -->
+                            <div class="d-flex align-items-center gap-1" style="font-size: 0.8rem; color: rgba(0,0,0,0.75);">
+                                <i class="fas fa-door-open" style="font-size: 0.7rem; opacity: 0.6;"></i>
+                                <span style="font-weight: 500;">Unit</span>
+                                <span style="font-weight: 800;">
+                                    {% if application.apartment %}{{ application.apartment.unit_number }}{% else %}{{ application.manual_unit_number|default:"TBD" }}{% endif %}
+                                </span>
+                            </div>
+                            {% if application.apartment.rent %}
+                            <!-- Rent: subtle pill -->
+                            <span class="d-inline-flex align-items-center gap-1" style="background: rgba(0,0,0,0.1); border-radius: 20px; padding: 3px 10px; font-size: 0.75rem; font-weight: 700; color: #1a1a1a;">
+                                <i class="fas fa-home" style="font-size: 0.65rem; opacity: 0.7;"></i>
+                                ${{ application.apartment.rent|floatformat:0 }}/mo
+                            </span>
+                            {% endif %}
+                            <!-- App Fee: distinct dark outlined pill -->
+                            <span class="d-inline-flex align-items-center gap-1" style="background: rgba(0,0,0,0.75); border-radius: 20px; padding: 3px 10px; font-size: 0.72rem; font-weight: 700; color: #ffe502; letter-spacing: 0.2px;">
+                                <i class="fas fa-receipt" style="font-size: 0.6rem;"></i>
+                                App Fee&nbsp;${{ application.application_fee_amount|floatformat:0 }}
                             </span>
                         </div>
                     </div>
+
+                    <!-- Vertical Divider (desktop) -->
+                    <div class="col-auto d-none d-lg-block">
+                        <div style="width: 1px; height: 70px; background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.2), transparent);"></div>
+                    </div>
+
+                    <!-- Right: Progress Ring -->
+                    <div class="col-lg-auto col-md-auto text-center" style="min-width: 110px;">
+                        <div style="position: relative; display: inline-flex; align-items: center; justify-content: center;">
+                            <!-- SVG Ring -->
+                            <svg width="90" height="90" viewBox="0 0 90 90" style="transform: rotate(-90deg);">
+                                <circle cx="45" cy="45" r="36" fill="none" stroke="rgba(0,0,0,0.15)" stroke-width="7"/>
+                                <circle cx="45" cy="45" r="36" fill="none" stroke="#1a1a1a" stroke-width="7"
+                                        stroke-linecap="round"
+                                        stroke-dasharray="{{ progress_percent|floatformat:0|default:0 }}, 100"
+                                        style="stroke-dasharray: calc({{ progress_percent|floatformat:0|default:0 }} * 2.262) 226.2; transition: stroke-dasharray 0.6s ease;"/>
+                            </svg>
+                            <!-- Center Text -->
+                            <div style="position: absolute; text-align: center; line-height: 1;">
+                                <div style="font-size: 1.3rem; font-weight: 800; color: #1a1a1a;">{{ progress_percent|floatformat:0 }}%</div>
+                            </div>
+                        </div>
+                        <div style="font-size: 0.7rem; font-weight: 700; color: rgba(0,0,0,0.5); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px;">Complete</div>
+                    </div>
+
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row">
-        <!-- Sidebar Column -->
+    <style>
+        /* ── Copy-to-clipboard contact buttons ── */
+        .header-copy-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: none;
+            border: none;
+            padding: 2px 0;
+            font-size: 0.8rem;
+            color: rgba(0, 0, 0, 0.7);
+            cursor: pointer;
+            border-radius: 4px;
+            transition: color 0.15s;
+            text-align: left;
+            max-width: 100%;
+        }
+        .header-copy-btn:hover {
+            color: #1a1a1a;
+        }
+        .header-copy-btn .fa-envelope,
+        .header-copy-btn .fa-phone {
+            opacity: 0.6;
+            flex-shrink: 0;
+            font-size: 0.72rem;
+            width: 12px;
+        }
+        .header-copy-icon {
+            opacity: 0;
+            font-size: 0.65rem;
+            flex-shrink: 0;
+            transition: opacity 0.15s;
+            color: rgba(0,0,0,0.45);
+        }
+        .header-copy-btn:hover .header-copy-icon {
+            opacity: 1;
+        }
+        .header-copy-btn.copied {
+            color: #16a34a;
+        }
+        .header-copy-btn.copied .header-copy-icon {
+            opacity: 1;
+            color: #16a34a;
+        }
+    </style>
+
+    <script>
+    function copyHeaderField(btn, value) {
+        navigator.clipboard.writeText(value).then(function () {
+            var icon = btn.querySelector('.header-copy-icon');
+            var text = btn.querySelector('.header-copy-text');
+            var originalText = text ? text.textContent : '';
+            var originalIconClass = icon ? icon.className : '';
+
+            btn.classList.add('copied');
+            if (icon) {
+                icon.classList.remove('fa-copy');
+                icon.classList.add('fa-check');
+            }
+            if (text) { text.textContent = 'Copied!'; }
+
+            setTimeout(function () {
+                btn.classList.remove('copied');
+                if (icon) {
+                    icon.classList.remove('fa-check');
+                    icon.classList.add('fa-copy');
+                }
+                if (text) { text.textContent = originalText; }
+            }, 1500);
+        }).catch(function () {
+            // Fallback for older browsers
+            var ta = document.createElement('textarea');
+            ta.value = value;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+        });
+    }
+    </script>
+
+    <div class="row g-4">
+        <!-- Left Column - Quick Actions & Activity -->
         <div class="col-lg-3">
-            {% include 'applications/v2/_application_sidebar.html' with show_detailed_info=True hide_broker_card=True hide_progress_steps=True %}
-
+            <!-- Quick Actions Card -->
+            <div class="card mb-4 shadow">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    {% if personal_info and personal_info.email %}
+                    <a href="mailto:{{ personal_info.email }}" class="btn btn-sm w-100 mb-2" style="background-color: #ffe502; color: #1a1a1a; border: none; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <i class="fas fa-envelope"></i> Email Applicant
+                    </a>
+                    {% else %}
+                    <button class="btn btn-outline-secondary btn-sm w-100 mb-2" disabled>
+                        <i class="fas fa-envelope"></i> Email (No Contact Info)
+                    </button>
+                    {% endif %}
+                    {% if personal_info and personal_info.phone_cell %}
+                    <button type="button" class="btn btn-sm w-100 mb-2" style="background-color: #ffcc02; color: #1a1a1a; border: none; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" data-bs-toggle="modal" data-bs-target="#sendSmsModal">
+                        <i class="fas fa-sms"></i> Send SMS to Applicant
+                    </button>
+                    {% else %}
+                    <button class="btn btn-outline-secondary btn-sm w-100 mb-2" disabled>
+                        <i class="fas fa-sms"></i> SMS (No Phone)
+                    </button>
+                    {% endif %}
+                    <button onclick="copyApplicationLink()" class="btn btn-sm w-100 mb-2" style="background-color: #ffb302; color: #1a1a1a; border: none; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <i class="fas fa-copy"></i> Copy Application Link
+                    </button>
+                    <a href="{% url 'v2_application_overview' application.id %}?token={{ application.unique_link }}" class="btn btn-sm w-100 mb-2" style="background-color: #ffcc02; color: #1a1a1a; border: none; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" target="_blank">
+                        <i class="fas fa-eye"></i> Preview Applicant View
+                    </a>
+                    <hr>
+                    {% if not application.is_revoked %}
+                    <button type="button" class="btn btn-danger btn-sm w-100" data-bs-toggle="modal" data-bs-target="#revokeApplicationModal">
+                        <i class="fas fa-ban"></i> Revoke Application
+                    </button>
+                    {% else %}
+                    <button class="btn btn-outline-danger btn-sm w-100" disabled>
+                        <i class="fas fa-ban"></i> Application Revoked
+                    </button>
+                    <small class="text-muted mt-1">
+                        Revoked: {{ application.revoked_at|date:"M d, Y g:i A" }}<br>
+                        Reason: {{ application.revocation_reason }}
+                    </small>
+                    {% endif %}
+                </div>
+            </div>
+            <!-- Recent Activity -->
+            <div class="card mb-4 shadow">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-history"></i> Recent Activity</h6>
+                </div>
+                <div class="card-body">
+                    {% if activity_log %}
+                        {% for activity in activity_log %}
+                        <div class="d-flex mb-3">
+                            <div class="me-3">
+                                <i class="fas fa-circle text-primary" style="font-size: 8px; margin-top: 8px;"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="small">{{ activity.description }}</div>
+                                <div class="text-muted" style="font-size: 11px;">{{ activity.timestamp|date:"M d, g:i A" }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted small mb-0">No activity recorded yet.</p>
+                    {% endif %}
+                </div>
+            </div>
         </div>
-
-        <!-- Main Content Column -->
-        <div class="col-lg-6">
-            
+        <!-- Right Column - Property Details + Application Content -->
+        <div class="col-lg-9">
+            {% include 'applications/v2/_application_sidebar.html' with show_detailed_info=True hide_broker_card=True hide_progress_steps=True %}
 
 
             <!-- Application Progress Timeline -->
+
             <div class="card mb-4 shadow border-0">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 fw-bold"><i class="fas fa-route me-2"></i>Application Progress</h5>
@@ -307,91 +515,13 @@
 
         </div>
 
-        <!-- Right Column - Management Actions & Activity -->
-        <div class="col-lg-3">
-            
-            <!-- Quick Actions Card -->
-            <div class="card mb-4 shadow">
-                <div class="card-header">
-                    <h6 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h6>
-                </div>
-                <div class="card-body">
-                    {% if personal_info and personal_info.email %}
-                    <a href="mailto:{{ personal_info.email }}" class="btn btn-sm w-100 mb-2" style="background-color: #ffe502; color: #1a1a1a; border: none; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                        <i class="fas fa-envelope"></i> Email Applicant
-                    </a>
-                    {% else %}
-                    <button class="btn btn-outline-secondary btn-sm w-100 mb-2" disabled>
-                        <i class="fas fa-envelope"></i> Email (No Contact Info)
-                    </button>
-                    {% endif %}
-                    
-                    {% if personal_info and personal_info.phone_cell %}
-                    <button type="button" class="btn btn-sm w-100 mb-2" style="background-color: #ffcc02; color: #1a1a1a; border: none; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" data-bs-toggle="modal" data-bs-target="#sendSmsModal">
-                        <i class="fas fa-sms"></i> Send SMS to Applicant
-                    </button>
-                    {% else %}
-                    <button class="btn btn-outline-secondary btn-sm w-100 mb-2" disabled>
-                        <i class="fas fa-sms"></i> SMS (No Phone)
-                    </button>
-                    {% endif %}
-                    
-                    <button onclick="copyApplicationLink()" class="btn btn-sm w-100 mb-2" style="background-color: #ffb302; color: #1a1a1a; border: none; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                        <i class="fas fa-copy"></i> Copy Application Link
-                    </button>
-                    
-                    <a href="{% url 'v2_application_overview' application.id %}?token={{ application.unique_link }}" class="btn btn-sm w-100 mb-2" style="background-color: #ffcc02; color: #1a1a1a; border: none; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" target="_blank">
-                        <i class="fas fa-eye"></i> Preview Applicant View
-                    </a>
-                    
-                    <hr>
-                    
-                    {% if not application.is_revoked %}
-                    <button type="button" class="btn btn-danger btn-sm w-100" data-bs-toggle="modal" data-bs-target="#revokeApplicationModal">
-                        <i class="fas fa-ban"></i> Revoke Application
-                    </button>
-                    {% else %}
-                    <button class="btn btn-outline-danger btn-sm w-100" disabled>
-                        <i class="fas fa-ban"></i> Application Revoked
-                    </button>
-                    <small class="text-muted mt-1">
-                        Revoked: {{ application.revoked_at|date:"M d, Y g:i A" }}<br>
-                        Reason: {{ application.revocation_reason }}
-                    </small>
-                    {% endif %}
-                </div>
-            </div>
+    </div><!-- /row -->
 
-            <!-- Recent Activity -->
-            <div class="card mb-4 shadow">
-                <div class="card-header">
-                    <h6 class="mb-0"><i class="fas fa-history"></i> Recent Activity</h6>
-                </div>
-                <div class="card-body">
-                    {% if activity_log %}
-                        {% for activity in activity_log %}
-                        <div class="d-flex mb-3">
-                            <div class="me-3">
-                                <i class="fas fa-circle text-primary" style="font-size: 8px; margin-top: 8px;"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <div class="small">{{ activity.description }}</div>
-                                <div class="text-muted" style="font-size: 11px;">{{ activity.timestamp|date:"M d, g:i A" }}</div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    {% else %}
-                        <p class="text-muted small mb-0">No activity recorded yet.</p>
-                    {% endif %}
-                </div>
-            </div>
-
-        </div>
-    </div>
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <!-- Document Management & AI Analysis — Full-Width Section        -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
+
     <div class="card mt-4 mb-4 shadow border-0 overflow-hidden">
         <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
             <h5 class="mb-0 fw-bold"><i class="fas fa-folder-open me-2"></i>Document Management & AI Analysis</h5>
