@@ -156,19 +156,21 @@ SMS_SAFE_FIELDS = {
         'desired_move_in_date':  {'label': 'Desired Move-In Date', 'type': 'date', 'priority': 'required'},
         'has_pets':              {'label': 'Do You Have Pets (Yes/No)', 'type': 'bool', 'priority': 'required'},
 
+        # ── Required: additional details ──
+        'street_address_2':      {'label': 'Apt/Unit', 'type': 'str', 'priority': 'required'},
+        'current_address_years': {'label': 'Years at Current Address', 'type': 'int', 'priority': 'required'},
+        'current_address_months':{'label': 'Months at Current Address', 'type': 'int', 'priority': 'required'},
+        'landlord_email':        {'label': 'Landlord Email', 'type': 'str', 'priority': 'required'},
+        'referral_source':       {'label': 'How Did You Hear About Us', 'type': 'str', 'priority': 'required'},
+        'reference1_name':       {'label': 'Reference 1 Name', 'type': 'str', 'priority': 'required'},
+        'reference1_phone':      {'label': 'Reference 1 Phone', 'type': 'str', 'priority': 'required'},
+        'reference2_name':       {'label': 'Reference 2 Name', 'type': 'str', 'priority': 'required'},
+        'reference2_phone':      {'label': 'Reference 2 Phone', 'type': 'str', 'priority': 'required'},
+        'reason_for_moving':     {'label': 'Reason for Moving', 'type': 'str', 'priority': 'required'},
+
         # ── Optional: not worth SMS-asking ──
         'middle_name':           {'label': 'Middle Name', 'type': 'str', 'priority': 'optional'},
         'suffix':                {'label': 'Suffix', 'type': 'str', 'priority': 'optional'},
-        'street_address_2':      {'label': 'Apt/Unit', 'type': 'str', 'priority': 'optional'},
-        'current_address_years': {'label': 'Years at Current Address', 'type': 'int', 'priority': 'optional'},
-        'current_address_months':{'label': 'Months at Current Address', 'type': 'int', 'priority': 'optional'},
-        'landlord_email':        {'label': 'Landlord Email', 'type': 'str', 'priority': 'optional'},
-        'referral_source':       {'label': 'How Did You Hear About Us', 'type': 'str', 'priority': 'optional'},
-        'reference1_name':       {'label': 'Reference 1 Name', 'type': 'str', 'priority': 'optional'},
-        'reference1_phone':      {'label': 'Reference 1 Phone', 'type': 'str', 'priority': 'optional'},
-        'reference2_name':       {'label': 'Reference 2 Name', 'type': 'str', 'priority': 'optional'},
-        'reference2_phone':      {'label': 'Reference 2 Phone', 'type': 'str', 'priority': 'optional'},
-        'reason_for_moving':     {'label': 'Reason for Moving', 'type': 'str', 'priority': 'optional'},
     },
     'income_info': {
         # ── Required: core employment & income ──
@@ -177,13 +179,15 @@ SMS_SAFE_FIELDS = {
         'job_title':             {'label': 'Job Title', 'type': 'str', 'priority': 'required'},
         'annual_income':         {'label': 'Annual Income', 'type': 'decimal', 'priority': 'required'},
 
-        # ── Optional: nice-to-have details ──
-        'employment_length':     {'label': 'How Long at This Job', 'type': 'str', 'priority': 'optional'},
-        'supervisor_name':       {'label': 'Supervisor Name', 'type': 'str', 'priority': 'optional'},
-        'supervisor_email':      {'label': 'Supervisor Email', 'type': 'str', 'priority': 'optional'},
-        'supervisor_phone':      {'label': 'Supervisor Phone', 'type': 'str', 'priority': 'optional'},
-        'start_date':            {'label': 'Employment Start Date', 'type': 'date', 'priority': 'optional'},
-        'end_date':              {'label': 'Employment End Date', 'type': 'date', 'priority': 'optional'},
+        # ── Required: employment details ──
+        'employment_length':     {'label': 'How Long at This Job', 'type': 'str', 'priority': 'required'},
+        'supervisor_name':       {'label': 'Supervisor Name', 'type': 'str', 'priority': 'required'},
+        'supervisor_email':      {'label': 'Supervisor Email', 'type': 'str', 'priority': 'required'},
+        'supervisor_phone':      {'label': 'Supervisor Phone', 'type': 'str', 'priority': 'required'},
+        'start_date':            {'label': 'Employment Start Date', 'type': 'date', 'priority': 'required'},
+        'end_date':              {'label': 'Employment End Date', 'type': 'date', 'priority': 'required'},
+
+        # ── Optional: not worth SMS-asking ──
         'school_name':           {'label': 'School Name', 'type': 'str', 'priority': 'optional'},
         'year_of_graduation':    {'label': 'Graduation Year', 'type': 'str', 'priority': 'optional'},
         'school_address':        {'label': 'School Address', 'type': 'str', 'priority': 'optional'},
