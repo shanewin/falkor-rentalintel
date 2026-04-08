@@ -21,7 +21,10 @@
             
             <p class="text-muted small mb-4">Please provide your employment details and annual income. This information is confidential and used only for qualification purposes.</p>
 
-            <form method="post" enctype="multipart/form-data" class="doorway-form">
+            <form method="post" enctype="multipart/form-data" class="doorway-form"
+                  id="section2-income-form"
+                  data-autosave-url="{% url 'v2_section2_autosave' application.id %}"
+                  data-autosave-token="{{ token }}">
                 {% csrf_token %}
 
                 <!-- Basic Employment -->
@@ -343,6 +346,7 @@
 
 {% block extra_js %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<script src="{% static 'js/forms.js' %}?v=2"></script>
 <script src="{% static 'js/image-cropper.js' %}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {

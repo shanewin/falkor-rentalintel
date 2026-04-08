@@ -1,6 +1,6 @@
 from django.urls import path, include
 from .views import delete_applicant_photo, delete_pet_photo, applicant_overview, applicants_list, applicant_crm, get_applicant_data, toggle_saved_apartment
-from .profile_views import progressive_profile, quick_profile_update, profile_step1, profile_step2, profile_step3
+from .profile_views import progressive_profile, quick_profile_update, profile_step1, profile_step2, profile_step3, profile_step1_autosave, profile_step2_autosave, profile_step3_autosave
 from .activity_views import activity_dashboard, activity_timeline, activity_analytics_api
 
 urlpatterns = [
@@ -20,6 +20,11 @@ urlpatterns = [
     path('my-profile/step1/', profile_step1, name='profile_step1'),
     path('my-profile/step2/', profile_step2, name='profile_step2'),
     path('my-profile/step3/', profile_step3, name='profile_step3'),
+
+    # Autosave endpoints (AJAX, no rate limit, @login_required)
+    path('my-profile/step1/autosave/', profile_step1_autosave, name='profile_step1_autosave'),
+    path('my-profile/step2/autosave/', profile_step2_autosave, name='profile_step2_autosave'),
+    path('my-profile/step3/autosave/', profile_step3_autosave, name='profile_step3_autosave'),
     
     # Activity tracking dashboard
     path('activity/dashboard/', activity_dashboard, name='activity_dashboard'),

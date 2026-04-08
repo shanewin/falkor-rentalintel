@@ -141,7 +141,9 @@
 
     <!-- Step 1: Basic Information -->
 
-            <form method="post" enctype="multipart/form-data" class="doorway-form">
+            <form method="post" enctype="multipart/form-data" class="doorway-form"
+                  id="profile-step1-form"
+                  data-autosave-url="{% url 'profile_step1_autosave' %}">
                 {% csrf_token %}
                 {% crispy form form.helper %}
                 <div class="d-flex justify-content-between mt-4">
@@ -164,7 +166,7 @@
 <script src="{% static 'js/image-cropper.js' %}"></script>
 
 {% block extra_js %}
-<script src="{% static 'js/forms.js' %}"></script>
+<script src="{% static 'js/forms.js' %}?v=2"></script>
 <script src="{% static 'applicants/js/smart_insights.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {

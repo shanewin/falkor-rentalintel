@@ -17,7 +17,9 @@
             
             <p class="text-muted small mb-4">Please provide your personal details exactly as they appear on your legal documents. Fields marked with <span class="text-danger">*</span> are required.</p>
 
-            <form method="post" id="personal-info-form" class="doorway-form">
+            <form method="post" id="personal-info-form" class="doorway-form"
+                  data-autosave-url="{% url 'v2_section1_autosave' application.id %}"
+                  data-autosave-token="{{ token }}">
                         {% csrf_token %}
                         
                         <!-- Personal Identity -->
@@ -293,7 +295,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/forms.js' %}"></script>
+<script src="{% static 'js/forms.js' %}?v=2"></script>
 {{ previous_addresses_data|json_script:"previous-addresses-data" }}
 {{ pets_data|json_script:"pets-data" }}
 <style>

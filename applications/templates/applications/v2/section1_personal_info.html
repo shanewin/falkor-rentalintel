@@ -309,7 +309,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/forms.js' %}"></script>
+<script src="{% static 'js/forms.js' %}?v=2"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const housingStatus = document.getElementById('{{ form.housing_status.id_for_label }}');

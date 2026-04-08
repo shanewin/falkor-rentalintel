@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 {% block extra_js %}
     {{ form.media.js }}
-    <script src="{% static 'js/forms.js' %}"></script>
+    <script src="{% static 'js/forms.js' %}?v=2"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Setup image cropper for any image fields in the dynamic form (square aspect ratio for profiles)

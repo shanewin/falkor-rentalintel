@@ -312,7 +312,9 @@
             <h5 class="mb-0"><i class="fas fa-home me-2"></i>Step 2: Housing Needs and Preferences</h5>
         </div>
         <div class="card-body p-4">
-            <form method="post" enctype="multipart/form-data" class="doorway-form">
+            <form method="post" enctype="multipart/form-data" class="doorway-form"
+                  id="profile-step2-form"
+                  data-autosave-url="{% url 'profile_step2_autosave' %}">
                 {% csrf_token %}
                 {% crispy form form.helper %}
             </form>
@@ -330,7 +332,7 @@
 <script src="{% static 'js/image-cropper.js' %}"></script>
 
 <!-- Include forms.js -->
-<script src="{% static 'js/forms.js' %}"></script>
+<script src="{% static 'js/forms.js' %}?v=2"></script>
 <script src="{% static 'applicants/js/smart_insights.js' %}"></script>
 
 <!-- Search filtering logic -->

@@ -1,495 +1,291 @@
-/* ================================================
-   DOORWAY FORMS - Unified Form Behavior
-   Consistent form interactions across all pages
-   ================================================ */
+/**
+ * Form handling utilities for Falkor application
+ */
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Phone Number Formatting
+    const phoneInputs = document.querySelectorAll('input[name*="phone"], input[id*="phone"]');
     
-    // ================================================
-    // Initialize all Doorway forms
-    // ================================================
-    function initializeDoorwayForms() {
-        // Find all forms with doorway-form class
-        const forms = document.querySelectorAll('.doorway-form');
-        
-        forms.forEach(form => {
-            initializeFormFields(form);
-            initializeFormValidation(form);
-        });
-    }
-    
-    // ================================================
-    // Field Highlighting - Empty Required Fields
-    // ================================================
-    function initializeFormFields(form) {
-        const formFields = form.querySelectorAll('input.form-control, textarea.form-control, select.form-control, select.form-select');
-        
-        formFields.forEach(field => {
-            // Function to check and update field state
-            function updateFieldState() {
-                // Remove all state classes first
-                field.classList.remove('is-empty-required', 'has-data');
-                
-                const value = field.value ? field.value.trim() : '';
-                
-                if (value === '') {
-                    // Check if field is required or important
-                    if (field.hasAttribute('required') || isImportantField(field)) {
-                        field.classList.add('is-empty-required');
-                    }
-                } else {
-                    // Optional: Add has-data class for filled fields
-                    // field.classList.add('has-data');
-                }
-            }
-            
-            // Check initial state
-            updateFieldState();
-            
-            // Add event listeners for dynamic updates
-            field.addEventListener('input', updateFieldState);
-            field.addEventListener('change', updateFieldState);
-            field.addEventListener('blur', updateFieldState);
-        });
-    }
-    
-    // ================================================
-    // Determine if field is important (customize per form)
-    // ================================================
-    function isImportantField(field) {
-        const importantFields = [
-            'name', 'first_name', 'last_name', 'email',
-            'address', 'state',
-            'building_name', 'position', 'title'
-        ];
-        
-        return importantFields.includes(field.name);
-    }
-    
-    // ================================================
-    // Form Validation Enhancement
-    // ================================================
-    function initializeFormValidation(form) {
-        form.addEventListener('submit', function(e) {
-            let isValid = true;
-            const requiredFields = form.querySelectorAll('[required]');
-            
-            requiredFields.forEach(field => {
-                if (!field.value || field.value.trim() === '') {
-                    isValid = false;
-                    field.classList.add('is-invalid');
-                    
-                    // Add error message if not exists
-                    if (!field.nextElementSibling || !field.nextElementSibling.classList.contains('invalid-feedback')) {
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'invalid-feedback';
-                        errorDiv.textContent = 'This field is required.';
-                        field.parentNode.insertBefore(errorDiv, field.nextSibling);
-                    }
-                } else {
-                    field.classList.remove('is-invalid');
-                    // Remove error message if exists
-                    if (field.nextElementSibling && field.nextElementSibling.classList.contains('invalid-feedback')) {
-                        field.nextElementSibling.remove();
-                    }
-                }
-            });
-            
-            if (!isValid) {
-                e.preventDefault();
-                // Scroll to first error
-                const firstError = form.querySelector('.is-invalid');
-                if (firstError) {
-                    firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    firstError.focus();
-                }
-            }
-        });
-    }
-    
-    // ================================================
-    // Auto-save Draft (optional feature)
-    // ================================================
-    function initializeAutoSave(form) {
-        if (!form.dataset.autosave) return;
-        
-        const formId = form.id || 'doorway-form';
-        const saveKey = `doorway-draft-${formId}`;
-        
-        // Load saved draft on page load
-        const savedData = localStorage.getItem(saveKey);
-        if (savedData) {
-            const data = JSON.parse(savedData);
-            Object.keys(data).forEach(key => {
-                const field = form.querySelector(`[name="${key}"]`);
-                if (field) {
-                    field.value = data[key];
-                }
-            });
+    phoneInputs.forEach(input => {
+        // Format on initialization if value exists
+        if (input.value) {
+            input.value = formatPhoneNumber(input.value);
         }
         
-        // Save draft on input
-        let saveTimeout;
-        form.addEventListener('input', function() {
-            clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(() => {
-                const formData = new FormData(form);
-                const data = {};
-                formData.forEach((value, key) => {
-                    data[key] = value;
-                });
-                localStorage.setItem(saveKey, JSON.stringify(data));
-                showAutoSaveIndicator();
-            }, 1000);
-        });
-        
-        // Clear draft on successful submit
-        form.addEventListener('submit', function() {
-            localStorage.removeItem(saveKey);
-        });
-    }
-    
-    // ================================================
-    // Show auto-save indicator
-    // ================================================
-    function showAutoSaveIndicator() {
-        const indicator = document.createElement('div');
-        indicator.className = 'autosave-indicator';
-        indicator.innerHTML = '<i class="fas fa-check"></i> Draft saved';
-        indicator.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #28a745;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 4px;
-            z-index: 1000;
-            animation: fadeInOut 2s ease;
-        `;
-        
-        document.body.appendChild(indicator);
-        setTimeout(() => indicator.remove(), 2000);
-    }
-    
-    // ================================================
-    // Character Counter for Textareas
-    // ================================================
-    function initializeCharacterCounters() {
-        const textareas = document.querySelectorAll('textarea[maxlength]');
-        
-        textareas.forEach(textarea => {
-            const maxLength = textarea.getAttribute('maxlength');
-            const counter = document.createElement('small');
-            counter.className = 'character-counter text-muted';
-            counter.style.display = 'block';
-            counter.style.marginTop = '5px';
+        // Format as user types
+        input.addEventListener('input', function(e) {
+            const cursorPosition = this.selectionStart;
+            const originalLength = this.value.length;
             
-            function updateCounter() {
-                const remaining = maxLength - textarea.value.length;
-                counter.textContent = `${remaining} characters remaining`;
-                
-                if (remaining < 20) {
-                    counter.classList.add('text-warning');
-                } else {
-                    counter.classList.remove('text-warning');
-                }
+            const formatted = formatPhoneNumber(this.value);
+            this.value = formatted;
+            
+            // Try to preserve cursor position (basic approximation)
+            if (formatted.length > originalLength) {
+                this.setSelectionRange(cursorPosition + 1, cursorPosition + 1);
+            } else {
+                this.setSelectionRange(cursorPosition, cursorPosition);
             }
-            
-            updateCounter();
-            textarea.addEventListener('input', updateCounter);
-            textarea.parentNode.appendChild(counter);
         });
-    }
-    
-    // ================================================
-    // Buildings-Specific Functionality
-    // ================================================
-    function initializeBuildingsFunctions() {
-        // Initialize Bootstrap popovers for help text
-        initializePopovers();
         
-        // Initialize currency formatting
-        initializeCurrencyFields();
-        
-        // Initialize Select2 dropdowns
-        initializeSelect2();
-    }
-    
-    function initializePopovers() {
-        // Use Bootstrap 5 syntax instead of jQuery
-        const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
-        popoverTriggerList.forEach(function(popoverTriggerEl) {
-            new bootstrap.Popover(popoverTriggerEl, {
-                trigger: 'hover',
-                placement: 'right',
-                container: 'body',
-                html: true
-            });
+        // Ensure format on blur
+        input.addEventListener('blur', function() {
+            this.value = formatPhoneNumber(this.value);
         });
-    }
-    
-    function initializeCurrencyFields() {
-        const currencyFields = document.querySelectorAll('.currency-field');
-        
-        currencyFields.forEach(field => {
-            // Add $ symbol overlay
-            const wrapper = document.createElement('div');
-            wrapper.style.position = 'relative';
-            wrapper.style.display = 'inline-block';
-            wrapper.style.width = '100%';
-            
-            const dollarSign = document.createElement('span');
-            dollarSign.textContent = '$';
-            dollarSign.style.position = 'absolute';
-            dollarSign.style.left = '12px';
-            dollarSign.style.top = '50%';
-            dollarSign.style.transform = 'translateY(-50%)';
-            dollarSign.style.color = '#6c757d';
-            dollarSign.style.fontWeight = '500';
-            dollarSign.style.fontSize = '16px';
-            dollarSign.style.pointerEvents = 'none';
-            dollarSign.style.zIndex = '10';
-            
-            field.parentNode.insertBefore(wrapper, field);
-            wrapper.appendChild(dollarSign);
-            wrapper.appendChild(field);
-            
-            // Format initial value
-            if (field.value) {
-                field.value = formatCurrencyInput(field.value);
-            }
-            
-            // Add event listeners
-            field.addEventListener('blur', function() {
-                this.value = formatCurrencyInput(this.value);
-            });
-            
-            field.addEventListener('focus', function() {
-                this.value = cleanCurrencyInput(this.value);
-            });
-            
-            field.addEventListener('keydown', function(e) {
-                if (!isValidCurrencyKey(e)) {
-                    e.preventDefault();
-                }
-            });
-        });
-    }
-    
-    function initializeSelect2() {
-        // Initialize Select2 only on select elements that explicitly have the select2 class
-        if (typeof $ !== 'undefined' && $.fn.select2) {
-            $('.doorway-form select.select2').select2({
-                theme: 'bootstrap-5',
-                width: '100%',
-                placeholder: function() {
-                    return $(this).data('placeholder') || 'Select an option';
-                },
-                allowClear: false
-            });
-        }
-        
-        // Initialize commission pay type conditional logic
-        initializeCommissionLogic();
-    }
-    
-    function initializeCommissionLogic() {
-        const commissionPayType = document.querySelector('select[name="commission_pay_type"]');
-        const percentFields = document.querySelectorAll('.commission-percent-field');
-        
-        if (commissionPayType && percentFields.length > 0) {
-            function togglePercentFields() {
-                const shouldShow = commissionPayType.value === 'owner_and_tenant_pays';
-                percentFields.forEach(field => {
-                    field.style.display = shouldShow ? 'block' : 'none';
-                });
-                
-                // Clear fields when hiding
-                if (!shouldShow) {
-                    const ownerField = document.querySelector('input[name="commission_owner_percent"]');
-                    const tenantField = document.querySelector('input[name="commission_tenant_percent"]');
-                    if (ownerField) ownerField.value = '';
-                    if (tenantField) tenantField.value = '';
-                }
-            }
-            
-            // Initial state - hide by default
-            percentFields.forEach(field => {
-                field.style.display = 'none';
-            });
-            
-            // Listen for regular change events
-            commissionPayType.addEventListener('change', togglePercentFields);
-            
-            // Listen for Select2 change events specifically
-            if (typeof $ !== 'undefined' && $.fn.select2) {
-                $(commissionPayType).on('select2:select', function() {
-                    setTimeout(togglePercentFields, 100); // Small delay to ensure value is updated
-                });
-            }
-        }
-        
-        // Initialize auto-calculation for commission percentages
-        initializePercentCalculation();
-    }
-    
-    function initializePercentCalculation() {
-        const ownerField = document.querySelector('input[name="commission_owner_percent"]');
-        const tenantField = document.querySelector('input[name="commission_tenant_percent"]');
-        
-        if (ownerField && tenantField) {
-            function calculateComplement(inputField, outputField) {
-                const value = parseInt(inputField.value) || 0;
-                if (value >= 0 && value <= 100) {
-                    const complement = 100 - value;
-                    outputField.value = complement;
-                } else if (value > 100) {
-                    inputField.value = 100;
-                    outputField.value = 0;
-                } else if (value < 0) {
-                    inputField.value = 0;
-                    outputField.value = 100;
-                }
-            }
-            
-            ownerField.addEventListener('input', function() {
-                calculateComplement(this, tenantField);
-            });
-            
-            tenantField.addEventListener('input', function() {
-                calculateComplement(this, ownerField);
-            });
-        }
-    }
-    
-    // Currency formatting helper functions
-    function cleanCurrencyInput(value) {
-        return value.replace(/[^0-9.]/g, '');
-    }
-    
-    function formatCurrencyInput(value) {
-        const cleaned = cleanCurrencyInput(value);
-        if (!cleaned) return '';
-        
-        const num = parseFloat(cleaned);
-        return isNaN(num) ? '' : num.toLocaleString('en-US', {
-            minimumFractionDigits: cleaned.includes('.') ? 2 : 0,
-            maximumFractionDigits: 2
-        });
-    }
-    
-    function isValidCurrencyKey(e) {
-        const allowedKeys = [
-            'Backspace', 'Delete', 'Tab', 'Enter', 
-            'ArrowLeft', 'ArrowRight', 'Home', 'End'
-        ];
-        
-        return (
-            (e.key >= '0' && e.key <= '9') ||
-            (e.key === '.' && !e.target.value.includes('.')) ||
-            allowedKeys.includes(e.key) ||
-            (e.ctrlKey || e.metaKey) && ['a', 'c', 'v', 'x'].includes(e.key.toLowerCase())
-        );
-    }
-    
-    // ================================================
-    // Initialize everything
-    // ================================================
-    initializeDoorwayForms();
-    initializeCharacterCounters();
-    initializeBuildingsFunctions();
-    initializeAutoUpload();
-    
-    // ================================================
-    // Auto-upload functionality for image fields
-    // ================================================
-    function initializeAutoUpload() {
-        const autoUploadFields = document.querySelectorAll('.auto-upload-field');
-        
-        autoUploadFields.forEach(field => {
-            field.addEventListener('change', function() {
-                if (this.files && this.files.length > 0) {
-                    // Show loading state
-                    const fieldset = this.closest('fieldset');
-                    if (fieldset) {
-                        const legend = fieldset.querySelector('legend');
-                        if (legend) {
-                            legend.innerHTML = 'Upload Building Images <i class="fas fa-spinner fa-spin text-primary"></i>';
-                        }
-                    }
-                    
-                    // Auto-submit the form
-                    this.form.submit();
-                }
-            });
-        });
-    }
-    
-    // Initialize auto-save for forms with data-autosave attribute
-    document.querySelectorAll('form[data-autosave]').forEach(form => {
-        initializeAutoSave(form);
+    });
+
+    // Universal Currency Formatting
+    document.querySelectorAll('.currency-input').forEach(input => {
+        setupCurrencyInput(input);
     });
 });
 
-// ================================================
-// Add fadeInOut animation
-// ================================================
-if (!document.querySelector('#doorway-forms-animations')) {
-    const style = document.createElement('style');
-    style.id = 'doorway-forms-animations';
-    style.textContent = `
-        @keyframes fadeInOut {
-            0% { opacity: 0; transform: translateY(10px); }
-            20% { opacity: 1; transform: translateY(0); }
-            80% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-10px); }
+/**
+ * Setup currency formatting for an input field
+ * @param {HTMLInputElement} input - The input element to setup
+ */
+function setupCurrencyInput(input) {
+    if (!input) return;
+
+    const formatCurrency = (value) => {
+        const numeric = value.replace(/[^0-9.]/g, '');
+        if (!numeric) return '';
+        const parts = numeric.split('.');
+        const whole = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        const decimal = parts[1] !== undefined ? '.' + parts[1].slice(0, 2) : '';
+        return whole + decimal;
+    };
+
+    const handleInput = (event) => {
+        const start = input.selectionStart;
+        const oldValue = input.value;
+        const newValue = formatCurrency(oldValue);
+        
+        if (oldValue !== newValue) {
+            input.value = newValue;
+            // Basic cursor position preservation
+            const diff = newValue.length - oldValue.length;
+            input.setSelectionRange(start + diff, start + diff);
         }
-    `;
-    document.head.appendChild(style);
+    };
+
+    input.addEventListener('input', handleInput);
+    
+    input.addEventListener('blur', () => { 
+        if (input.value) {
+            const parts = input.value.replace(/,/g, '').split('.');
+            const whole = parts[0];
+            const decimal = parts[1] || '00';
+            input.value = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '.' + decimal.slice(0, 2).padEnd(2, '0');
+        }
+    });
+
+    const form = input.closest('form');
+    if (form) {
+        form.addEventListener('submit', () => {
+            // Only strip commas if it's a standard form submission
+            // For AJAX, let the AJAX handler decide
+            input.value = input.value.replace(/,/g, '');
+        });
+    }
+
+    // Initial format
+    if (input.value) {
+        input.value = formatCurrency(input.value);
+        if (!input.value.includes('.')) {
+            input.value += '.00';
+        } else if (input.value.split('.')[1].length === 1) {
+            input.value += '0';
+        }
+    }
 }
 
-// ================================================
-// Phone Number Formatting
-// ================================================
+/**
+ * Format string as US phone number (XXX) XXX-XXXX
+ * @param {string} value - The input string
+ * @returns {string} - Formatted phone number
+ */
 function formatPhoneNumber(value) {
-    // Remove all non-digit characters
+    if (!value) return value;
+    
+    // Strip all non-digits
     const phoneNumber = value.replace(/\D/g, '');
     
-    // Format as (XXX) XXX-XXXX
-    if (phoneNumber.length >= 6) {
-        return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
-    } else if (phoneNumber.length >= 3) {
+    // Setup formatting based on length
+    if (phoneNumber.length < 4) {
+        return phoneNumber;
+    } else if (phoneNumber.length < 7) {
         return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
-    } else if (phoneNumber.length > 0) {
-        return `(${phoneNumber}`;
+    } else {
+        return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
     }
-    return '';
 }
 
-// Initialize phone formatting for all phone fields
-document.addEventListener('DOMContentLoaded', function() {
-    const phoneFields = document.querySelectorAll('input[name="phone_number"], input[name*="phone"]');
-    
-    phoneFields.forEach(field => {
-        field.addEventListener('input', function(e) {
-            const cursorPosition = e.target.selectionStart;
-            const oldValue = e.target.value;
-            const formatted = formatPhoneNumber(e.target.value);
-            
-            e.target.value = formatted;
-            
-            // Adjust cursor position to account for formatting
-            let newCursorPosition = cursorPosition;
-            if (formatted.length > oldValue.length) {
-                newCursorPosition = Math.min(cursorPosition + 1, formatted.length);
+/* ============================================================
+   FALKOR AUTO-SAVE ENGINE
+   AJAX-first field-level autosave for Profile & Application forms.
+
+   Usage:  add  data-autosave-url="/path/to/autosave/"  to any <form>.
+           For token-protected application forms, also add
+           data-autosave-token="{{ token }}"  on the form.
+
+   Excluded from autosave:
+     - input[type=file]        (uploads require explicit submit)
+     - input[name=csrfmiddlewaretoken]
+     - Fields inside .no-autosave containers (pet rows, address rows, jobs)
+
+   NOTE (future work): M2M fields (amenity sliders, neighborhood rankings,
+   pet records, address rows, job records) are intentionally excluded from
+   autosave because they require complex nested serialization. These should
+   be wired in a later pass using dedicated AJAX sub-endpoints.
+   ============================================================ */
+
+(function () {
+    'use strict';
+
+    // ── Configuration ─────────────────────────────────────────
+    const DEBOUNCE_MS   = 1500;   // wait this long after user stops typing
+    const BADGE_TTL_OK  = 2500;   // how long "✓ Saved" stays visible (ms)
+    const LS_PREFIX     = 'falkor-autosave:';
+
+    // ── Singleton badge ────────────────────────────────────────
+    let _badge = null;
+    let _badgeTimeout = null;
+
+    function getBadge() {
+        if (!_badge) {
+            _badge = document.createElement('div');
+            _badge.id = 'falkor-autosave-badge';
+            _badge.style.cssText = [
+                'position:fixed', 'bottom:24px', 'right:24px',
+                'padding:8px 16px', 'border-radius:8px',
+                'font-size:13px', 'font-weight:500',
+                'display:flex', 'align-items:center', 'gap:6px',
+                'box-shadow:0 2px 8px rgba(0,0,0,.18)',
+                'z-index:9999', 'transition:opacity .3s ease',
+                'opacity:0', 'pointer-events:none',
+            ].join(';');
+            document.body.appendChild(_badge);
+        }
+        return _badge;
+    }
+
+    function showBadge(state) {
+        const badge = getBadge();
+        clearTimeout(_badgeTimeout);
+
+        const styles = {
+            saving: { bg: '#6c757d', text: 'white', icon: '⏳', label: 'Saving\u2026' },
+            saved:  { bg: '#198754', text: 'white', icon: '✓',  label: 'Saved'         },
+            error:  { bg: '#dc3545', text: 'white', icon: '⚠',  label: 'Save failed'   },
+        };
+        const s = styles[state] || styles.saving;
+
+        badge.style.background  = s.bg;
+        badge.style.color       = s.text;
+        badge.innerHTML         = '<span>' + s.icon + '</span><span>' + s.label + '</span>';
+        badge.style.opacity     = '1';
+
+        if (state === 'saved') {
+            _badgeTimeout = setTimeout(function() { badge.style.opacity = '0'; }, BADGE_TTL_OK);
+        }
+        // 'error' persists until next save attempt
+    }
+
+    // ── CSRF helper ─────────────────────────────────────────────
+    function getCsrf() {
+        var el = document.querySelector('[name=csrfmiddlewaretoken]');
+        return el ? el.value : '';
+    }
+
+    // ── Collect saveable fields ─────────────────────────────────
+    var SKIP_TYPES  = {'file':1,'submit':1,'button':1,'image':1,'reset':1,'hidden':1};
+    var SKIP_NAMES  = {'csrfmiddlewaretoken':1};
+
+    function collectFields(form) {
+        var data   = {};
+        var inputs = form.querySelectorAll('input, select, textarea');
+
+        inputs.forEach(function(el) {
+            if (!el.name) return;
+            if (SKIP_NAMES[el.name]) return;
+            if (el.type && SKIP_TYPES[el.type]) return;
+            if (el.closest('.no-autosave')) return;
+
+            if (el.type === 'checkbox') {
+                data[el.name] = el.checked ? 'true' : 'false';
+            } else if (el.type === 'radio') {
+                if (el.checked) data[el.name] = el.value;
+            } else {
+                data[el.name] = el.value;
             }
-            e.target.setSelectionRange(newCursorPosition, newCursorPosition);
         });
-        
-        // Format on blur to ensure consistency
-        field.addEventListener('blur', function(e) {
-            e.target.value = formatPhoneNumber(e.target.value);
+
+        return data;
+    }
+
+    // ── Send to server ──────────────────────────────────────────
+    function postAutosave(url, token, data) {
+        var body = new URLSearchParams(data);
+        body.append('csrfmiddlewaretoken', getCsrf());
+        if (token) body.append('autosave_token', token);
+
+        return fetch(url, {
+            method:  'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body:    body,
+        }).then(function(resp) {
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            return resp.json();
+        }).then(function(json) {
+            if (json.status !== 'ok') throw new Error(json.message || 'Server error');
         });
+    }
+
+    // ── Per-form watcher ────────────────────────────────────────
+    function initFormAutosave(form) {
+        var url   = form.dataset.autosaveUrl;
+        var token = form.dataset.autosaveToken || '';
+        var lsKey = LS_PREFIX + (form.id || url);
+
+        if (!url) return;
+
+        var timer = null;
+
+        function triggerSave() {
+            var data = collectFields(form);
+            showBadge('saving');
+
+            postAutosave(url, token, data).then(function() {
+                try { localStorage.setItem(lsKey, JSON.stringify(data)); } catch(e) {}
+                showBadge('saved');
+            }).catch(function(err) {
+                console.warn('[autosave] Server save failed, using localStorage fallback:', err);
+                try { localStorage.setItem(lsKey, JSON.stringify(data)); } catch(e) {}
+                showBadge('error');
+            });
+        }
+
+        function onActivity(e) {
+            if (e.target.type === 'file') return;
+            if (e.target.closest && e.target.closest('.no-autosave')) return;
+            clearTimeout(timer);
+            timer = setTimeout(triggerSave, DEBOUNCE_MS);
+        }
+
+        form.addEventListener('input',  onActivity);
+        form.addEventListener('change', onActivity);
+
+        // On submit, cancel pending save and clear localStorage draft
+        form.addEventListener('submit', function() {
+            clearTimeout(timer);
+            try { localStorage.removeItem(lsKey); } catch(e) {}
+        });
+    }
+
+    // ── Boot ────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('form[data-autosave-url]').forEach(initFormAutosave);
     });
-});
+
+}());

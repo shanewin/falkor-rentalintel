@@ -3039,3 +3039,186 @@ def prefill_status_api(request, application_id):
             'success': False,
             'error': str(e)
         })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# APPLICATION AUTOSAVE VIEWS
+# Section 1 and Section 2 AJAX autosave endpoints.
+# Section 3 is signature-only (already handled by v2_sign_document).
+# Section 4 is read-only review. Section 5 is payment.
+# ─────────────────────────────────────────────────────────────────────────────
+
+from django.views.decorators.http import require_POST as _require_POST
+
+
+@_require_POST
+def v2_section1_autosave(request, application_id):
+    """
+    AJAX autosave for Application Section 1 (Personal Information).
+    Excluded: file uploads, previous addresses.
+    """
+    from django.http import JsonResponse
+    application = get_object_or_404(Application, id=application_id)
+    access_type, error = validate_application_access(request, application)
+    if error:
+        return JsonResponse({'status': 'error', 'message': 'Access denied'}, status=403)
+
+    # Token check for applicant access (passed as hidden field in form)
+    if access_type == 'applicant':
+        token = request.POST.get('autosave_token', '')
+        from .models import ApplicationToken
+        try:
+            app_token = ApplicationToken.objects.get(application=application, token=token)
+        except Exception:
+            return JsonResponse({'status': 'error', 'message': 'Invalid token'}, status=403)
+
+    try:
+        personal_info, _ = PersonalInfoData.objects.get_or_create(application=application)
+
+        CHAR_FIELDS = [
+            'first_name', 'middle_name', 'last_name', 'suffix',
+            'email', 'phone_cell',
+            'street_address_1', 'street_address_2', 'city', 'state', 'zip_code',
+            'housing_status', 'reason_for_moving',
+            'landlord_name', 'landlord_phone', 'landlord_email',
+            'reference1_name', 'reference1_phone',
+            'reference2_name', 'reference2_phone',
+            'eviction_explanation', 'bankruptcy_explanation', 'conviction_explanation',
+            'referral_source',
+        ]
+        INT_FIELDS     = ['current_address_years', 'current_address_months']
+        DECIMAL_FIELDS = ['current_monthly_rent']
+        BOOL_FIELDS    = [
+            'has_been_evicted', 'has_filed_bankruptcy', 'has_criminal_conviction', 'has_pets',
+        ]
+        DATE_FIELDS    = ['date_of_birth', 'desired_move_in_date']
+
+        update_fields = []
+
+        for field in CHAR_FIELDS:
+            if field in request.POST:
+                setattr(personal_info, field, request.POST[field].strip() or None)
+                update_fields.append(field)
+
+        for field in INT_FIELDS:
+            if field in request.POST:
+                val = request.POST[field].strip()
+                setattr(personal_info, field, int(val) if val.isdigit() else 0)
+                update_fields.append(field)
+
+        for field in DECIMAL_FIELDS:
+            if field in request.POST:
+                val = request.POST[field].strip().replace(',', '')
+                if val:
+                    from decimal import Decimal, InvalidOperation
+                    try:
+                        setattr(personal_info, field, Decimal(val))
+                        update_fields.append(field)
+                    except InvalidOperation:
+                        pass
+
+        for field in BOOL_FIELDS:
+            if field in request.POST:
+                raw = request.POST[field].lower()
+                if raw in ('true', '1', 'yes'):
+                    setattr(personal_info, field, True); update_fields.append(field)
+                elif raw in ('false', '0', 'no'):
+                    setattr(personal_info, field, False); update_fields.append(field)
+
+        for field in DATE_FIELDS:
+            if field in request.POST:
+                val = request.POST[field].strip()
+                if val:
+                    from datetime import date
+                    try:
+                        setattr(personal_info, field, date.fromisoformat(val))
+                        update_fields.append(field)
+                    except ValueError:
+                        pass
+
+        if update_fields:
+            personal_info.save(update_fields=update_fields)
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'ok'})
+
+
+@_require_POST
+def v2_section2_autosave(request, application_id):
+    """
+    AJAX autosave for Application Section 2 (Income & Employment).
+    Excluded: file uploads (paystubs, bank statements, ID images).
+    """
+    from django.http import JsonResponse
+    application = get_object_or_404(Application, id=application_id)
+    access_type, error = validate_application_access(request, application)
+    if error:
+        return JsonResponse({'status': 'error', 'message': 'Access denied'}, status=403)
+
+    if access_type == 'applicant':
+        token = request.POST.get('autosave_token', '')
+        from .models import ApplicationToken
+        try:
+            ApplicationToken.objects.get(application=application, token=token)
+        except Exception:
+            return JsonResponse({'status': 'error', 'message': 'Invalid token'}, status=403)
+
+    try:
+        income_info = IncomeData.objects.filter(application=application).first()
+        if not income_info:
+            return JsonResponse({'status': 'ok', 'message': 'No income record yet'})
+
+        CHAR_FIELDS = [
+            'employment_type', 'employer', 'job_title', 'employment_length',
+            'supervisor_name', 'supervisor_email', 'supervisor_phone',
+            'school_name', 'year_of_graduation', 'school_address', 'school_phone',
+            'additional_income_source', 'id_type', 'id_number', 'id_state',
+        ]
+        DECIMAL_FIELDS = ['annual_income', 'additional_income_amount']
+        BOOL_FIELDS = ['currently_employed', 'has_multiple_jobs', 'has_additional_income', 'has_assets']
+        DATE_FIELDS = ['start_date', 'end_date']
+
+        update_fields = []
+
+        for field in CHAR_FIELDS:
+            if field in request.POST:
+                setattr(income_info, field, request.POST[field].strip() or None)
+                update_fields.append(field)
+
+        for field in DECIMAL_FIELDS:
+            if field in request.POST:
+                val = request.POST[field].strip().replace(',', '')
+                if val:
+                    from decimal import Decimal, InvalidOperation
+                    try:
+                        setattr(income_info, field, Decimal(val)); update_fields.append(field)
+                    except InvalidOperation:
+                        pass
+
+        for field in BOOL_FIELDS:
+            if field in request.POST:
+                raw = request.POST[field].lower()
+                if raw in ('true', '1', 'yes', 'on'):
+                    setattr(income_info, field, True); update_fields.append(field)
+                elif raw in ('false', '0', 'no'):
+                    setattr(income_info, field, False); update_fields.append(field)
+
+        for field in DATE_FIELDS:
+            if field in request.POST:
+                val = request.POST[field].strip()
+                if val:
+                    from datetime import date
+                    try:
+                        setattr(income_info, field, date.fromisoformat(val)); update_fields.append(field)
+                    except ValueError:
+                        pass
+
+        if update_fields:
+            income_info.save(update_fields=update_fields)
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'ok'})

@@ -2,6 +2,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 from .models import Applicant, PreviousAddress, ApplicantJob, ApplicantIncomeSource, ApplicantAsset
 from .forms import ApplicantForm, ApplicantBasicInfoForm, ApplicantHousingForm, ApplicantEmploymentForm
 
@@ -827,3 +829,184 @@ def process_dynamic_assets(request, applicant):
                     account_balance=float(balance),
                     asset_type='other'
                 )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AUTOSAVE VIEWS
+# Lightweight AJAX endpoints for field-level autosave on the profile steps.
+# Rate limiter is intentionally bypassed — these are @login_required writes
+# to the authenticated user's own Applicant record only.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _get_applicant_or_error(request):
+    """Return (applicant, None) or (None, JsonResponse) with error."""
+    if not request.user.is_authenticated:
+        return None, JsonResponse({'status': 'error', 'message': 'Not authenticated'}, status=403)
+    try:
+        return request.user.applicant_profile, None
+    except Applicant.DoesNotExist:
+        return None, JsonResponse({'status': 'error', 'message': 'Profile not found'}, status=404)
+
+
+@login_required
+@require_POST
+def profile_step1_autosave(request):
+    """
+    Autosave Step 1 (Basic Information) scalar fields.
+    Excluded: file uploads, previous addresses (full submit required).
+    """
+    applicant, err = _get_applicant_or_error(request)
+    if err:
+        return err
+
+    CHAR_FIELDS = [
+        'middle_name', 'suffix',
+        'street_address_1', 'street_address_2', 'city', 'state', 'zip_code',
+        'housing_status', 'current_landlord_name', 'current_landlord_phone',
+        'current_landlord_email', 'reason_for_moving',
+        'driver_license_number', 'driver_license_state', 'eviction_explanation',
+        'emergency_contact_name', 'emergency_contact_relationship', 'emergency_contact_phone',
+    ]
+    INT_FIELDS    = ['current_address_years', 'current_address_months']
+    DECIMAL_FIELDS = ['monthly_rent']
+    PROP_FIELDS   = ['first_name', 'last_name', 'email', 'phone_number']
+    BOOL_FIELDS   = ['evicted_before']
+
+    update_fields = []
+    try:
+        for field in CHAR_FIELDS:
+            if field in request.POST:
+                setattr(applicant, field, request.POST[field].strip() or None)
+                update_fields.append(field)
+
+        for field in INT_FIELDS:
+            if field in request.POST:
+                val = request.POST[field].strip()
+                setattr(applicant, field, int(val) if val.isdigit() else 0)
+                update_fields.append(field)
+
+        for field in DECIMAL_FIELDS:
+            if field in request.POST:
+                val = request.POST[field].strip().replace(',', '')
+                if val:
+                    from decimal import Decimal, InvalidOperation
+                    try:
+                        setattr(applicant, field, Decimal(val))
+                        update_fields.append(field)
+                    except InvalidOperation:
+                        pass
+
+        for field in BOOL_FIELDS:
+            if field in request.POST:
+                raw = request.POST[field].lower()
+                if raw in ('true', '1', 'yes'):
+                    setattr(applicant, field, True); update_fields.append(field)
+                elif raw in ('false', '0', 'no'):
+                    setattr(applicant, field, False); update_fields.append(field)
+
+        # Property-backed: setters persist to the linked User model automatically
+        for field in PROP_FIELDS:
+            if field in request.POST:
+                val = request.POST[field].strip()
+                if val:
+                    setattr(applicant, field, val)
+
+        if update_fields:
+            applicant.save(update_fields=update_fields)
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'ok'})
+
+
+@login_required
+@require_POST
+def profile_step2_autosave(request):
+    """
+    Autosave Step 2 (Housing Needs) scalar fields.
+    Excluded (future work - M2M): amenity sliders, neighborhood rankings, pets.
+    """
+    applicant, err = _get_applicant_or_error(request)
+    if err:
+        return err
+
+    CHAR_FIELDS    = ['move_in_timeframe', 'lease_term_preference']
+    DECIMAL_FIELDS = ['min_budget', 'max_budget']
+    INT_FIELDS     = ['min_bedrooms', 'max_bedrooms', 'min_bathrooms', 'max_bathrooms']
+    BOOL_FIELDS    = ['has_pets', 'requires_parking', 'requires_storage', 'requires_laundry']
+
+    update_fields = []
+    try:
+        for field in CHAR_FIELDS:
+            if field in request.POST and hasattr(applicant, field):
+                setattr(applicant, field, request.POST[field].strip() or None)
+                update_fields.append(field)
+
+        for field in INT_FIELDS:
+            if field in request.POST and hasattr(applicant, field):
+                val = request.POST[field].strip()
+                if val.isdigit():
+                    setattr(applicant, field, int(val)); update_fields.append(field)
+
+        for field in DECIMAL_FIELDS:
+            if field in request.POST and hasattr(applicant, field):
+                val = request.POST[field].strip().replace(',', '')
+                if val:
+                    from decimal import Decimal, InvalidOperation
+                    try:
+                        setattr(applicant, field, Decimal(val)); update_fields.append(field)
+                    except InvalidOperation:
+                        pass
+
+        for field in BOOL_FIELDS:
+            if field in request.POST and hasattr(applicant, field):
+                raw = request.POST[field].lower()
+                val = True if raw in ('true', '1', 'on', 'yes') else False
+                setattr(applicant, field, val); update_fields.append(field)
+
+        if update_fields:
+            applicant.save(update_fields=update_fields)
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'ok'})
+
+
+@login_required
+@require_POST
+def profile_step3_autosave(request):
+    """
+    Autosave Step 3 (Employment & Income) scalar fields.
+    Excluded (future work - M2M): job records, income sources, assets.
+    """
+    applicant, err = _get_applicant_or_error(request)
+    if err:
+        return err
+
+    CHAR_FIELDS = ['employment_status']
+    BOOL_FIELDS = ['has_been_evicted', 'has_filed_for_bankruptcy', 'has_been_convicted']
+
+    update_fields = []
+    try:
+        for field in CHAR_FIELDS:
+            if field in request.POST and hasattr(applicant, field):
+                setattr(applicant, field, request.POST[field].strip() or None)
+                update_fields.append(field)
+
+        for field in BOOL_FIELDS:
+            if field in request.POST and hasattr(applicant, field):
+                raw = request.POST[field].lower()
+                if raw in ('true', '1', 'yes'):
+                    setattr(applicant, field, True); update_fields.append(field)
+                elif raw in ('false', '0', 'no'):
+                    setattr(applicant, field, False); update_fields.append(field)
+
+        if update_fields:
+            applicant.save(update_fields=update_fields)
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'ok'})

@@ -5,6 +5,8 @@ from .views import (
     v2_section2_income, v2_section3_legal, v2_section4_review, v2_section5_payment,
     add_previous_address, remove_previous_address,
     v2_sign_document,
+    # Autosave endpoints
+    v2_section1_autosave, v2_section2_autosave,
     # Progressive broker application creation
     broker_create_step1, broker_create_step2, broker_create_step3,
     # Separated broker and applicant interfaces
@@ -43,9 +45,11 @@ urlpatterns = [
     path('<int:application_id>/sign-document/', v2_sign_document, name='v2_sign_document'),
     path('<int:application_id>/section4/', v2_section4_review, name='section4_review'),
     path('<int:application_id>/section5/', v2_section5_payment, name='section5_payment'),
-    
 
-    
+    # Autosave endpoints (AJAX, token-protected)
+    path('<int:application_id>/section1/autosave/', v2_section1_autosave, name='v2_section1_autosave'),
+    path('<int:application_id>/section2/autosave/', v2_section2_autosave, name='v2_section2_autosave'),
+
     # AJAX endpoints for previous addresses
     path('<int:application_id>/add-address/', add_previous_address, name='add_previous_address'),
     path('<int:application_id>/remove-address/<int:address_id>/', remove_previous_address, name='remove_previous_address'),
