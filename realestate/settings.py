@@ -180,6 +180,12 @@ USE_TZ = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Map Django message tags to Bootstrap alert classes
+from django.contrib.messages import constants as message_constants
+MESSAGE_TAGS = {
+    message_constants.ERROR: 'danger',
+}
+
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api	

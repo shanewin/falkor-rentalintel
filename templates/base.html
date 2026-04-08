@@ -172,6 +172,21 @@
 
     <!-- Main Content Area -->
     <div class="content">
+        {% if messages %}
+        <div class="container mt-3" style="max-width: 900px;">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show shadow-sm border-0" role="alert"
+                 style="border-radius: 10px; font-size: 0.9rem;{% if message.tags == 'success' %} background: linear-gradient(135deg, #d4edda, #c3e6cb); color: #155724; border-left: 4px solid #28a745;{% elif message.tags == 'error' %} background: linear-gradient(135deg, #f8d7da, #f5c6cb); color: #721c24; border-left: 4px solid #dc3545;{% elif message.tags == 'warning' %} background: linear-gradient(135deg, #fff3cd, #ffeeba); color: #856404; border-left: 4px solid #ffc107;{% else %} background: linear-gradient(135deg, #d1ecf1, #bee5eb); color: #0c5460; border-left: 4px solid #17a2b8;{% endif %}">
+                {% if message.tags == 'success' %}<i class="fas fa-check-circle me-2"></i>
+                {% elif message.tags == 'error' %}<i class="fas fa-exclamation-circle me-2"></i>
+                {% elif message.tags == 'warning' %}<i class="fas fa-exclamation-triangle me-2"></i>
+                {% else %}<i class="fas fa-info-circle me-2"></i>{% endif %}
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
         {% block content %}{% endblock %}
     </div>
 
