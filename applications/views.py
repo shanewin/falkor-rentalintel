@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 from users.models import User
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
@@ -361,6 +363,7 @@ def broker_send_sms(request, application_id):
     if request.method == 'POST':
         message_text = request.POST.get('message', '').strip()
         is_ai_remind = request.POST.get('ai_remind') == '1'
+        logger.info(f"broker_send_sms: ai_remind raw='{request.POST.get('ai_remind')}' is_ai_remind={is_ai_remind} app={application_id}")
         
         if not message_text:
             messages.error(request, "Please enter a message to send.")
