@@ -3085,13 +3085,10 @@ def v2_section1_autosave(request, application_id):
     if error:
         return JsonResponse({'status': 'error', 'message': 'Access denied'}, status=403)
 
-    # Token check for applicant access (passed as hidden field in form)
+    # Token already validated by validate_application_access above
     if access_type == 'applicant':
         token = request.POST.get('autosave_token', '')
-        from .models import ApplicationToken
-        try:
-            app_token = ApplicationToken.objects.get(application=application, token=token)
-        except Exception:
+        if not token:
             return JsonResponse({'status': 'error', 'message': 'Invalid token'}, status=403)
 
     try:
@@ -3179,12 +3176,10 @@ def v2_section2_autosave(request, application_id):
     if error:
         return JsonResponse({'status': 'error', 'message': 'Access denied'}, status=403)
 
+    # Token already validated by validate_application_access above
     if access_type == 'applicant':
         token = request.POST.get('autosave_token', '')
-        from .models import ApplicationToken
-        try:
-            ApplicationToken.objects.get(application=application, token=token)
-        except Exception:
+        if not token:
             return JsonResponse({'status': 'error', 'message': 'Invalid token'}, status=403)
 
     try:
