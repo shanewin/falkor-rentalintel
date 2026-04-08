@@ -1398,7 +1398,8 @@ def v2_section1_personal_info(request, application_id):
     )
     
     if request.method == 'POST':
-        form = PersonalInfoForm(request.POST, instance=personal_info)
+        is_draft = 'save_continue' not in request.POST
+        form = PersonalInfoForm(request.POST, instance=personal_info, draft_mode=is_draft)
         
         if form.is_valid():
             with transaction.atomic():

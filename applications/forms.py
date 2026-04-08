@@ -199,6 +199,7 @@ class PersonalInfoForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        self.draft_mode = kwargs.pop('draft_mode', False)
         super().__init__(*args, **kwargs)
         
         # Landlord fields are required if renting
@@ -248,7 +249,8 @@ class PersonalInfoForm(forms.ModelForm):
         cleaned_data = super().clean()
         housing_status = cleaned_data.get('housing_status')
         
-        if housing_status == 'Rent':
+        # Only enforce landlord fields on "Save & Continue" (not draft saves)
+        if not self.draft_mode and housing_status == 'Rent':
             for field in ['landlord_name', 'landlord_phone', 'landlord_email']:
                 if not cleaned_data.get(field):
                     self.add_error(field, "This field is required for rental properties.")
