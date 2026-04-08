@@ -40,6 +40,7 @@ RUN python manage.py collectstatic --noinput
 # Expose port (Railway will override this)
 EXPOSE 8000
 
-# Railway will use the startCommand from railway.json if present
-# Fallback to this CMD if no override is set
-CMD gunicorn realestate.wsgi:application --bind 0.0.0.0:8000
+# Run migrations then start gunicorn
+# NOTE: Railway uses Dockerfile, not Procfile, so the Procfile 'release' step is ignored.
+# Migrations must run here instead.
+CMD python manage.py migrate --noinput && gunicorn realestate.wsgi:application --bind 0.0.0.0:8000
