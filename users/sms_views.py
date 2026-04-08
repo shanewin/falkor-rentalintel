@@ -410,16 +410,33 @@ def telnyx_webhook(request):
                 # Check for active AI SMS conversation
                 try:
                     from applications.sms_conversation import SMSConversation
+                    from applications.sms_utils import normalize_phone
+                    
+                    # Normalize inbound number to E.164 for matching
+                    normalized_from = normalize_phone(from_number or '')
+                    logger.info(f"Inbound SMS from raw={from_number} normalized={normalized_from} text='{text}'")
+                    
+                    # Try normalized first, then raw as fallback
                     conversation = SMSConversation.objects.filter(
-                        phone_number=from_number,
+                        phone_number=normalized_from,
                         status='active',
                         expires_at__gt=timezone.now()
                     ).order_by('-created_at').first()
+                    
+                    if not conversation and from_number != normalized_from:
+                        # Fallback: try raw number in case it was stored un-normalized
+                        conversation = SMSConversation.objects.filter(
+                            phone_number=from_number,
+                            status='active',
+                            expires_at__gt=timezone.now()
+                        ).order_by('-created_at').first()
                     
                     if conversation:
                         from applications.sms_ai_service import handle_inbound_reply
                         handle_inbound_reply(conversation, text or '')
                         logger.info(f"Routed inbound SMS to AI conversation #{conversation.id}")
+                    else:
+                        logger.info(f"No active AI conversation found for {normalized_from}")
                 except Exception as conv_err:
                     logger.error(f"AI conversation handling failed: {conv_err}")
         

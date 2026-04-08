@@ -10,6 +10,26 @@ from typing import Optional, Tuple
 logger = logging.getLogger(__name__)
 
 
+def normalize_phone(phone: str) -> str:
+    """
+    Normalize any phone format to E.164: +1XXXXXXXXXX
+    Handles: (631) 759-6760, 631-759-6760, 6317596760, +16317596760, etc.
+    """
+    if not phone:
+        return ''
+    cleaned = ''.join(c for c in phone if c.isdigit() or c == '+')
+    # Strip leading +
+    digits = cleaned.lstrip('+')
+    # If 11 digits starting with 1, it's already US with country code
+    if len(digits) == 11 and digits.startswith('1'):
+        return f'+{digits}'
+    # If 10 digits, add +1
+    if len(digits) == 10:
+        return f'+1{digits}'
+    # Fallback: return with + prefix
+    return f'+{digits}' if digits else ''
+
+
 class SMSBackend:
     """
     Telnyx SMS backend for sending application notifications

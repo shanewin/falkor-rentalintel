@@ -406,6 +406,7 @@ def broker_send_sms(request, application_id):
                 if is_ai_remind:
                     try:
                         from .sms_conversation import SMSConversation, get_missing_safe_fields
+                        from .sms_utils import normalize_phone
                         
                         # Expire any existing active conversations
                         SMSConversation.objects.filter(
@@ -414,9 +415,10 @@ def broker_send_sms(request, application_id):
                         ).update(status='expired')
                         
                         missing_fields = get_missing_safe_fields(application)
+                        normalized = normalize_phone(phone)
                         conversation = SMSConversation.objects.create(
                             application=application,
-                            phone_number=phone,
+                            phone_number=normalized,
                             requested_fields=missing_fields,
                             collected_fields={},
                             messages=[{'role': 'assistant', 'content': message_text}],
