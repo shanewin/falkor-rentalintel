@@ -241,10 +241,7 @@ class ApplicationSection(models.Model):
         return f"Application {self.application.id} - Section {self.get_section_number_display()}"
 
     def get_progress_percentage(self):
-        """Returns a percentage score for this section based on its data model"""
-        if self.status == SectionStatus.COMPLETED:
-            return 100
-            
+        """Returns a percentage score for this section based on actual field completion"""
         # Try to find corresponding data model
         if self.section_number == 1:
             data_model = getattr(self.application, 'personal_info', None)
@@ -257,10 +254,14 @@ class ApplicationSection(models.Model):
         else:
             data_model = None
 
+        # Always use real field completion if available
         if data_model and hasattr(data_model, 'get_completion_status'):
             return data_model.get_completion_status()
         
-        return 100 if self.status == SectionStatus.COMPLETED else (20 if self.status == SectionStatus.IN_PROGRESS else 0)
+        # Fallback for sections without data models (e.g., Review)
+        if self.status == SectionStatus.COMPLETED:
+            return 100
+        return 20 if self.status == SectionStatus.IN_PROGRESS else 0
 
 
 class PersonalInfoData(models.Model):
