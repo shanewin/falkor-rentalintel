@@ -247,14 +247,9 @@ class PersonalInfoForm(forms.ModelForm):
     
     def clean(self):
         cleaned_data = super().clean()
-        housing_status = cleaned_data.get('housing_status')
-        
-        # Only enforce landlord fields on "Save & Continue" (not draft saves)
-        if not self.draft_mode and housing_status == 'Rent':
-            for field in ['landlord_name', 'landlord_phone', 'landlord_email']:
-                if not cleaned_data.get(field):
-                    self.add_error(field, "This field is required for rental properties.")
-                    
+        # Landlord fields (name, phone, email) are encouraged but NOT
+        # enforced — users can save with them empty and fill them later.
+        # The model already uses blank=True, null=True.
         return cleaned_data
 
 

@@ -1501,6 +1501,7 @@ def v2_section1_personal_info(request, application_id):
             section.validation_errors = form.errors
             section.save()
             
+            logger.warning(f"Section 1 validation errors for app {application_id}: {form.errors.as_json()}")
             messages.error(request, "Please correct the errors below.")
     else:
         form = PersonalInfoForm(instance=personal_info)
