@@ -397,7 +397,7 @@ def telnyx_webhook(request):
             text = getattr(payload, 'text', '')
             body = (text or '').upper().strip()
             
-            # Handle opt-out commands (backup — Telnyx handles these at platform level)
+            # Handle opt-out commands FIRST (backup — Telnyx handles these at platform level)
             if body in ['STOP', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT']:
                 prefs = SMSPreferences.objects.filter(
                     phone_number=from_number
@@ -406,6 +406,22 @@ def telnyx_webhook(request):
                 if prefs:
                     prefs.record_opt_out()
                     logger.info(f"User opted out via inbound SMS: {from_number}")
+            else:
+                # Check for active AI SMS conversation
+                try:
+                    from applications.sms_conversation import SMSConversation
+                    conversation = SMSConversation.objects.filter(
+                        phone_number=from_number,
+                        status='active',
+                        expires_at__gt=timezone.now()
+                    ).order_by('-created_at').first()
+                    
+                    if conversation:
+                        from applications.sms_ai_service import handle_inbound_reply
+                        handle_inbound_reply(conversation, text or '')
+                        logger.info(f"Routed inbound SMS to AI conversation #{conversation.id}")
+                except Exception as conv_err:
+                    logger.error(f"AI conversation handling failed: {conv_err}")
         
         return JsonResponse({'status': 'ok'})
         

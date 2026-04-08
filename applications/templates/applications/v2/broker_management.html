@@ -1000,60 +1000,82 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Send SMS Modal -->
 {% if personal_info and personal_info.phone_cell %}
 <div class="modal fade" id="sendSmsModal" tabindex="-1" aria-labelledby="sendSmsModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content border-0 shadow">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
             <div class="modal-header" style="background: linear-gradient(135deg, #ffe502, #ffb302); border: none;">
-                <h5 class="modal-title" id="sendSmsModalLabel" style="color: #1a1a1a;">
-                    <i class="fas fa-sms me-2"></i>Send SMS to Applicant
+                <h5 class="modal-title fw-bold" id="sendSmsModalLabel" style="color: #1a1a1a;">
+                    <i class="fas fa-comment-sms me-2"></i>Send Message
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="post" action="{% url 'broker_send_sms' application.id %}">
                 {% csrf_token %}
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted">RECIPIENT</label>
-                        <div class="d-flex align-items-center p-2 rounded" style="background: #f8f9fa;">
-                            <i class="fas fa-user-circle me-2 text-muted"></i>
+                <input type="hidden" name="ai_remind" id="aiRemindFlag" value="0">
+                <div class="modal-body px-4 pt-4 pb-2">
+
+                    <!-- Recipient -->
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-uppercase text-muted" style="letter-spacing: .6px; font-size: .7rem;">Recipient</label>
+                        <div class="d-flex align-items-center gap-3 p-3 rounded-3" style="background: #f8f9fa; border: 1px solid #e9ecef;">
+                            <div class="d-flex align-items-center justify-content-center rounded-circle" style="width:40px;height:40px;background:linear-gradient(135deg,#ffe502,#ffb302);flex-shrink:0;">
+                                <i class="fas fa-user" style="color:#1a1a1a; font-size:.9rem;"></i>
+                            </div>
                             <div>
-                                <div class="fw-semibold">
+                                <div class="fw-semibold" style="font-size:.95rem;">
                                     {% if personal_info %}{{ personal_info.first_name }} {{ personal_info.last_name }}{% endif %}
                                 </div>
-                                <div class="text-muted small">{{ personal_info.phone_cell }}</div>
+                                <div class="text-muted" style="font-size:.82rem; letter-spacing:.3px;">{{ personal_info.phone_cell }}</div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Quick Messages dropdown -->
                     <div class="mb-3">
-                        <label for="sms_message" class="form-label small fw-bold text-muted">MESSAGE</label>
-                        <textarea name="message" id="sms_message" class="form-control" rows="4" 
+                        <label class="form-label small fw-bold text-uppercase text-muted" style="letter-spacing:.6px; font-size:.7rem;">Quick Messages</label>
+                        <select id="quickMessageSelect" class="form-select form-select-sm" style="border-radius:8px; font-size:.85rem; border-color:#dee2e6;">
+                            <option value="">— Choose a message to pre-fill —</option>
+                            <option value="Hi {{ personal_info.first_name }}, this is a reminder to complete your rental application. Please log in to continue: https://rentfalkor.com">📅 Completion Reminder</option>
+                            <option value="Hi {{ personal_info.first_name }}, we need a few more documents for your application. Please upload them at your earliest convenience.">📎 Documents Needed</option>
+                            <option value="Hi {{ personal_info.first_name }}, great news! Your application is being reviewed. We'll be in touch soon.">✅ Status Update</option>
+                            <option value="Hi {{ personal_info.first_name }}, we haven't heard from you in a while. Is there anything we can help you with to move your application forward?">💬 Check In</option>
+                        </select>
+                    </div>
+
+                    <!-- Message textarea -->
+                    <div class="mb-3">
+                        <label for="sms_message" class="form-label small fw-bold text-uppercase text-muted" style="letter-spacing:.6px; font-size:.7rem;">Message</label>
+                        <textarea name="message" id="sms_message" class="form-control" rows="4"
                                   maxlength="320" required
-                                  placeholder="Type your message to the applicant..."></textarea>
-                        <div class="d-flex justify-content-between mt-1">
-                            <small class="text-muted">SMS messages are sent via Telnyx from your platform number.</small>
+                                  placeholder="Write your message to the applicant…"
+                                  style="border-radius:10px; font-size:.9rem; resize:vertical;"></textarea>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <small class="text-muted" style="font-size:.75rem;">
+                                <i class="fas fa-phone-alt me-1 opacity-50"></i>
+                                Sent from&nbsp;<span class="fw-semibold">{% if sms_from_number %}{{ sms_from_number }}{% else %}your platform number{% endif %}</span>
+                            </small>
                             <small class="text-muted"><span id="smsCharCount">0</span>/320</small>
                         </div>
                     </div>
-                    <div class="mb-0">
-                        <label class="form-label small fw-bold text-muted">QUICK TEMPLATES</label>
-                        <div class="d-flex flex-wrap gap-1">
-                            <button type="button" class="btn btn-sm btn-outline-secondary sms-template-btn" 
-                                    data-msg="Hi {{ personal_info.first_name }}, this is a reminder to complete your rental application. Please log in to continue: https://rentfalkor.com">
-                                <i class="fas fa-clock me-1"></i>Reminder
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary sms-template-btn" 
-                                    data-msg="Hi {{ personal_info.first_name }}, we need a few more documents for your application. Please upload them at your earliest convenience.">
-                                <i class="fas fa-file-upload me-1"></i>Docs Needed
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary sms-template-btn" 
-                                    data-msg="Hi {{ personal_info.first_name }}, great news! Your application is being reviewed. We'll be in touch soon.">
-                                <i class="fas fa-check-circle me-1"></i>Status Update
+
+                    <!-- AI Remind row -->
+                    <div class="mb-1 pt-1 border-top">
+                        <div class="d-flex align-items-center justify-content-between py-2">
+                            <div>
+                                <div class="fw-semibold small" style="font-size:.82rem;">AI: Remind Missing Fields</div>
+                                <div class="text-muted" style="font-size:.72rem;">Generates a personalised nudge based on what's still incomplete</div>
+                            </div>
+                            <button type="button" class="btn btn-sm fw-bold ms-3" id="aiRemindBtn"
+                                    style="background: linear-gradient(135deg,#ffe502,#ffb302); color:#1a1a1a; border:none; white-space:nowrap; min-width:120px;"
+                                    title="AI will generate a personalized reminder about missing fields">
+                                <i class="fas fa-robot me-1"></i>Generate
                             </button>
                         </div>
                     </div>
+
                 </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn fw-bold" style="background: linear-gradient(135deg, #ffe502, #f59e0b); color: #1a1a1a; border: none;">
+                <div class="modal-footer border-0 px-4 pb-4 pt-2">
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn fw-bold px-4" style="background: linear-gradient(135deg, #1a1a1a, #2d2d2d); color: #ffe502; border: none;">
                         <i class="fas fa-paper-plane me-1"></i>Send SMS
                     </button>
                 </div>
@@ -1063,18 +1085,69 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 <script>
+const smsTextarea = document.getElementById('sms_message');
+const smsCharCount = document.getElementById('smsCharCount');
+
 // Character counter
-document.getElementById('sms_message').addEventListener('input', function() {
-    document.getElementById('smsCharCount').textContent = this.value.length;
+smsTextarea.addEventListener('input', function() {
+    smsCharCount.textContent = this.value.length;
 });
 
-// Quick template buttons
-document.querySelectorAll('.sms-template-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-        const textarea = document.getElementById('sms_message');
-        textarea.value = this.dataset.msg;
-        document.getElementById('smsCharCount').textContent = textarea.value.length;
+// Quick message dropdown
+document.getElementById('quickMessageSelect').addEventListener('change', function() {
+    if (this.value) {
+        smsTextarea.value = this.value;
+        smsCharCount.textContent = this.value.length;
+        document.getElementById('aiRemindFlag').value = '0';
+        smsTextarea.focus();
+        // Reset select back to placeholder so it doesn't look "stuck"
+        this.value = '';
+    }
+});
+
+// AI Remind Missing Fields button
+document.getElementById('aiRemindBtn').addEventListener('click', function() {
+    const btn = this;
+    const originalHTML = btn.innerHTML;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Generating…';
+
+    fetch('{% url "broker_remind_missing" application.id %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            smsTextarea.value = data.message;
+            smsCharCount.textContent = data.message.length;
+            document.getElementById('aiRemindFlag').value = '1';
+            smsTextarea.focus();
+        } else if (data.error) {
+            alert(data.error);
+        }
+    })
+    .catch(err => {
+        alert('Failed to generate AI message. Please try again.');
+        console.error(err);
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
     });
+});
+
+// Reset state when modal closes
+document.getElementById('sendSmsModal').addEventListener('hidden.bs.modal', function() {
+    smsTextarea.value = '';
+    smsCharCount.textContent = '0';
+    document.getElementById('aiRemindFlag').value = '0';
+    document.getElementById('quickMessageSelect').value = '';
 });
 </script>
 {% endif %}

@@ -360,6 +360,7 @@ def broker_send_sms(request, application_id):
     
     if request.method == 'POST':
         message_text = request.POST.get('message', '').strip()
+        is_ai_remind = request.POST.get('ai_remind') == '1'
         
         if not message_text:
             messages.error(request, "Please enter a message to send.")
@@ -392,7 +393,7 @@ def broker_send_sms(request, application_id):
                     SMSMessage.objects.create(
                         user=application.applicant.user if application.applicant else None,
                         phone_number=phone,
-                        message_type='broker_message',
+                        message_type='ai_reminder' if is_ai_remind else 'broker_message',
                         content=message_text,
                         sms_sid=result,
                         direction='outbound',
@@ -400,12 +401,148 @@ def broker_send_sms(request, application_id):
                     )
                 except Exception as log_err:
                     logger.warning(f"Failed to log SMS message: {log_err}")
+                
+                # If this was an AI reminder, create a conversation to track replies
+                if is_ai_remind:
+                    try:
+                        from .sms_conversation import SMSConversation, get_missing_safe_fields
+                        
+                        # Expire any existing active conversations
+                        SMSConversation.objects.filter(
+                            application=application,
+                            status='active'
+                        ).update(status='expired')
+                        
+                        missing_fields = get_missing_safe_fields(application)
+                        conversation = SMSConversation.objects.create(
+                            application=application,
+                            phone_number=phone,
+                            requested_fields=missing_fields,
+                            collected_fields={},
+                            messages=[{'role': 'assistant', 'content': message_text}],
+                            initiated_by=request.user,
+                        )
+                        
+                        from .models import ApplicationActivity
+                        ApplicationActivity.objects.create(
+                            application=application,
+                            description=f"AI SMS reminder sent ({len(missing_fields)} missing fields). Conversation #{conversation.id}"
+                        )
+                        
+                        messages.success(
+                            request,
+                            f"AI conversation started! Tracking {len(missing_fields)} missing fields. "
+                            f"The applicant can reply via text."
+                        )
+                    except Exception as conv_err:
+                        logger.warning(f"Failed to create SMS conversation: {conv_err}")
             else:
                 messages.error(request, f"SMS sending failed: {result}")
                 
         except Exception as e:
             messages.error(request, f"SMS sending failed: {str(e)}")
     
+    return redirect('broker_application_management', application_id=application_id)
+
+
+@login_required
+def broker_remind_missing(request, application_id):
+    """
+    AI-powered SMS reminder about missing application fields.
+    
+    AJAX mode (X-Requested-With: XMLHttpRequest):
+        - Generates the AI message and returns JSON {message: "..."}
+        - The broker can review/edit in the SMS modal before sending
+    
+    Regular POST:
+        - Generates and sends immediately, creates conversation
+    """
+    from django.http import JsonResponse
+    from .models import Application
+    from .sms_conversation import SMSConversation, get_missing_safe_fields
+    from .sms_ai_service import generate_reminder_sms
+
+    application = get_object_or_404(Application, id=application_id)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    # Permission check
+    if not (request.user.is_superuser or request.user == application.broker):
+        if is_ajax:
+            return JsonResponse({'error': 'Not authorized'}, status=403)
+        messages.error(request, "You are not authorized to send reminders for this application.")
+        return redirect('broker_application_management', application_id=application_id)
+
+    if request.method != 'POST':
+        return redirect('broker_application_management', application_id=application_id)
+
+    # Get missing safe-to-collect fields
+    missing_fields = get_missing_safe_fields(application)
+    if not missing_fields:
+        if is_ajax:
+            return JsonResponse({'error': 'No missing fields to collect via SMS. All safe-to-collect fields are filled!'})
+        messages.info(request, "No missing fields to collect via SMS. All safe-to-collect fields are filled!")
+        return redirect('broker_application_management', application_id=application_id)
+
+    # Generate the AI reminder
+    reminder_text = generate_reminder_sms(application, missing_fields)
+
+    # AJAX mode: return the generated message for the broker to review
+    if is_ajax:
+        return JsonResponse({
+            'message': reminder_text,
+            'missing_count': len(missing_fields),
+        })
+
+    # Regular POST mode: send immediately
+    phone = None
+    personal_info = getattr(application, 'personal_info', None)
+    if personal_info:
+        phone = personal_info.phone_cell
+
+    if not phone:
+        messages.error(request, "No phone number found for this applicant.")
+        return redirect('broker_application_management', application_id=application_id)
+
+    # Expire any existing active conversations for this application
+    SMSConversation.objects.filter(
+        application=application,
+        status='active'
+    ).update(status='expired')
+
+    try:
+        from .sms_utils import SMSBackend
+        sms = SMSBackend()
+        success, result = sms.send_sms(phone, reminder_text)
+
+        if success:
+            conversation = SMSConversation.objects.create(
+                application=application,
+                phone_number=phone,
+                requested_fields=missing_fields,
+                collected_fields={},
+                messages=[{'role': 'assistant', 'content': reminder_text}],
+                initiated_by=request.user,
+            )
+
+            try:
+                from .models import ApplicationActivity
+                ApplicationActivity.objects.create(
+                    application=application,
+                    description=f"AI SMS reminder sent ({len(missing_fields)} missing fields). Conversation #{conversation.id}"
+                )
+            except Exception:
+                pass
+
+            messages.success(
+                request,
+                f"AI reminder sent to {phone}! Tracking {len(missing_fields)} missing fields. "
+                f"The applicant can reply via text and we'll collect the data."
+            )
+        else:
+            messages.error(request, f"SMS sending failed: {result}")
+    except Exception as e:
+        messages.error(request, f"Failed to send reminder: {str(e)}")
+
     return redirect('broker_application_management', application_id=application_id)
 
 
@@ -1879,6 +2016,7 @@ def broker_application_management(request, application_id):
     doc_inventory_filled = sum(1 for d in doc_inventory if d['filed'])
     doc_inventory_total = sum(1 for d in doc_inventory if d['required'])
 
+    from django.conf import settings as django_settings
     context = {
         'application': application,
         'sections': sections,
@@ -1896,6 +2034,7 @@ def broker_application_management(request, application_id):
         'doc_inventory': doc_inventory,
         'doc_inventory_filled': doc_inventory_filled,
         'doc_inventory_total': doc_inventory_total,
+        'sms_from_number': getattr(django_settings, 'TELNYX_FROM_PHONE', ''),
     }
     
     return render(request, 'applications/v2/broker_management.html', context)

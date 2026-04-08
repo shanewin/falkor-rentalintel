@@ -11,7 +11,7 @@ from .views import (
     broker_application_management, applicant_application_interface,
     # Keep existing views for file management and analysis
     applicant_complete, application_list, 
-    delete_uploaded_file, analyze_uploaded_file, check_analysis_status, send_application_link, revoke_application, test_email_send, test_sms_send, broker_send_sms,
+    delete_uploaded_file, analyze_uploaded_file, check_analysis_status, send_application_link, revoke_application, test_email_send, test_sms_send, broker_send_sms, broker_remind_missing,
     nudge_applicant, approve_application,
     application_preview, broker_prefill_dashboard, broker_prefill_section1, prefill_status_api
 )
@@ -62,6 +62,7 @@ urlpatterns = [
     path('test-email/', test_email_send, name='test_email_send'),
     path('test-sms/', test_sms_send, name='test_sms_send'),
     path('<int:application_id>/send-sms/', broker_send_sms, name='broker_send_sms'),
+    path('<int:application_id>/remind-missing/', broker_remind_missing, name='broker_remind_missing'),
     path('<int:application_id>/preview/', application_preview, name='application_preview'),
     path('<int:application_id>/broker-prefill/', broker_prefill_dashboard, name='broker_prefill_dashboard'),
     path('<int:application_id>/edit/', broker_prefill_dashboard, name='application_edit'),

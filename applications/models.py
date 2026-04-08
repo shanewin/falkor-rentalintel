@@ -786,3 +786,6 @@ class ApplicationPayment(models.Model):
                 if field['filled']:
                     filled += 1
         return round((filled / total) * 100) if total > 0 else 0
+
+# Import SMS conversation model so Django discovers it for migrations
+from .sms_conversation import SMSConversation  # noqa: E402, F401
