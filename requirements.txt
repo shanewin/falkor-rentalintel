@@ -86,7 +86,7 @@ sympy==1.13.3
 tenacity==9.0.0
 typing-inspect==0.9.0
 typing-inspection==0.4.0
-typing_extensions==4.12.2
+typing_extensions==4.13.0
 tzdata==2025.1
 unstructured-client==0.31.1
 whitenoise
@@ -99,7 +99,7 @@ django-encrypted-model-fields==0.6.5
 sendgrid==6.10.0
 mailgun2==2.0.1
 boto3==1.35.80
-telnyx>=2.1.0
+telnyx==2.1.6
 celery
 redis
 gunicorn==21.2.0
