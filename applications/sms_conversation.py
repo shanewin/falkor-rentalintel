@@ -34,6 +34,12 @@ class SMSConversation(models.Model):
         help_text="Dict of field_name -> value that have been extracted and saved"
     )
 
+    # Sequential field tracking — one question at a time
+    current_field_index = models.IntegerField(
+        default=0,
+        help_text="Index into requested_fields — which field we're currently asking about"
+    )
+
     # Full conversation history for AI context
     messages = models.JSONField(
         default=list,
@@ -78,6 +84,31 @@ class SMSConversation(models.Model):
         """Returns list of field dicts that haven't been collected yet."""
         collected_keys = set(self.collected_fields.keys())
         return [f for f in self.requested_fields if f['field'] not in collected_keys]
+
+    @property
+    def current_field(self):
+        """Returns the field dict we're currently asking about, or None if done."""
+        if self.current_field_index < len(self.requested_fields):
+            return self.requested_fields[self.current_field_index]
+        return None
+
+    @property
+    def next_field(self):
+        """Returns the field dict that comes after the current one, or None."""
+        next_idx = self.current_field_index + 1
+        if next_idx < len(self.requested_fields):
+            return self.requested_fields[next_idx]
+        return None
+
+    @property
+    def fields_remaining(self):
+        """How many fields are left to ask (including current)."""
+        return max(0, len(self.requested_fields) - self.current_field_index)
+
+    def advance_field(self):
+        """Move to the next field in the sequence."""
+        self.current_field_index += 1
+        self.save(update_fields=['current_field_index', 'updated_at'])
 
     def add_message(self, role, content):
         """Append a message to the conversation history."""

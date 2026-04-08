@@ -53,17 +53,16 @@ def _call_claude(prompt, system_prompt="", max_tokens=300, temperature=0.3):
         return None
 
 
+# ──────────────────────────────────────────────────────────────────
+# STEP 1: Generate the opening SMS (asks about the FIRST field)
+# ──────────────────────────────────────────────────────────────────
+
 def generate_reminder_sms(application, missing_fields):
     """
-    Use Claude to generate a friendly, concise SMS reminding the applicant
-    about their missing fields.
+    Generate a friendly opening SMS that introduces the conversation
+    and asks about the FIRST missing field only.
 
-    Args:
-        application: Application model instance
-        missing_fields: list of dicts [{'field': 'employer', 'label': 'Employer Name', ...}, ...]
-
-    Returns:
-        str: SMS message text (under 320 chars)
+    This message is shown to the broker in the modal for review before sending.
     """
     applicant_name = "there"
     personal_info = getattr(application, 'personal_info', None)
@@ -71,103 +70,115 @@ def generate_reminder_sms(application, missing_fields):
         applicant_name = personal_info.first_name
 
     building = application.get_building_display()
-    field_labels = [f['label'] for f in missing_fields[:8]]
+    first_field = missing_fields[0]
+    total = len(missing_fields)
 
-    prompt = f"""Generate a SHORT, friendly SMS reminder for a rental application. 
-Keep it under 280 characters so there's room for the sign-off.
+    prompt = f"""Generate a SHORT, friendly SMS to start a conversation with a rental applicant.
+You need to collect {total} piece(s) of missing info, ONE AT A TIME via text.
 
-Applicant's first name: {applicant_name}
-Property: {building}
-Missing fields: {', '.join(field_labels)}
+This first message should:
+1. Greet {applicant_name} by name (casual, no "Dear")
+2. Briefly mention this is about their Falkor rental application for {building}
+3. Say you have {total} quick question(s) to help complete their app
+4. Ask the FIRST question: "{first_field['label']}"
+5. Make the question feel natural and conversational
 
-Rules:
-- Be warm and professional
-- List the 3-4 most important missing items by name
-- If there are more than 4 missing fields, say "and a few more details"
-- End by saying they can reply to this text with the info
-- Do NOT include any greeting like "Dear" — just use their first name casually
-- Do NOT include any signature or phone number
-- Output ONLY the message text, nothing else"""
+Keep it under 280 characters total.
+Output ONLY the message text, nothing else."""
 
-    system = "You are a concise SMS writer for a rental application platform called Falkor. Write short, friendly texts."
+    system = "You are a concise SMS writer for a rental application platform called Falkor. Write short, friendly texts. One question at a time."
     text = _call_claude(prompt, system_prompt=system, max_tokens=150, temperature=0.7)
 
     if text:
         text = text.strip().strip('"').strip("'")
         return text[:320]
 
-    return _fallback_reminder(application, missing_fields)
+    return _fallback_opening(applicant_name, building, first_field, total)
 
 
-def _fallback_reminder(application, missing_fields):
-    """Fallback if Claude is unavailable — simple template-based message."""
-    personal_info = getattr(application, 'personal_info', None)
-    name = personal_info.first_name if personal_info and personal_info.first_name else "there"
-    labels = [f['label'] for f in missing_fields[:4]]
-    items = ", ".join(labels)
-    extra = f" and {len(missing_fields) - 4} more" if len(missing_fields) > 4 else ""
-    return f"Hi {name}! Your rental application is almost complete. We still need: {items}{extra}. You can reply to this text with that info, or log in at rentfalkor.com."
+def _fallback_opening(name, building, first_field, total_fields):
+    """Fallback if Claude is unavailable — simple template for the opening message."""
+    return (
+        f"Hi {name}! Just a few quick questions to finish your Falkor "
+        f"application for {building} ({total_fields} total). "
+        f"First up: What is your {first_field['label']}?"
+    )[:320]
 
 
-def parse_applicant_reply(conversation, reply_text):
+# ──────────────────────────────────────────────────────────────────
+# STEP 2: Parse a single-field reply from the applicant
+# ──────────────────────────────────────────────────────────────────
+
+def parse_single_field_reply(conversation, reply_text):
     """
-    Use Claude to extract field values from an applicant's SMS reply.
+    Parse the applicant's reply for the ONE field we're currently asking about.
 
-    Args:
-        conversation: SMSConversation instance
-        reply_text: The applicant's reply text
-
-    Returns:
-        dict with 'extracted', 'still_missing', and 'reply' keys
+    Returns dict:
+        {
+            'value': <extracted value or None>,
+            'needs_retry': bool,      # True if we couldn't extract a usable value
+            'follow_up': str,         # Next SMS to send
+        }
     """
-    pending = conversation.pending_fields
+    current = conversation.current_field
+    if not current:
+        return {
+            'value': None,
+            'needs_retry': False,
+            'follow_up': "All set! Your application has been updated. Thank you!",
+        }
 
-    field_descriptions = []
-    for f in pending:
-        desc = f"- {f['field']} ({f['label']}, type: {f['type']})"
-        field_descriptions.append(desc)
+    next_field = conversation.next_field
+    fields_remaining = conversation.fields_remaining
 
-    history_text = ""
-    for msg in conversation.messages[-6:]:
-        role = "Assistant" if msg['role'] == 'assistant' else "Applicant"
-        history_text += f"{role}: {msg['content']}\n"
+    applicant_name = "there"
+    personal_info = getattr(conversation.application, 'personal_info', None)
+    if personal_info and personal_info.first_name:
+        applicant_name = personal_info.first_name
 
-    prompt = f"""You are parsing an SMS reply from a rental applicant. Extract any field values they provided.
+    # Special handling for skip-like replies
+    skip_words = {'skip', 'n/a', 'na', 'none', 'pass', 'no', '-', 'idk', "don't know", "dont know"}
+    if reply_text.strip().lower() in skip_words:
+        # For optional-feeling fields, allow skipping
+        if next_field:
+            follow_up = _build_next_question(applicant_name, next_field, fields_remaining - 1)
+        else:
+            follow_up = f"All done! Thanks for completing your application, {applicant_name}!"
 
-FIELDS WE NEED (still missing):
-{chr(10).join(field_descriptions)}
+        return {
+            'value': None,
+            'needs_retry': False,  # Not a retry — they chose to skip
+            'follow_up': follow_up,
+        }
 
-CONVERSATION HISTORY:
-{history_text}
-Applicant: {reply_text}
+    prompt = f"""An applicant replied to a question about their rental application.
+
+THE QUESTION WAS ABOUT: {current['label']} (field type: {current['type']})
+
+THEIR REPLY: "{reply_text}"
 
 INSTRUCTIONS:
-1. Extract any field values the applicant provided in their message
+1. Extract the value for "{current['label']}" from their reply
 2. For dates, convert to YYYY-MM-DD format
-3. For booleans (yes/no questions), convert to true/false
+3. For booleans (Yes/No questions), convert to "true" or "false"
 4. For decimals/money, extract just the number (no $ sign)
-5. For integers, extract just the number
-6. Only extract fields that are in the FIELDS WE NEED list above
-7. If the applicant's message doesn't contain useful field data, return empty extracted
-8. Generate a SHORT follow-up SMS (under 200 chars) that:
-   - Acknowledges what was received (if anything)
-   - Asks about remaining missing fields (pick 2-3 most important)
-   - If all fields are now covered, thank them and say the application is updated
-9. If the applicant seems confused or asks a question, answer helpfully and re-ask for the fields
+5. If their reply is a valid answer to the question, extract it
+6. If their reply does NOT answer the question (gibberish, unrelated, or too vague), set value to null
 
 Return valid JSON only:
 {{
-  "extracted": {{"field_name": "value", ...}},
-  "still_missing_fields": ["field_name1", "field_name2"],
-  "reply": "Your follow-up SMS text here"
+  "value": "extracted value here or null",
+  "understood": true/false
 }}"""
 
-    system = "You are a rental application assistant. Parse applicant SMS replies and extract structured data. Always respond with valid JSON only."
-    text = _call_claude(prompt, system_prompt=system, max_tokens=300, temperature=0.3)
+    system = "You are a data extraction assistant. Parse the applicant's SMS reply for a single field. Return JSON only."
+    text = _call_claude(prompt, system_prompt=system, max_tokens=100, temperature=0.1)
+
+    extracted_value = None
+    understood = False
 
     if text:
         try:
-            # Extract JSON from response (Claude may wrap it in text)
             import re
             json_match = re.search(r'\{.*\}', text, re.DOTALL)
             if json_match:
@@ -175,35 +186,129 @@ Return valid JSON only:
             else:
                 result = json.loads(text)
 
-            # Map still_missing_fields back to full field dicts
-            still_missing_names = set(result.get('still_missing_fields', []))
-            still_missing = [f for f in pending if f['field'] in still_missing_names]
+            raw_value = result.get('value')
+            understood = result.get('understood', False)
 
-            # If AI forgot to list remaining fields, compute them ourselves
-            extracted_keys = set(result.get('extracted', {}).keys())
-            if not still_missing:
-                still_missing = [f for f in pending if f['field'] not in extracted_keys]
+            if raw_value is not None and str(raw_value).lower() not in ('null', 'none', ''):
+                extracted_value = str(raw_value)
 
-            return {
-                'extracted': result.get('extracted', {}),
-                'still_missing': still_missing,
-                'reply': result.get('reply', '').strip('"')[:320],
-            }
         except (json.JSONDecodeError, Exception) as e:
             logger.error(f"Failed to parse Claude response: {e}")
+            # Fallback: if the reply is short and looks like a direct answer, use it as-is
+            extracted_value = _naive_extract(reply_text, current)
 
-    return _fallback_parse(pending, reply_text)
+    else:
+        # Claude unavailable — naive extraction
+        extracted_value = _naive_extract(reply_text, current)
+
+    # Build the follow-up message
+    if extracted_value:
+        # Success — acknowledge and move to next
+        if next_field:
+            follow_up = _build_next_question(applicant_name, next_field, fields_remaining - 1, ack=True)
+        else:
+            follow_up = f"Got it! That's everything — your application is all updated. Thank you, {applicant_name}! 🎉"
+
+        return {
+            'value': extracted_value,
+            'needs_retry': False,
+            'follow_up': follow_up,
+        }
+    else:
+        # Couldn't extract — ask again
+        retry_msg = _build_retry(applicant_name, current)
+        return {
+            'value': None,
+            'needs_retry': True,
+            'follow_up': retry_msg,
+        }
 
 
-def _fallback_parse(pending, reply_text):
-    """Fallback if Claude is unavailable — no extraction, just ask again."""
-    labels = [f['label'] for f in pending[:3]]
-    return {
-        'extracted': {},
-        'still_missing': pending,
-        'reply': f"Thanks for your reply! We still need: {', '.join(labels)}. Could you provide those details?",
-    }
+def _naive_extract(reply_text, field):
+    """Fallback extraction when Claude is unavailable — accepts the raw reply for simple types."""
+    text = reply_text.strip()
+    if not text or len(text) > 200:
+        return None
 
+    if field['type'] == 'str':
+        return text
+    elif field['type'] == 'bool':
+        lower = text.lower()
+        if lower in ('yes', 'y', 'yeah', 'yep', 'true', '1'):
+            return 'true'
+        elif lower in ('no', 'n', 'nah', 'nope', 'false', '0'):
+            return 'false'
+        return None
+    elif field['type'] in ('int', 'decimal'):
+        cleaned = ''.join(c for c in text if c.isdigit() or c == '.')
+        return cleaned if cleaned else None
+    else:
+        return text
+
+
+def _build_next_question(name, next_field, remaining, ack=False):
+    """Build a follow-up SMS asking about the next field."""
+    ack_prefix = "Got it! " if ack else ""
+    remaining_text = f" ({remaining} left)" if remaining > 1 else " (last one!)"
+    label = next_field['label']
+
+    # Make certain questions more natural
+    question = _humanize_question(label, next_field.get('type', 'str'))
+
+    return f"{ack_prefix}{question}{remaining_text}"[:320]
+
+
+def _build_retry(name, field):
+    """Build a clarification message when we couldn't understand the reply."""
+    label = field['label']
+    ftype = field.get('type', 'str')
+
+    if ftype == 'date':
+        return f"Sorry, I didn't catch that. Could you provide your {label} as a date? (e.g., 01/15/2025)"[:320]
+    elif ftype == 'decimal':
+        return f"Could you provide your {label} as a number? (e.g., 75000)"[:320]
+    elif ftype == 'bool':
+        return f"Just to confirm — {label}? (Yes or No)"[:320]
+    elif ftype == 'int':
+        return f"Could you provide your {label} as a number?"[:320]
+    else:
+        return f"Sorry, I didn't catch that. What is your {label}?"[:320]
+
+
+def _humanize_question(label, ftype):
+    """Convert a field label into a natural-sounding SMS question."""
+    label_lower = label.lower()
+
+    # Special phrasings for certain fields
+    if 'middle name' in label_lower:
+        return "Do you have a middle name? If so, what is it?"
+    elif 'suffix' in label_lower:
+        return "Do you have a name suffix? (Jr., Sr., III, etc.)"
+    elif 'pets' in label_lower:
+        return "Do you have any pets? (Yes/No)"
+    elif 'currently employed' in label_lower:
+        return "Are you currently employed? (Yes/No)"
+    elif 'move-in date' in label_lower or 'move in' in label_lower:
+        return "When is your desired move-in date?"
+    elif 'reason for moving' in label_lower:
+        return "What's your reason for moving?"
+    elif 'how did you hear' in label_lower or 'referral' in label_lower:
+        return "How did you hear about us?"
+    elif 'annual income' in label_lower:
+        return "What is your annual income?"
+    elif 'how long' in label_lower:
+        return "How long have you been at your current job?"
+    elif ftype == 'bool':
+        return f"{label}? (Yes or No)"
+    elif ftype == 'date':
+        return f"What is your {label}? (e.g., 01/15/2025)"
+    else:
+        return f"What is your {label}?"
+
+
+# ──────────────────────────────────────────────────────────────────
+# Type coercion (unchanged from original)
+# ──────────────────────────────────────────────────────────────────
 
 def coerce_value(value, field_type):
     """
@@ -250,99 +355,187 @@ def coerce_value(value, field_type):
         return None
 
 
-def save_extracted_fields(conversation, extracted):
+# ──────────────────────────────────────────────────────────────────
+# Save a SINGLE extracted field
+# ──────────────────────────────────────────────────────────────────
+
+def save_single_field(conversation, field, raw_value):
     """
-    Save extracted field values to the appropriate model.
+    Save one extracted field value to the appropriate model.
+    Returns True if saved successfully, False otherwise.
     """
     from .sms_conversation import SMS_SAFE_FIELDS
 
     application = conversation.application
-    saved = []
+    model_name = field['model']
+    field_name = field['field']
+    field_type = field.get('type', 'str')
 
-    field_lookup = {}
-    for req in conversation.requested_fields:
-        field_lookup[req['field']] = (req['model'], req.get('type', 'str'))
+    # Security check: whitelist only
+    if model_name not in SMS_SAFE_FIELDS or field_name not in SMS_SAFE_FIELDS[model_name]:
+        logger.warning(f"Field '{field_name}' not in SMS_SAFE_FIELDS whitelist — skipping")
+        return False
 
-    for field_name, raw_value in extracted.items():
-        if field_name not in field_lookup:
-            logger.warning(f"Extracted field '{field_name}' not in requested fields — skipping")
-            continue
+    model_instance = getattr(application, model_name, None)
+    if not model_instance:
+        logger.warning(f"Application {application.id} has no {model_name} — skipping")
+        return False
 
-        model_name, field_type = field_lookup[field_name]
+    coerced = coerce_value(raw_value, field_type)
+    if coerced is None:
+        logger.warning(f"Coercion failed for {field_name}={raw_value} (type={field_type})")
+        return False
 
-        # Security check: ensure this field is in the whitelist
-        if model_name not in SMS_SAFE_FIELDS or field_name not in SMS_SAFE_FIELDS[model_name]:
-            logger.warning(f"Field '{field_name}' not in SMS_SAFE_FIELDS whitelist — skipping")
-            continue
+    setattr(model_instance, field_name, coerced)
+    try:
+        model_instance.save(update_fields=[field_name, 'updated_at'])
+        conversation.mark_field_collected(field_name, raw_value)
+        logger.info(f"SMS collected: {field_name}={coerced} for App #{application.id}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to save {field_name} for App #{application.id}: {e}")
+        return False
 
-        model_instance = getattr(application, model_name, None)
-        if not model_instance:
-            logger.warning(f"Application {application.id} has no {model_name} — skipping")
-            continue
 
-        coerced = coerce_value(raw_value, field_type)
-        if coerced is not None:
-            setattr(model_instance, field_name, coerced)
-            try:
-                model_instance.save(update_fields=[field_name, 'updated_at'])
-                conversation.mark_field_collected(field_name, raw_value)
-                saved.append(field_name)
-                logger.info(f"SMS collected: {field_name}={coerced} for App #{application.id}")
-            except Exception as e:
-                logger.error(f"Failed to save {field_name} for App #{application.id}: {e}")
-
-    return saved
-
+# ──────────────────────────────────────────────────────────────────
+# MAIN HANDLER: process each inbound reply (one field at a time)
+# ──────────────────────────────────────────────────────────────────
 
 def handle_inbound_reply(conversation, reply_text):
     """
     Main handler for inbound SMS replies in an active conversation.
-    Called from the Telnyx webhook when a message.received event matches
-    an active SMSConversation.
+    Processes ONE field at a time:
+      1. Parse the reply for the current field
+      2. If valid, save it and advance to the next field
+      3. If invalid, ask again
+      4. If all fields done, mark conversation complete
+      5. Send the follow-up SMS
     """
     from .sms_utils import SMSBackend
 
     # Record the applicant's message
     conversation.add_message('user', reply_text)
 
-    # Parse the reply with Claude
-    result = parse_applicant_reply(conversation, reply_text)
-    extracted = result.get('extracted', {})
-    still_missing = result.get('still_missing', [])
-    follow_up = result.get('reply', '')
+    current = conversation.current_field
+    if not current:
+        # All fields already collected — shouldn't normally happen
+        follow_up = "Your application is already complete. Thank you!"
+        conversation.add_message('assistant', follow_up)
+        conversation.complete()
+        _send_sms(conversation.phone_number, follow_up)
+        return
 
-    # Save any extracted fields to the database
-    saved = []
-    if extracted:
-        saved = save_extracted_fields(conversation, extracted)
+    # Parse the reply for this single field
+    result = parse_single_field_reply(conversation, reply_text)
+    value = result.get('value')
+    needs_retry = result.get('needs_retry', False)
+    follow_up = result.get('follow_up', '')
 
-    # Log activity
+    saved = False
+    if value and not needs_retry:
+        # Try to save the extracted value
+        saved = save_single_field(conversation, current, value)
+
+        if not saved:
+            # Coercion/save failed — ask again with a type hint
+            follow_up = _build_retry(
+                _get_applicant_name(conversation),
+                current
+            )
+            needs_retry = True
+
     if saved:
+        # Success — advance to next field
+        conversation.advance_field()
+
+        # Log activity
         try:
             from .models import ApplicationActivity
             ApplicationActivity.objects.create(
                 application=conversation.application,
-                description=f"SMS collected {len(saved)} field(s): {', '.join(saved)}"
+                description=f"SMS collected: {current['label']} = \"{value}\""
             )
         except Exception:
             pass
 
-    # Determine if we're done
-    if not still_missing or not conversation.pending_fields:
-        if not follow_up:
-            follow_up = "All set! We've updated your application with the info you provided. Thank you!"
-        conversation.add_message('assistant', follow_up)
-        conversation.complete()
+        # Check if all done
+        if not conversation.current_field:
+            follow_up = f"All done! Your application is fully updated. Thank you! 🎉"
+            conversation.add_message('assistant', follow_up)
+            conversation.complete()
+
+            try:
+                from .models import ApplicationActivity
+                ApplicationActivity.objects.create(
+                    application=conversation.application,
+                    description=f"SMS conversation completed — {len(conversation.collected_fields)} fields collected"
+                )
+            except Exception:
+                pass
+        else:
+            conversation.add_message('assistant', follow_up)
+    elif not needs_retry:
+        # Skipped field — advance without saving
+        conversation.advance_field()
+
+        if not conversation.current_field:
+            follow_up = f"All done! Your application has been updated. Thank you! 🎉"
+            conversation.add_message('assistant', follow_up)
+            conversation.complete()
+        else:
+            conversation.add_message('assistant', follow_up)
     else:
-        if not follow_up:
-            labels = [f['label'] for f in still_missing[:3]]
-            follow_up = f"Thanks! We still need: {', '.join(labels)}. Can you provide those?"
+        # Retry — don't advance, ask again
         conversation.add_message('assistant', follow_up)
 
-    # Send the follow-up/confirmation SMS via Telnyx
+    # Send the follow-up SMS
     if follow_up:
-        try:
-            sms = SMSBackend()
-            sms.send_sms(conversation.phone_number, follow_up)
-        except Exception as e:
-            logger.error(f"Failed to send follow-up SMS: {e}")
+        _send_sms(conversation.phone_number, follow_up)
+
+
+def _send_sms(phone_number, message):
+    """Helper to send an SMS, handling errors gracefully."""
+    try:
+        from .sms_utils import SMSBackend
+        sms = SMSBackend()
+        sms.send_sms(phone_number, message)
+    except Exception as e:
+        logger.error(f"Failed to send follow-up SMS to {phone_number}: {e}")
+
+
+def _get_applicant_name(conversation):
+    """Get the applicant's first name from the conversation's application."""
+    personal_info = getattr(conversation.application, 'personal_info', None)
+    if personal_info and personal_info.first_name:
+        return personal_info.first_name
+    return "there"
+
+
+# ──────────────────────────────────────────────────────────────────
+# Legacy compat: keep old function names so callers don't break
+# ──────────────────────────────────────────────────────────────────
+
+def save_extracted_fields(conversation, extracted):
+    """Legacy wrapper — no longer used in the new one-at-a-time flow."""
+    saved = []
+    for field_name, raw_value in extracted.items():
+        for req in conversation.requested_fields:
+            if req['field'] == field_name:
+                if save_single_field(conversation, req, raw_value):
+                    saved.append(field_name)
+                break
+    return saved
+
+
+def parse_applicant_reply(conversation, reply_text):
+    """Legacy wrapper — redirects to single-field parsing."""
+    result = parse_single_field_reply(conversation, reply_text)
+    extracted = {}
+    current = conversation.current_field
+    if current and result.get('value'):
+        extracted[current['field']] = result['value']
+    return {
+        'extracted': extracted,
+        'still_missing': conversation.pending_fields,
+        'reply': result.get('follow_up', ''),
+    }
