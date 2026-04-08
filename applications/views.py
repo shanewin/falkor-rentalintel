@@ -1457,15 +1457,30 @@ def v2_section1_personal_info(request, application_id):
                                         pet=pet,
                                         image=image_file
                                     )
+                # Determine section status based on field completeness
+                required_fields_filled = all([
+                    personal_info.first_name,
+                    personal_info.last_name,
+                    personal_info.email,
+                    personal_info.phone_cell,
+                    personal_info.date_of_birth,
+                    personal_info.street_address_1,
+                    personal_info.city,
+                    personal_info.state,
+                    personal_info.zip_code,
+                    personal_info.housing_status,
+                ])
                 
-                # Update section status
-                section.status = SectionStatus.COMPLETED
-                section.completed_at = timezone.now()
-                section.is_valid = True
+                if required_fields_filled:
+                    section.status = SectionStatus.COMPLETED
+                    section.completed_at = timezone.now()
+                    section.is_valid = True
+                    application.section_statuses[1] = SectionStatus.COMPLETED
+                else:
+                    section.status = SectionStatus.IN_PROGRESS
+                    section.is_valid = False
+                    application.section_statuses[1] = SectionStatus.IN_PROGRESS
                 section.save()
-                
-                # Update application section status
-                application.section_statuses[1] = SectionStatus.COMPLETED
                 
                 # Move to next section
                 application.current_section = 2
