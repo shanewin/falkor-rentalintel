@@ -101,7 +101,7 @@ Desktop.ini
 railway.toml
 
 # Document Analysis & Uploads
-doc_analysis/
+# Note: doc_analysis/ must NOT be gitignored — it's a required Django app
 *.pdf
 *.docx
 *.doc
