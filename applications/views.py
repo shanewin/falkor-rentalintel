@@ -362,8 +362,17 @@ def broker_send_sms(request, application_id):
     
     if request.method == 'POST':
         message_text = request.POST.get('message', '').strip()
+        
+        # Detect AI reminder: check hidden field OR session-stored flag
         is_ai_remind = request.POST.get('ai_remind') == '1'
-        logger.info(f"broker_send_sms: ai_remind raw='{request.POST.get('ai_remind')}' is_ai_remind={is_ai_remind} app={application_id}")
+        session_app = request.session.pop('_ai_remind_app', None)
+        session_text = request.session.pop('_ai_remind_text', None)
+        if not is_ai_remind and session_app == application_id and session_text:
+            # Session confirms this was an AI-generated message
+            is_ai_remind = True
+            logger.info(f"broker_send_sms: AI remind detected via SESSION for app {application_id}")
+        
+        logger.info(f"broker_send_sms: ai_remind raw='{request.POST.get('ai_remind')}' session_app={session_app} is_ai_remind={is_ai_remind} app={application_id}")
         
         if not message_text:
             messages.error(request, "Please enter a message to send.")
@@ -493,6 +502,12 @@ def broker_remind_missing(request, application_id):
 
     # AJAX mode: return the generated message for the broker to review
     if is_ajax:
+        # Store in session so broker_send_sms can detect AI-generated messages
+        # even if the client-side hidden field fails
+        request.session['_ai_remind_app'] = application_id
+        request.session['_ai_remind_text'] = reminder_text
+        request.session.modified = True
+        logger.info(f"AI reminder generated for app {application_id}, stored in session")
         return JsonResponse({
             'message': reminder_text,
             'missing_count': len(missing_fields),
