@@ -151,18 +151,18 @@
                         <div class="col-6 col-md">
                             {% if not is_preview %}
                                 {% if section.section_number == 1 %}
-                                    <a href="{% url 'section1_personal_info' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3 {% if section.status == 'COMPLETED' %}btn-outline-success{% else %}btn-outline-secondary{% endif %}">
+                                    <a href="{% url 'section1_personal_info' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3 {% if section.get_progress_percentage == 100 %}btn-outline-success{% else %}btn-outline-secondary{% endif %}">
                                 {% elif section.section_number == 2 %}
-                                    <a href="{% url 'section2_income' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3 {% if section.status == 'COMPLETED' %}btn-outline-success{% else %}btn-outline-secondary{% endif %}">
+                                    <a href="{% url 'section2_income' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3 {% if section.get_progress_percentage == 100 %}btn-outline-success{% else %}btn-outline-secondary{% endif %}">
                                 {% elif section.section_number == 3 %}
-                                    <a href="{% url 'section3_legal' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3 {% if section.status == 'COMPLETED' %}btn-outline-success{% else %}btn-outline-secondary{% endif %}">
+                                    <a href="{% url 'section3_legal' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3 {% if section.get_progress_percentage == 100 %}btn-outline-success{% else %}btn-outline-secondary{% endif %}">
                                 {% elif section.section_number == 4 %}
-                                    <a href="{% url 'section4_review' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3 {% if section.status == 'COMPLETED' %}btn-outline-success{% else %}btn-outline-secondary{% endif %}">
+                                    <a href="{% url 'section4_review' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3 {% if section.get_progress_percentage == 100 %}btn-outline-success{% else %}btn-outline-secondary{% endif %}">
                                 {% elif section.section_number == 5 %}
-                                    <a href="{% url 'section5_payment' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3 {% if section.status == 'COMPLETED' %}btn-outline-success{% else %}btn-outline-secondary{% endif %}">
+                                    <a href="{% url 'section5_payment' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3 {% if section.get_progress_percentage == 100 %}btn-outline-success{% else %}btn-outline-secondary{% endif %}">
                                 {% endif %}
                             {% else %}
-                                <div class="btn w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3 {% if section.status == 'COMPLETED' %}btn-outline-success{% else %}btn-outline-secondary{% endif %}">
+                                <div class="btn w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3 {% if section.get_progress_percentage == 100 %}btn-outline-success{% else %}btn-outline-secondary{% endif %}">
                             {% endif %}
                             
                                 <i class="fas fa-2x mb-2
@@ -185,7 +185,7 @@
                                         {{ section.get_progress_percentage }}%
                                     </span>
                                 </div>
-                                {% if section.status == 'COMPLETED' %}
+                                {% if section.get_progress_percentage == 100 %}
                                     <i class="fas fa-check-circle mt-1 text-success"></i>
                                 {% endif %}
                                 

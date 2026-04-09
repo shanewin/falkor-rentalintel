@@ -130,11 +130,11 @@
             <div class="d-flex align-items-start mb-4 {% if forloop.last %}mb-0{% endif %}">
                 <div class="step-indicator me-3 d-flex flex-column align-items-center">
                     <div class="step-dot rounded-circle d-flex align-items-center justify-content-center shadow-sm
-                        {% if step.status == 'COMPLETED' %}bg-success text-white
+                        {% if step.get_progress_percentage == 100 %}bg-success text-white
                         {% elif step.section_number == current_step %}bg-warning text-dark fw-bold
                         {% else %}bg-light text-muted border{% endif %}"
                          style="width: 32px; height: 32px; z-index: 2;">
-                        {% if step.status == 'COMPLETED' %}
+                        {% if step.get_progress_percentage == 100 %}
                         <i class="bi bi-check-lg"></i>
                         {% else %}
                         {{ step.section_number }}
@@ -154,7 +154,8 @@
                         {% endif %}
                     </h6>
                     <small class="text-muted" style="font-size: 0.75rem;">
-                        {% if step.status == 'COMPLETED' %}Completed
+                        {% if step.get_progress_percentage == 100 %}Completed
+                        {% elif step.get_progress_percentage > 0 %}{{ step.get_progress_percentage }}% Complete
                         {% elif step.section_number == current_step %}In Progress
                         {% else %}Pending{% endif %}
                     </small>
