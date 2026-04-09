@@ -142,7 +142,7 @@
                 
                 <!-- Progress Bar -->
                 <div class="progress mb-4" style="height: 12px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress_percent|default:0 }}%;" aria-valuenow="{{ progress_percent|default:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar {% if progress_percent == 100 %}bg-success{% else %}bg-warning{% endif %}" role="progressbar" style="width: {{ progress_percent|default:0 }}%;" aria-valuenow="{{ progress_percent|default:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 
                 <!-- Section Navigation -->
