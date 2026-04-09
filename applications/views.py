@@ -1551,13 +1551,20 @@ def v2_section1_personal_info(request, application_id):
     # Check if this is a preview request
     is_preview = request.GET.get('preview') == 'true'
     
+    # Get all sections for sidebar stepper navigation
+    all_sections = ApplicationSection.objects.filter(
+        application=application
+    ).order_by('section_number')
+
     context = {
         'application': application,
         'form': form,
         'section': section,
+        'sections': all_sections,
         'previous_addresses_data': previous_addresses_list,
         'pets_data': pets_list,
         'current_section': 1,
+        'current_step': 1,
         'section_title': 'Personal Information',
         'progress_percent': application.get_total_progress(),
         'is_preview': is_preview,
@@ -2219,7 +2226,8 @@ def v2_section2_income(request, application_id):
         )
     
     if request.method == 'POST':
-        form = IncomeForm(request.POST, request.FILES, instance=income_data)
+        is_draft = 'save_continue' not in request.POST
+        form = IncomeForm(request.POST, request.FILES, instance=income_data, draft_mode=is_draft)
         
         if form.is_valid():
             with transaction.atomic():
@@ -2341,15 +2349,22 @@ def v2_section2_income(request, application_id):
     assets = income_data.assets.all()
     supporting_documents = income_data.supporting_documents.all()
     
+    # Get all sections for sidebar stepper navigation
+    all_sections = ApplicationSection.objects.filter(
+        application=application
+    ).order_by('section_number')
+
     context = {
         'application': application,
         'form': form,
         'section': section,
+        'sections': all_sections,
         'additional_employment': additional_employment,
         'additional_income': additional_income,
         'assets': assets,
         'supporting_documents': supporting_documents,
         'current_section': 2,
+        'current_step': 2,
         'section_title': 'Income & Employment',
         'progress_percent': application.get_total_progress(),
         'is_preview': is_preview,
@@ -2536,14 +2551,23 @@ def v2_section3_legal(request, application_id):
     # Intro text for Section 3
     intro_text = "The following forms are for the property you are applying for. Please review each form and sign at the bottom where indicated."
     
+    # Get all sections for sidebar stepper navigation
+    all_sections = ApplicationSection.objects.filter(
+        application=application
+    ).order_by('section_number')
+
     context = {
         'application': application,
         'legal_docs': legal_docs,
         'section': section,
+        'sections': all_sections,
         'current_section': 3,
+        'current_step': 3,
         'section_title': 'Legal',
         'intro_text': intro_text,
         'progress_percent': application.get_total_progress(),
+        'discrimination_pdf_url': '/static/docs/ny_discrimination_disclosure.pdf',
+        'brokers_pdf_url': '/static/docs/ny_landlord_tenant_disclosure.pdf',
         'is_preview': is_preview,
         'token': token,
         'is_applicant_access': is_applicant_access,
@@ -2753,6 +2777,11 @@ def v2_section4_review(request, application_id):
             else:
                 return redirect('section5_payment', application_id=application.id)
     
+    # Get all sections for sidebar stepper navigation
+    all_sections = ApplicationSection.objects.filter(
+        application=application
+    ).order_by('section_number')
+
     # Build context for template
     context = {
         'application': application,
@@ -2760,6 +2789,8 @@ def v2_section4_review(request, application_id):
         'income_data': income_data,
         'legal_docs': legal_docs,
         'uploaded_files': uploaded_files,
+        'sections': all_sections,
+        'current_step': 4,
         'sections_complete': sections_complete,
         'all_sections_complete': all_sections_complete,
         'required_documents_list': required_documents_list,
@@ -2767,6 +2798,7 @@ def v2_section4_review(request, application_id):
         'token': token,
         'is_applicant_access': is_applicant_access,
         'is_preview': is_preview,
+        'progress_percent': application.get_total_progress(),
         
         # Include related data if available
         'previous_addresses': personal_info.previous_addresses.all() if personal_info else [],
@@ -2876,9 +2908,16 @@ def v2_section5_payment(request, application_id):
                 messages.error(request, f"Payment failed: {message}")
     
     # Prepare context for template
+    # Get all sections for sidebar stepper navigation
+    all_sections = ApplicationSection.objects.filter(
+        application=application
+    ).order_by('section_number')
+
     context = {
         'application': application,
         'payment': payment,
+        'sections': all_sections,
+        'current_step': 5,
         'token': token,
         'is_applicant_access': is_applicant_access,
         'progress_percent': application.get_total_progress(),

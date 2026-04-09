@@ -10,110 +10,277 @@
 <div class="row">
     <!-- Main Content -->
     <div class="col-lg-8">
+
+        <!-- Intro Card -->
         <div class="form-card shadow-sm mb-4">
             <div class="form-card-header">
                 <h5 class="mb-0"><i class="bi bi-file-earmark-check me-2 text-warning"></i>Required Disclosures</h5>
             </div>
-            
-            <p class="text-muted small mb-4">{{ intro_text }}</p>
-
-            <div class="legal-documents-container">
-                <!-- NY Discrimination Form -->
-                <div class="legal-form-block mb-5 p-4 border rounded bg-white shadow-sm" id="discrimination-block">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="fw-bold mb-0">1. New York State Housing Discrimination Disclosure Form</h6>
-                        {% if legal_docs.discrimination_form_signed %}
-                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Signed</span>
-                        {% else %}
-                        <span class="badge bg-warning text-dark"><i class="bi bi-pencil me-1"></i> Pending Signature</span>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="legal-text-box mb-3 p-3 bg-light rounded shadow-inner" style="max-height: 300px; overflow-y: auto; font-size: 0.85rem; line-height: 1.6; border: 1px solid #dee2e6;">
-                        <p class="text-center fw-bold mb-3">NEW YORK STATE HOUSING DISCRIMINATION DISCLOSURE FORM</p>
-                        <p>Federal, State and local Fair Housing Laws make it illegal to discriminate in housing on the basis of race, religion, sex, disability, familial status or national origin. New York State Fair Housing Law also protects against discrimination on the basis of sexual orientation, marital status, military status, and age.</p>
-                        <p>Real estate agents are prohibited by law from discriminating on the basis of any of these protected classes. This means that an agent cannot:</p>
-                        <ul>
-                            <li>Refuse to rent or sell housing</li>
-                            <li>Refuse to negotiate for housing</li>
-                            <li>Make housing unavailable</li>
-                            <li>Set different terms, conditions or privileges for sale or rental of housing</li>
-                            <li>Falsely state that housing is unavailable for inspection, sale or rental</li>
-                        </ul>
-                        <p>If you believe you have been the victim of housing discrimination, you should contact the New York State Division of Human Rights or the U.S. Department of Housing and Urban Development.</p>
-                    </div>
-
-                    {% if not legal_docs.discrimination_form_signed %}
-                    <div class="signature-area p-3 bg-light rounded border">
-                        <label class="form-label fw-bold small">Type your full legal name to sign</label>
-                        <div class="input-group">
-                            <input type="text" id="sig-discrimination" class="form-control" placeholder="Full Legal Name">
-                            <button class="btn btn-dark" onclick="signDocument('NY_DISCRIMINATION', 'sig-discrimination')">
-                                <i class="bi bi-pen me-2"></i>Sign Document
-                            </button>
+            <div class="p-4">
+                <div class="d-flex align-items-start">
+                    <div class="me-3">
+                        <div class="rounded-circle bg-warning bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                            <i class="bi bi-shield-check text-warning" style="font-size: 1.4rem;"></i>
                         </div>
                     </div>
-                    {% else %}
-                    <div class="signed-info p-3 border-start border-success border-4 bg-light rounded">
-                        <p class="mb-0 small fw-bold">Digitally Signed By: <span class="text-success">{{ legal_docs.discrimination_form_signature }}</span></p>
-                        <p class="mb-0 text-muted" style="font-size: 0.7rem;">Signed on {{ legal_docs.discrimination_form_signed_at|date:"M d, Y H:i" }} | IP: {{ legal_docs.discrimination_form_ip }}</p>
+                    <div>
+                        <p class="mb-1 fw-bold">Please review and sign each document below</p>
+                        <p class="text-muted small mb-0">New York State requires that you review and acknowledge these disclosures as part of your rental application. Please read each document carefully, then type your full legal name to apply your electronic signature.</p>
                     </div>
-                    {% endif %}
                 </div>
-
-                <!-- NY Brokers Form -->
-                <div class="legal-form-block mb-4 p-4 border rounded bg-white shadow-sm" id="brokers-block">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="fw-bold mb-0">2. New York State Disclosure Form for Buyer and Seller</h6>
-                        {% if legal_docs.brokers_form_signed %}
-                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Signed</span>
-                        {% else %}
-                        <span class="badge bg-warning text-dark"><i class="bi bi-pencil me-1"></i> Pending Signature</span>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="legal-text-box mb-3 p-3 bg-light rounded shadow-inner" style="max-height: 300px; overflow-y: auto; font-size: 0.85rem; line-height: 1.6; border: 1px solid #dee2e6;">
-                        <p class="text-center fw-bold mb-3">NEW YORK STATE DISCLOSURE FORM FOR LANDLORD AND TENANT</p>
-                        <p><strong>THIS IS NOT A CONTRACT</strong></p>
-                        <p>New York State law requires real estate licensees who are acting as agents of landlords and tenants of real property to advise the potential landlords and tenants with whom they work of the nature of their agency relationship and the rights and obligations it creates.</p>
-                        <p><strong>Tenant's Agent:</strong> A tenant's agent is an agent who is engaged by a tenant to represent the tenant's interests. The tenant's agent is responsible for performing the following duties for the tenant: reasonable care, undivided loyalty, confidentiality, full disclosure, obedience and duty to account.</p>
-                        <p><strong>Landlord's Agent:</strong> A landlord's agent is an agent who is engaged by a landlord to represent the landlord's interests. The landlord's agent is responsible for performing the following duties for the landlord: reasonable care, undivided loyalty, confidentiality, full disclosure, obedience and duty to account.</p>
-                    </div>
-
-                    {% if not legal_docs.brokers_form_signed %}
-                    <div class="signature-area p-3 bg-light rounded border">
-                        <label class="form-label fw-bold small">Type your full legal name to sign</label>
-                        <div class="input-group">
-                            <input type="text" id="sig-brokers" class="form-control" placeholder="Full Legal Name">
-                            <button class="btn btn-dark" onclick="signDocument('NY_BROKERS', 'sig-brokers')">
-                                <i class="bi bi-pen me-2"></i>Sign Document
-                            </button>
+                <!-- Progress Summary -->
+                <div class="mt-3 pt-3 border-top">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="d-flex align-items-center justify-content-center">
+                                {% if legal_docs.discrimination_form_signed %}
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                <span class="small fw-bold text-success">Document 1 Signed</span>
+                                {% else %}
+                                <i class="bi bi-circle text-muted me-2"></i>
+                                <span class="small fw-bold text-muted">Document 1 Pending</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex align-items-center justify-content-center">
+                                {% if legal_docs.brokers_form_signed %}
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                <span class="small fw-bold text-success">Document 2 Signed</span>
+                                {% else %}
+                                <i class="bi bi-circle text-muted me-2"></i>
+                                <span class="small fw-bold text-muted">Document 2 Pending</span>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
-                    {% else %}
-                    <div class="signed-info p-3 border-start border-success border-4 bg-light rounded">
-                        <p class="mb-0 small fw-bold">Digitally Signed By: <span class="text-success">{{ legal_docs.brokers_form_signature }}</span></p>
-                        <p class="mb-0 text-muted" style="font-size: 0.7rem;">Signed on {{ legal_docs.brokers_form_signed_at|date:"M d, Y H:i" }} | IP: {{ legal_docs.brokers_form_ip }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- DOCUMENT 1: NY Housing Discrimination Disclosure Form -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <div class="legal-doc-card mb-4" id="doc-discrimination">
+            <div class="legal-doc-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <div class="legal-doc-number">1</div>
+                        <div>
+                            <h6 class="fw-bold mb-0">NY Housing Discrimination Disclosure</h6>
+                            <small class="text-muted">Required by New York State Department of State</small>
+                        </div>
                     </div>
+                    {% if legal_docs.discrimination_form_signed %}
+                    <span class="badge legal-badge-signed"><i class="bi bi-check-circle-fill me-1"></i>Signed</span>
+                    {% else %}
+                    <span class="badge legal-badge-pending"><i class="bi bi-clock me-1"></i>Pending</span>
                     {% endif %}
                 </div>
             </div>
 
-            <!-- Form Actions -->
-            <form method="post" class="mt-5 pt-3 border-top">
-                {% csrf_token %}
-                <div class="d-flex justify-content-between">
-                    <a href="{% url 'section2_income' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn btn-outline-dark">
-                        <i class="bi bi-arrow-left me-2"></i> Back
-                    </a>
+            <div class="legal-doc-body">
+                <!-- PDF Viewer -->
+                <div class="pdf-viewer-container mb-3">
+                    <div class="pdf-viewer-frame">
+                        <!-- 
+                            TODO: Replace src with actual PDF path once uploaded.
+                            Example: {% static 'docs/ny_discrimination_disclosure.pdf' %}
+                        -->
+                        {% if discrimination_pdf_url %}
+                        <iframe src="{{ discrimination_pdf_url }}#toolbar=0&navpanes=0" class="pdf-iframe" title="NY Housing Discrimination Disclosure Form"></iframe>
+                        {% else %}
+                        <!-- Fallback: Inline Text -->
+                        <div class="pdf-fallback-text">
+                            <p class="text-center fw-bold mb-3" style="font-size: 1rem;">NEW YORK STATE<br>HOUSING AND ANTI-DISCRIMINATION DISCLOSURE FORM</p>
+                            
+                            <p>Federal, State and local Fair Housing Laws make it illegal to discriminate in housing on the basis of race, creed, color, religion, sex, disability, familial status or national origin. New York State Human Rights Law also protects against discrimination on the basis of age, sexual orientation, gender identity or expression, marital status, military status, citizenship or immigration status, status as a victim of domestic violence, and lawful source of income.</p>
+                            
+                            <p><strong>It is illegal for a real estate agent to:</strong></p>
+                            <ul>
+                                <li>Refuse to rent, sell, or negotiate for housing</li>
+                                <li>Make housing unavailable</li>
+                                <li>Set different terms, conditions, or privileges for housing</li>
+                                <li>Provide different housing services or facilities</li>
+                                <li>Deny participation in any service related to the sale or rental of housing</li>
+                                <li>Falsely state that housing is unavailable for inspection, sale or rental</li>
+                                <li>Steer prospective buyers or renters to or from certain neighborhoods based on a protected class</li>
+                            </ul>
+                            
+                            <p><strong>If you believe you have been the victim of housing discrimination, you may contact:</strong></p>
+                            <ul>
+                                <li><strong>NYS Division of Human Rights:</strong> (844) 862-8703 | <em>dhr.ny.gov</em></li>
+                                <li><strong>NYS Department of State:</strong> (518) 474-4429 | <em>dos.ny.gov</em></li>
+                                <li><strong>NYS Attorney General (Civil Rights):</strong> (212) 416-8250 | <em>ag.ny.gov</em></li>
+                                <li><strong>U.S. Dept. of Housing & Urban Development:</strong> (800) 496-4294 | <em>hud.gov</em></li>
+                            </ul>
+                            
+                            <p class="text-muted small fst-italic mt-3">This disclosure is provided in accordance with New York Executive Law, Article 15 and Real Property Law §442-h.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Acknowledgment & Signature -->
+                {% if not legal_docs.discrimination_form_signed %}
+                <div class="legal-doc-sign-area">
+                    <!-- Read Acknowledgment -->
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="ack-discrimination" onchange="toggleSignArea('discrimination')">
+                        <label class="form-check-label small fw-bold" for="ack-discrimination">
+                            I have read and understand the above disclosure document
+                        </label>
+                    </div>
+                    
+                    <!-- Signature (hidden until acknowledged) -->
+                    <div id="sign-area-discrimination" class="sign-area-hidden">
+                        <label class="form-label small fw-bold text-dark"><i class="bi bi-pen me-1"></i>Type your full legal name to sign</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark text-warning"><i class="bi bi-vector-pen"></i></span>
+                            <input type="text" id="sig-discrimination" class="form-control form-control-lg" placeholder="e.g. Alexandra Murphy" autocomplete="off">
+                            <button class="btn btn-dark fw-bold px-4" id="btn-sign-discrimination" onclick="signDocument('NY_DISCRIMINATION', 'sig-discrimination', 'discrimination')">
+                                <i class="bi bi-pen me-2"></i>Sign
+                            </button>
+                        </div>
+                        <div class="form-text small mt-1"><i class="bi bi-info-circle me-1"></i>By typing your name, you agree this constitutes a legal electronic signature.</div>
+                    </div>
+                </div>
+                {% else %}
+                <!-- Already Signed -->
+                <div class="legal-doc-signed">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-patch-check-fill text-success me-3" style="font-size: 1.8rem;"></i>
+                        <div>
+                            <p class="mb-0 fw-bold">Digitally Signed: <span class="text-success fst-italic">{{ legal_docs.discrimination_form_signature }}</span></p>
+                            <p class="mb-0 text-muted" style="font-size: 0.75rem;">
+                                <i class="bi bi-calendar-check me-1"></i>{{ legal_docs.discrimination_form_signed_at|date:"M d, Y \a\t h:i A" }}
+                                <span class="mx-1">•</span>
+                                <i class="bi bi-globe me-1"></i>IP: {{ legal_docs.discrimination_form_ip }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- DOCUMENT 2: NY Disclosure Form for Landlord & Tenant  -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <div class="legal-doc-card mb-4" id="doc-brokers">
+            <div class="legal-doc-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <div class="legal-doc-number">2</div>
+                        <div>
+                            <h6 class="fw-bold mb-0">NY Disclosure: Landlord & Tenant</h6>
+                            <small class="text-muted">Agency Relationship Disclosure (Not a Contract)</small>
+                        </div>
+                    </div>
+                    {% if legal_docs.brokers_form_signed %}
+                    <span class="badge legal-badge-signed"><i class="bi bi-check-circle-fill me-1"></i>Signed</span>
+                    {% else %}
+                    <span class="badge legal-badge-pending"><i class="bi bi-clock me-1"></i>Pending</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="legal-doc-body">
+                <!-- PDF Viewer -->
+                <div class="pdf-viewer-container mb-3">
+                    <div class="pdf-viewer-frame">
+                        <!-- 
+                            TODO: Replace src with actual PDF path once uploaded.
+                            Example: {% static 'docs/ny_landlord_tenant_disclosure.pdf' %}
+                        -->
+                        {% if brokers_pdf_url %}
+                        <iframe src="{{ brokers_pdf_url }}#toolbar=0&navpanes=0" class="pdf-iframe" title="NY Disclosure Form for Landlord and Tenant"></iframe>
+                        {% else %}
+                        <!-- Fallback: Inline Text -->
+                        <div class="pdf-fallback-text">
+                            <p class="text-center fw-bold mb-3" style="font-size: 1rem;">NEW YORK STATE<br>DISCLOSURE FORM FOR LANDLORD AND TENANT</p>
+                            <p class="text-center fw-bold text-danger mb-3">THIS IS NOT A CONTRACT</p>
+                            
+                            <p>New York State law requires real estate licensees who are acting as agents of landlords and tenants of real property to advise the potential landlords and tenants with whom they work of the nature of their agency relationship and the rights and obligations it creates. This disclosure will help you to make informed choices about your relationship with the real estate broker and its sales associates.</p>
+                            
+                            <p><strong>Landlord's Agent:</strong> A landlord's agent is an agent who is engaged by a landlord to represent the landlord's interests. The landlord's agent does this by securing a tenant for the landlord's apartment or house at a rent and on terms acceptable to the landlord. A landlord's agent has, without limitation, the following fiduciary duties to the landlord: reasonable care, undivided loyalty, confidentiality, full disclosure, obedience, and duty to account.</p>
+                            
+                            <p><strong>Tenant's Agent:</strong> A tenant's agent is an agent who is engaged by a tenant to represent the tenant's interests. The tenant's agent does this by negotiating the rental or lease of an apartment or house at a rent and on terms acceptable to the tenant. A tenant's agent has, without limitation, the following fiduciary duties to the tenant: reasonable care, undivided loyalty, confidentiality, full disclosure, obedience, and duty to account.</p>
+                            
+                            <p><strong>Broker's Agent:</strong> A broker's agent is an agent that cooperates or is engaged by a listing agent or a tenant's agent (but does not work for the same firm as the listing agent or tenant's agent) to assist the listing agent or tenant's agent in locating a property to rent or lease for the listing agent's landlord or the tenant agent's tenant.</p>
+                            
+                            <p><strong>Dual Agent:</strong> A real estate agent acting as a dual agent must explain carefully to both the landlord and the tenant that the agent is acting for both, and what their respective interests are. Both the landlord and the tenant must provide informed consent in writing to the dual agency.</p>
+                            
+                            <p class="text-muted small fst-italic mt-3">This form was provided to you by the listing agent or property representative. For more information, contact the New York Department of State at dos.ny.gov.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Acknowledgment & Signature -->
+                {% if not legal_docs.brokers_form_signed %}
+                <div class="legal-doc-sign-area">
+                    <!-- Read Acknowledgment -->
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="ack-brokers" onchange="toggleSignArea('brokers')">
+                        <label class="form-check-label small fw-bold" for="ack-brokers">
+                            I have read and understand the above disclosure document
+                        </label>
+                    </div>
+                    
+                    <!-- Signature (hidden until acknowledged) -->
+                    <div id="sign-area-brokers" class="sign-area-hidden">
+                        <label class="form-label small fw-bold text-dark"><i class="bi bi-pen me-1"></i>Type your full legal name to sign</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark text-warning"><i class="bi bi-vector-pen"></i></span>
+                            <input type="text" id="sig-brokers" class="form-control form-control-lg" placeholder="e.g. Alexandra Murphy" autocomplete="off">
+                            <button class="btn btn-dark fw-bold px-4" id="btn-sign-brokers" onclick="signDocument('NY_BROKERS', 'sig-brokers', 'brokers')">
+                                <i class="bi bi-pen me-2"></i>Sign
+                            </button>
+                        </div>
+                        <div class="form-text small mt-1"><i class="bi bi-info-circle me-1"></i>By typing your name, you agree this constitutes a legal electronic signature.</div>
+                    </div>
+                </div>
+                {% else %}
+                <!-- Already Signed -->
+                <div class="legal-doc-signed">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-patch-check-fill text-success me-3" style="font-size: 1.8rem;"></i>
+                        <div>
+                            <p class="mb-0 fw-bold">Digitally Signed: <span class="text-success fst-italic">{{ legal_docs.brokers_form_signature }}</span></p>
+                            <p class="mb-0 text-muted" style="font-size: 0.75rem;">
+                                <i class="bi bi-calendar-check me-1"></i>{{ legal_docs.brokers_form_signed_at|date:"M d, Y \a\t h:i A" }}
+                                <span class="mx-1">•</span>
+                                <i class="bi bi-globe me-1"></i>IP: {{ legal_docs.brokers_form_ip }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- Navigation Buttons                                    -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <form method="post">
+            {% csrf_token %}
+            <div class="d-flex justify-content-between align-items-center py-3">
+                <a href="{% url 'section2_income' application.id %}{% if token %}?token={{ token }}{% endif %}" class="btn btn-outline-dark px-4">
+                    <i class="bi bi-arrow-left me-2"></i>Back to Section 2
+                </a>
+                <div>
+                    <button type="submit" name="save_exit" class="btn btn-outline-secondary me-2 px-4">
+                        <i class="bi bi-save me-1"></i>Save & Exit
+                    </button>
                     <button type="submit" name="save_continue" class="btn btn-warning px-5 fw-bold shadow-sm"
                             {% if not legal_docs.discrimination_form_signed or not legal_docs.brokers_form_signed %}disabled{% endif %}
                             id="btn-continue">
-                        Save and Continue <i class="bi bi-arrow-right ms-2"></i>
+                        Continue to Review <i class="bi bi-arrow-right ms-2"></i>
                     </button>
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
 
     <!-- Sidebar -->
@@ -123,18 +290,196 @@
 </div>
 {% endblock %}
 
+{% block extra_css %}
+<style>
+/* ═══ Legal Document Cards ═══════════════════════════ */
+.legal-doc-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    transition: box-shadow 0.3s ease;
+}
+.legal-doc-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+}
+
+.legal-doc-header {
+    background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+    color: #fff;
+    padding: 16px 20px;
+}
+
+.legal-doc-number {
+    width: 36px; height: 36px; min-width: 36px;
+    border-radius: 50%;
+    background: #ffcc00;
+    color: #000;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 0.9rem;
+    margin-right: 14px;
+}
+
+.legal-doc-body {
+    padding: 24px;
+}
+
+/* Badges */
+.legal-badge-signed {
+    background: #198754;
+    color: #fff;
+    padding: 6px 14px;
+    font-size: 0.78rem;
+    border-radius: 20px;
+}
+.legal-badge-pending {
+    background: rgba(255, 204, 0, 0.15);
+    color: #b38f00;
+    border: 1px solid rgba(255, 204, 0, 0.3);
+    padding: 6px 14px;
+    font-size: 0.78rem;
+    border-radius: 20px;
+}
+
+/* ═══ PDF Viewer ═════════════════════════════════════ */
+.pdf-viewer-container {
+    border: 2px solid #eee;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #f8f8f8;
+}
+
+.pdf-viewer-frame {
+    position: relative;
+    width: 100%;
+}
+
+.pdf-iframe {
+    width: 100%;
+    height: 500px;
+    border: none;
+    display: block;
+}
+
+.pdf-fallback-text {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 28px;
+    font-size: 0.88rem;
+    line-height: 1.7;
+    color: #333;
+    background: #fafafa;
+}
+.pdf-fallback-text::-webkit-scrollbar {
+    width: 6px;
+}
+.pdf-fallback-text::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 3px;
+}
+.pdf-fallback-text::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+}
+.pdf-fallback-text::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+}
+
+/* ═══ Signature Area ═════════════════════════════════ */
+.legal-doc-sign-area {
+    background: #f9f9f9;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.sign-area-hidden {
+    display: none;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e0e0e0;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══ Signed Confirmation ════════════════════════════ */
+.legal-doc-signed {
+    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+    border: 1px solid #bbf7d0;
+    border-radius: 10px;
+    padding: 18px 20px;
+}
+
+/* ═══ Form Check Styling ═════════════════════════════ */
+.legal-doc-sign-area .form-check-input:checked {
+    background-color: #000;
+    border-color: #000;
+}
+.legal-doc-sign-area .form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(255, 204, 0, 0.25);
+    border-color: #ffcc00;
+}
+
+/* ═══ Signature Button Pulse ═════════════════════════ */
+#btn-sign-discrimination, #btn-sign-brokers {
+    transition: all 0.3s ease;
+}
+#btn-sign-discrimination:hover, #btn-sign-brokers:hover {
+    background: #ffcc00;
+    border-color: #ffcc00;
+    color: #000;
+}
+</style>
+{% endblock %}
+
 {% block extra_js %}
 <script>
-function signDocument(docType, inputId) {
-    const signature = document.getElementById(inputId).value;
+// Toggle signature area when "I have read" checkbox is checked
+function toggleSignArea(docId) {
+    const checkbox = document.getElementById('ack-' + docId);
+    const signArea = document.getElementById('sign-area-' + docId);
+    
+    if (checkbox.checked) {
+        signArea.style.display = 'block';
+        // Focus the signature input
+        setTimeout(() => {
+            document.getElementById('sig-' + docId).focus();
+        }, 300);
+    } else {
+        signArea.style.display = 'none';
+    }
+}
+
+// Sign document via AJAX
+function signDocument(docType, inputId, docId) {
+    const signatureInput = document.getElementById(inputId);
+    const signature = signatureInput.value.trim();
+    const btn = document.getElementById('btn-sign-' + docId);
+
     if (!signature) {
-        alert("Please enter your name to sign.");
+        signatureInput.classList.add('is-invalid');
+        signatureInput.focus();
+        return;
+    }
+    signatureInput.classList.remove('is-invalid');
+
+    if (signature.length < 2) {
+        alert("Please enter your full legal name.");
         return;
     }
 
-    if (!confirm(`Are you sure you want to digitally sign this document as "${signature}"?`)) {
+    if (!confirm(`By clicking OK, you are digitally signing this document as:\n\n"${signature}"\n\nThis is a legally binding electronic signature.`)) {
         return;
     }
+
+    // Disable button and show loading
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Signing...';
 
     fetch("{% url 'v2_sign_document' application.id %}", {
         method: "POST",
@@ -147,14 +492,22 @@ function signDocument(docType, inputId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            location.reload();
+            // Show success briefly then reload
+            btn.innerHTML = '<i class="bi bi-check-lg me-2"></i>Signed!';
+            btn.classList.remove('btn-dark');
+            btn.classList.add('btn-success');
+            setTimeout(() => location.reload(), 800);
         } else {
             alert("Error: " + data.error);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-pen me-2"></i>Sign';
         }
     })
     .catch(error => {
         console.error("Error signing document:", error);
         alert("An error occurred. Please try again.");
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-pen me-2"></i>Sign';
     });
 }
 </script>

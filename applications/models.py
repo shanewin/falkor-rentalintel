@@ -434,7 +434,7 @@ class PersonalInfoData(models.Model):
                 })
             result.append({'group': group_name, 'fields': group_fields})
 
-        # ── Related Records (conditional) ──
+        # ── Related Records ──
         pet_count = self.pets.count() if self.pk else 0
         address_history_ok = self._check_address_history_sufficient()
 
@@ -444,6 +444,47 @@ class PersonalInfoData(models.Model):
                 'filled': address_history_ok,
             },
         ]
+
+        # ── Per-address field-level tracking ──
+        if self.pk:
+            for addr in self.previous_addresses.all():
+                addr_label = f"Prev Address {addr.order}"
+                # Core address fields are always required
+                for field_name, label in [
+                    ('street_address_1', 'Street Address'),
+                    ('city', 'City'),
+                    ('state', 'State'),
+                    ('zip_code', 'Zip Code'),
+                    ('housing_status', 'Housing Status'),
+                ]:
+                    val = getattr(addr, field_name)
+                    related_fields.append({
+                        'label': f'{addr_label} – {label}',
+                        'filled': is_filled(val),
+                    })
+
+                # Duration: at least years or months must be filled
+                has_duration = (addr.years is not None and addr.years > 0) or \
+                               (addr.months is not None and addr.months > 0)
+                related_fields.append({
+                    'label': f'{addr_label} – Duration',
+                    'filled': has_duration,
+                })
+
+                # Conditional: Landlord info required when renting
+                if addr.housing_status and addr.housing_status.lower() == 'rent':
+                    for field_name, label in [
+                        ('monthly_rent', 'Monthly Rent'),
+                        ('landlord_name', 'Landlord Name'),
+                        ('landlord_phone', 'Landlord Phone'),
+                        ('landlord_email', 'Landlord Email'),
+                    ]:
+                        val = getattr(addr, field_name)
+                        related_fields.append({
+                            'label': f'{addr_label} – {label}',
+                            'filled': is_filled(val),
+                        })
+
         # Pets: only counted if applicant said "Yes" to has_pets
         if self.has_pets is True:
             related_fields.append({

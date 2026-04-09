@@ -59,8 +59,13 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="{{ form.ssn.id_for_label }}" class="form-label">Social Security Number <span class="text-danger">*</span></label>
-                                {{ form.ssn }}
-                                <div class="form-text small">Required for background screening. Your data is encrypted.</div>
+                                <div class="input-group">
+                                    {{ form.ssn }}
+                                    <button type="button" class="btn btn-outline-secondary" id="ssn-toggle-btn" title="Show/Hide SSN" tabindex="-1">
+                                        <i class="bi bi-eye-slash" id="ssn-toggle-icon"></i>
+                                    </button>
+                                </div>
+                                <div class="form-text small"><i class="bi bi-shield-lock-fill text-success me-1"></i>Required for background screening. Your data is encrypted at rest.</div>
                                 {% if form.ssn.errors %}
                                     <div class="text-danger small">{{ form.ssn.errors }}</div>
                                 {% endif %}
@@ -352,6 +357,70 @@
         if (housingStatus) {
             housingStatus.addEventListener('change', toggleLandlord);
             toggleLandlord();
+        }
+
+        // --- SSN Formatting & Toggle ---
+        const ssnInput = document.querySelector('.ssn-input');
+        const ssnToggleBtn = document.getElementById('ssn-toggle-btn');
+        const ssnToggleIcon = document.getElementById('ssn-toggle-icon');
+
+        if (ssnInput) {
+            // Auto-format as XXX-XX-XXXX while typing
+            ssnInput.addEventListener('input', function(e) {
+                let value = this.value.replace(/\D/g, ''); // strip non-digits
+                if (value.length > 9) value = value.slice(0, 9);
+
+                // Insert dashes at positions 3 and 5
+                let formatted = '';
+                for (let i = 0; i < value.length; i++) {
+                    if (i === 3 || i === 5) formatted += '-';
+                    formatted += value[i];
+                }
+                this.value = formatted;
+            });
+
+            // Prevent non-numeric keys (except backspace, tab, arrow keys, dashes)
+            ssnInput.addEventListener('keydown', function(e) {
+                const allowed = ['Backspace', 'Tab', 'ArrowLeft', 'ArrowRight', 'Delete', 'Home', 'End'];
+                if (allowed.includes(e.key)) return;
+                if (e.key === '-') return; // allow manual dash
+                if (e.ctrlKey || e.metaKey) return; // allow copy/paste shortcuts
+                if (!/^\d$/.test(e.key)) {
+                    e.preventDefault();
+                }
+            });
+
+            // Handle paste: clean and reformat
+            ssnInput.addEventListener('paste', function(e) {
+                e.preventDefault();
+                const pasted = (e.clipboardData || window.clipboardData).getData('text');
+                let digits = pasted.replace(/\D/g, '').slice(0, 9);
+                let formatted = '';
+                for (let i = 0; i < digits.length; i++) {
+                    if (i === 3 || i === 5) formatted += '-';
+                    formatted += digits[i];
+                }
+                this.value = formatted;
+                this.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+
+            // Show/Hide toggle
+            if (ssnToggleBtn) {
+                ssnToggleBtn.addEventListener('click', function() {
+                    const isPassword = ssnInput.type === 'password';
+                    ssnInput.type = isPassword ? 'text' : 'password';
+                    ssnToggleIcon.className = isPassword ? 'bi bi-eye' : 'bi bi-eye-slash';
+                    ssnToggleBtn.title = isPassword ? 'Hide SSN' : 'Show SSN';
+                });
+            }
+
+            // Format existing value on load (in case it comes back unformatted from DB)
+            if (ssnInput.value) {
+                let digits = ssnInput.value.replace(/\D/g, '').slice(0, 9);
+                if (digits.length === 9) {
+                    ssnInput.value = digits.slice(0,3) + '-' + digits.slice(3,5) + '-' + digits.slice(5);
+                }
+            }
         }
 
         // --- Previous Addresses Logic ---

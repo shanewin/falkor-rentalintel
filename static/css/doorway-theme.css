@@ -707,7 +707,152 @@ label.requiredField {
 }
 
 /* ================================================
-   5. Vendor Overrides
+   5. Toast Notifications (Django Messages)
+   ================================================ */
+
+/* Container — fixed top-right stack */
+.falkor-toast-container {
+    position: fixed;
+    top: 90px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 420px;
+    width: 100%;
+    pointer-events: none;
+}
+
+/* Individual toast */
+.falkor-toast {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 12px;
+    background: var(--brand-black);
+    color: #f0f0f0;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    pointer-events: auto;
+    position: relative;
+    overflow: hidden;
+    transform: translateX(110%);
+    opacity: 0;
+    animation: falkor-toast-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.falkor-toast.toast-dismiss {
+    animation: falkor-toast-out 0.35s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+}
+
+/* Accent bar on the left */
+.falkor-toast::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    border-radius: 12px 0 0 12px;
+}
+
+/* Type-specific accent colors */
+.falkor-toast.toast-success::before { background: #22c55e; }
+.falkor-toast.toast-error::before,
+.falkor-toast.toast-danger::before  { background: #ef4444; }
+.falkor-toast.toast-warning::before { background: var(--brand-yellow); }
+.falkor-toast.toast-info::before    { background: #3b82f6; }
+
+/* Icon circle */
+.falkor-toast-icon {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+.toast-success .falkor-toast-icon { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+.toast-error   .falkor-toast-icon,
+.toast-danger  .falkor-toast-icon { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+.toast-warning .falkor-toast-icon { background: rgba(255, 214, 10, 0.15); color: var(--brand-yellow); }
+.toast-info    .falkor-toast-icon { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+
+/* Body */
+.falkor-toast-body {
+    flex: 1;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+/* Dismiss button */
+.falkor-toast-close {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.falkor-toast-close:hover {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Auto-dismiss progress bar */
+.falkor-toast-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    border-radius: 0 0 12px 12px;
+    animation: falkor-toast-progress 5s linear forwards;
+}
+
+.toast-success .falkor-toast-progress { background: #22c55e; }
+.toast-error   .falkor-toast-progress,
+.toast-danger  .falkor-toast-progress { background: #ef4444; }
+.toast-warning .falkor-toast-progress { background: var(--brand-yellow); }
+.toast-info    .falkor-toast-progress { background: #3b82f6; }
+
+/* Animations */
+@keyframes falkor-toast-in {
+    from { transform: translateX(110%); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes falkor-toast-out {
+    from { transform: translateX(0);    opacity: 1; max-height: 100px; margin-bottom: 0; }
+    to   { transform: translateX(110%); opacity: 0; max-height: 0;     margin-bottom: -10px; }
+}
+
+@keyframes falkor-toast-progress {
+    from { width: 100%; }
+    to   { width: 0%;   }
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    .falkor-toast-container {
+        right: 10px;
+        left: 10px;
+        max-width: none;
+        top: 70px;
+    }
+}
+
+/* ================================================
+   6. Vendor Overrides
    ================================================ */
 
 /* Select2 Bootstrap 5 Theme Overrides to match Custom Form Styles */

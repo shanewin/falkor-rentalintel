@@ -119,62 +119,240 @@
 {% endif %}
 
 {% if not hide_progress_steps %}
-<!-- Application Progress -->
-<div class="card shadow-sm mb-4 border-0">
+<!-- Application Progress & Navigation -->
+<div class="card shadow-sm mb-4 border-0 sidebar-progress-card">
     <div class="card-header bg-dark text-white py-3">
         <h5 class="mb-0"><i class="bi bi-clipboard-check me-2 text-warning"></i>Application Progress</h5>
     </div>
-    <div class="card-body p-4">
-        <div class="application-steps">
+    <div class="card-body px-3 py-4">
+        <!-- Vertical Stepper Navigation -->
+        <div class="stepper-nav">
+            <!-- Home Link -->
+            {% url 'v2_application_overview' application.id as overview_url %}
+            <a href="{{ overview_url }}{% if token %}?token={{ token }}{% endif %}"
+               class="stepper-item d-flex align-items-stretch text-decoration-none {% if current_step == 0 %}stepper-active{% endif %}"
+               id="stepper-step-home">
+                <div class="stepper-track d-flex flex-column align-items-center">
+                    <div class="stepper-circle stepper-circle-home">
+                        <i class="bi bi-house-door-fill"></i>
+                    </div>
+                    <div class="stepper-connector stepper-connector-complete"></div>
+                </div>
+                <div class="stepper-body flex-grow-1 ms-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="stepper-label stepper-label-active">Overview</span>
+                    </div>
+                    <div class="stepper-status">
+                        <i class="bi bi-grid-fill text-dark me-1"></i>Application Dashboard
+                    </div>
+                </div>
+            </a>
+
             {% for step in sections %}
-            <div class="d-flex align-items-start mb-4 {% if forloop.last %}mb-0{% endif %}">
-                <div class="step-indicator me-3 d-flex flex-column align-items-center">
-                    <div class="step-dot rounded-circle d-flex align-items-center justify-content-center shadow-sm
-                        {% if step.get_progress_percentage == 100 %}bg-success text-white
-                        {% elif step.section_number == current_step %}bg-warning text-dark fw-bold
-                        {% else %}bg-light text-muted border{% endif %}"
-                         style="width: 32px; height: 32px; z-index: 2;">
-                        {% if step.get_progress_percentage == 100 %}
+            {% with step_pct=step.get_progress_percentage %}
+            {% if step.section_number == 1 %}{% url 'section1_personal_info' application.id as step_url %}
+            {% elif step.section_number == 2 %}{% url 'section2_income' application.id as step_url %}
+            {% elif step.section_number == 3 %}{% url 'section3_legal' application.id as step_url %}
+            {% elif step.section_number == 4 %}{% url 'section4_review' application.id as step_url %}
+            {% elif step.section_number == 5 %}{% url 'section5_payment' application.id as step_url %}
+            {% endif %}
+
+            <a href="{{ step_url }}{% if token %}?token={{ token }}{% endif %}"
+               class="stepper-item d-flex align-items-stretch text-decoration-none {% if step.section_number == current_step %}stepper-active{% endif %} {% if step_pct == 100 %}stepper-complete{% endif %}"
+               id="stepper-step-{{ step.section_number }}">
+
+                <!-- Left: Circle + Connector Line -->
+                <div class="stepper-track d-flex flex-column align-items-center">
+                    <div class="stepper-circle
+                        {% if step_pct == 100 %}stepper-circle-complete
+                        {% elif step.section_number == current_step %}stepper-circle-active
+                        {% else %}stepper-circle-pending{% endif %}">
+                        {% if step_pct == 100 %}
                         <i class="bi bi-check-lg"></i>
                         {% else %}
                         {{ step.section_number }}
                         {% endif %}
                     </div>
                     {% if not forloop.last %}
-                    <div class="step-line" style="width: 2px; height: 30px; background-color: #dee2e6; margin-top: 4px;"></div>
+                    <div class="stepper-connector
+                        {% if step_pct == 100 %}stepper-connector-complete{% endif %}"></div>
                     {% endif %}
                 </div>
-                <div class="step-content pt-1">
-                    <h6 class="mb-0 small fw-bold {% if step.section_number == current_step %}text-dark{% else %}text-muted{% endif %}">
-                        {% if step.section_number == 1 %}Personal Information
-                        {% elif step.section_number == 2 %}Income & Employment
-                        {% elif step.section_number == 3 %}Legal Documents
-                        {% elif step.section_number == 4 %}Review Application
-                        {% elif step.section_number == 5 %}Payment & Submit
-                        {% endif %}
-                    </h6>
-                    <small class="text-muted" style="font-size: 0.75rem;">
-                        {% if step.get_progress_percentage == 100 %}Completed
-                        {% elif step.get_progress_percentage > 0 %}{{ step.get_progress_percentage }}% Complete
-                        {% elif step.section_number == current_step %}In Progress
-                        {% else %}Pending{% endif %}
-                    </small>
+
+                <!-- Right: Label + Progress Bar + Percentage -->
+                <div class="stepper-body flex-grow-1 ms-3 {% if forloop.last %}pb-0{% endif %}">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="stepper-label
+                            {% if step.section_number == current_step %}stepper-label-active
+                            {% elif step_pct == 100 %}stepper-label-complete
+                            {% else %}stepper-label-pending{% endif %}">
+                            {% if step.section_number == 1 %}Personal Info
+                            {% elif step.section_number == 2 %}Income & Employment
+                            {% elif step.section_number == 3 %}Legal Documents
+                            {% elif step.section_number == 4 %}Review
+                            {% elif step.section_number == 5 %}Payment & Submit
+                            {% endif %}
+                        </span>
+                        <span class="stepper-pct
+                            {% if step_pct == 100 %}text-success
+                            {% elif step.section_number == current_step %}text-warning
+                            {% else %}text-muted{% endif %}">
+                            {{ step_pct|default:0 }}%
+                        </span>
+                    </div>
+                    <div class="stepper-bar-track">
+                        <div class="stepper-bar-fill
+                            {% if step_pct == 100 %}stepper-bar-complete
+                            {% elif step.section_number == current_step %}stepper-bar-active
+                            {% else %}stepper-bar-pending{% endif %}"
+                             style="width: {{ step_pct|default:0 }}%;"></div>
+                    </div>
+                    <div class="stepper-status">
+                        {% if step_pct == 100 %}<i class="bi bi-check-circle-fill text-success me-1"></i>Completed
+                        {% elif step_pct > 0 %}<i class="bi bi-pencil-fill text-warning me-1"></i>{{ step_pct }}% Complete
+                        {% elif step.section_number == current_step %}<i class="bi bi-arrow-right-circle-fill text-warning me-1"></i>In Progress
+                        {% else %}<i class="bi bi-circle text-muted me-1"></i>Pending{% endif %}
+                    </div>
                 </div>
-            </div>
+            </a>
+            {% endwith %}
             {% endfor %}
         </div>
 
-        <div class="mt-4 pt-3 border-top">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-                <small class="text-muted fw-bold">Overall Progress</small>
-                <small class="text-dark fw-bold">{{ progress_percent|floatformat:0 }}%</small>
+        <!-- Overall Progress -->
+        <div class="stepper-overall mt-3 pt-3 border-top">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="stepper-overall-label">Overall Progress</span>
+                <span class="stepper-overall-pct">{{ progress_percent|floatformat:0 }}%</span>
             </div>
-            <div class="progress" style="height: 6px;">
-                    <div class="progress-bar {% if progress_percent == 100 %}bg-success{% else %}bg-warning{% endif %}" role="progressbar" style="width: {{ progress_percent|default:0 }}%;" aria-valuenow="{{ progress_percent|default:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+            <div class="progress stepper-overall-bar">
+                <div class="progress-bar {% if progress_percent == 100 %}bg-success{% else %}stepper-overall-fill{% endif %}"
+                     role="progressbar"
+                     style="width: {{ progress_percent|default:0 }}%;"
+                     aria-valuenow="{{ progress_percent|default:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+/* ── Stepper Navigation ──────────────────────────── */
+.stepper-nav { display: flex; flex-direction: column; }
+
+.stepper-item {
+    padding: 0;
+    border-radius: 10px;
+    transition: background 0.2s ease;
+    cursor: pointer;
+}
+.stepper-item:hover { background: rgba(255, 204, 0, 0.06); }
+.stepper-active { background: rgba(255, 204, 0, 0.08); }
+
+/* Circle */
+.stepper-circle {
+    width: 36px; height: 36px; min-width: 36px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.82rem; font-weight: 700;
+    z-index: 2;
+    transition: all 0.3s ease;
+}
+.stepper-circle-complete {
+    background: #198754; color: #fff;
+    box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.18);
+}
+.stepper-circle-active {
+    background: #ffcc00; color: #000;
+    box-shadow: 0 0 0 3px rgba(255, 204, 0, 0.25);
+    animation: pulse-ring 2s ease-in-out infinite;
+}
+.stepper-circle-pending {
+    background: #f0f0f0; color: #999;
+    border: 2px solid #dee2e6;
+}
+.stepper-circle-home {
+    background: #000; color: #ffcc00;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.10);
+}
+
+@keyframes pulse-ring {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(255, 204, 0, 0.25); }
+    50%      { box-shadow: 0 0 0 6px rgba(255, 204, 0, 0.10); }
+}
+
+/* Connector Line */
+.stepper-connector {
+    width: 2px; flex-grow: 1; min-height: 20px;
+    background: #dee2e6;
+    margin: 4px 0;
+    transition: background 0.3s ease;
+}
+.stepper-connector-complete { background: #198754; }
+
+/* Track column */
+.stepper-track { padding: 4px 0; }
+
+/* Body */
+.stepper-body { padding: 6px 0 18px 0; }
+.stepper-item:last-child .stepper-body { padding-bottom: 4px; }
+
+/* Label */
+.stepper-label {
+    font-size: 0.82rem; font-weight: 600;
+    line-height: 1.2;
+}
+.stepper-label-active  { color: #000; }
+.stepper-label-complete{ color: #198754; }
+.stepper-label-pending { color: #888; }
+
+/* Percentage badge */
+.stepper-pct {
+    font-size: 0.78rem; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Mini progress bar */
+.stepper-bar-track {
+    height: 5px; border-radius: 4px;
+    background: #eee;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+.stepper-bar-fill {
+    height: 100%; border-radius: 4px;
+    transition: width 0.5s ease;
+}
+.stepper-bar-complete { background: #198754; }
+.stepper-bar-active   { background: linear-gradient(90deg, #ffcc00, #ffd633); }
+.stepper-bar-pending  { background: #ccc; }
+
+/* Status text */
+.stepper-status {
+    font-size: 0.7rem; color: #888;
+    font-weight: 500;
+    display: flex; align-items: center;
+}
+.stepper-status i { font-size: 0.65rem; }
+
+/* ── Overall Progress ─────────────────────────────── */
+.stepper-overall-label {
+    font-size: 0.75rem; font-weight: 700;
+    color: #555; text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.stepper-overall-pct {
+    font-size: 1.1rem; font-weight: 800;
+    color: #000;
+}
+.stepper-overall-bar {
+    height: 8px; border-radius: 6px;
+    background: #eee;
+    overflow: hidden;
+}
+.stepper-overall-fill {
+    background: linear-gradient(90deg, #ffcc00, #ffd633);
+}
+</style>
 {% endif %}
 
 

@@ -306,12 +306,67 @@ def apartment_overview(request, apartment_id):
         from .models import BrokerInquiry
         has_contacted = BrokerInquiry.objects.filter(apartment=apartment, applicant=request.user).exists()
 
+    import json
+
+    # --- Cost Estimator Data (from existing ApartmentUtilities + ApartmentParking models) ---
+    cost_data = {
+        'base_rent': float(apartment.rent_price) if apartment.rent_price else 0,
+        'deposit': float(apartment.deposit_price) if apartment.deposit_price else 0,
+        'lease_duration': apartment.lease_duration or '',
+        'broker_fee': apartment.broker_fee_required,
+        'utilities_included': [],
+        'utilities_estimate': 200,  # sensible default if no utilities model
+        'all_utilities_included': False,
+        'parking': [],
+    }
+    try:
+        utils = apartment.utilities
+        included = []
+        if utils.water_included: included.append('Water')
+        if utils.gas_included: included.append('Gas')
+        if utils.electricity_included: included.append('Electricity')
+        if utils.heat_included: included.append('Heat')
+        if utils.hot_water_included: included.append('Hot Water')
+        if utils.internet_included: included.append('Internet')
+        cost_data['utilities_included'] = included
+        # Estimate cost for non-included utilities
+        est = 0
+        if not utils.water_included: est += float(utils.water_cost_estimate or 40)
+        if not utils.gas_included: est += float(utils.gas_cost_estimate or 60)
+        if not utils.electricity_included: est += float(utils.electricity_cost_estimate or 80)
+        cost_data['utilities_estimate'] = int(est) if est else 0
+        cost_data['all_utilities_included'] = (
+            utils.water_included and utils.gas_included and
+            utils.electricity_included and utils.heat_included
+        )
+    except Exception:
+        pass  # No utilities record — defaults remain
+
+    for p in apartment.parking_options.all():
+        if p.monthly_rate:
+            cost_data['parking'].append({
+                'type': p.get_parking_type_display(),
+                'rate': float(p.monthly_rate),
+                'included': p.spaces_included > 0,
+            })
+
+    # --- Price History ---
+    has_price_history = apartment.price_history.count() > 1
+
+    # --- Availability & Concessions ---
+    availability = apartment.get_current_availability()
+    concessions = apartment.concessions.all()
+
     return render(request, 'apartments/apartment_overview.html', {
         'apartment': apartment,
         'mapbox_token': getattr(settings, 'MAPBOX_API_TOKEN', ''),
-        'smart_matches': smart_matches, # Pass matches to template
-        'is_saved': is_saved, 
+        'smart_matches': smart_matches,
+        'is_saved': is_saved,
         'has_contacted': has_contacted,
+        'cost_estimator_json': json.dumps(cost_data),
+        'has_price_history': has_price_history,
+        'availability': availability,
+        'concessions': concessions,
     })
 
 

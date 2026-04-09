@@ -9,1020 +9,886 @@
 {% endblock %}
 
 {% block content %}
-<!-- Page Header -->
-<div class="bg-dark text-white py-4 mb-4">
-    <div class="container">
-        <div class="d-flex justify-content-between align-items-start flex-wrap">
-            <div>
-                <h1 class="mb-2">{{ applicant.first_name }} {{ applicant.last_name }}</h1>
-                <p class="mb-0">Applicant Profile Overview</p>
+<div class="container mt-4">
+
+    <!-- Redesigned Profile Header (matching broker_management style) -->
+    <div class="mb-4">
+        <div class="card border-0 overflow-hidden" style="border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.10);">
+
+            <!-- Top Bar: Navigation + Profile ID + Status -->
+            <div class="d-flex justify-content-between align-items-center px-4 py-2" style="background: #1a1a1a; color: #fff; border-radius: 16px 16px 0 0;">
+                <a href="{% url 'applicants_list' %}" class="btn btn-sm d-flex align-items-center gap-2" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.15); font-size: 0.8rem; padding: 4px 12px; border-radius: 20px; text-decoration: none; transition: background 0.2s;">
+                    <i class="fas fa-arrow-left" style="font-size: 0.7rem;"></i> All Applicants
+                </a>
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size: 0.75rem; color: rgba(255,255,255,0.5); letter-spacing: 0.5px;">APPLICANT</span>
+                    <span style="font-size: 0.85rem; font-weight: 700; color: #ffe502;">#{{ applicant.id }}</span>
+                    <span class="badge rounded-pill ms-1" style="{% if applicant.placement_status == 'placed' %}background: #22c55e; color: #fff;{% elif applicant.placement_status == 'withdrawn' %}background: #ef4444; color: #fff;{% else %}background: rgba(255,255,255,0.15); color: #fff;{% endif %} font-size: 0.7rem; font-weight: 600; padding: 4px 10px;">
+                        {{ applicant.get_placement_status_display|default:"Active" }}
+                    </span>
+                </div>
             </div>
-            <div class="header-actions">
-                <a href="{% url 'broker_create_step1' %}?applicant_id={{ applicant.id }}" class="btn btn-primary me-2">
-                    <i class="fas fa-plus-circle me-2"></i>Create Application
-                </a>
-                <a href="{% url 'profile_step1' %}" class="btn btn-warning me-2">
-                    <i class="fas fa-edit me-2"></i>Edit Profile
-                </a>
-                <a href="{% url 'applicant_crm' applicant.id %}" class="btn btn-outline-light">
-                    <i class="fas fa-database me-2"></i>CRM
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
 
-<div class="container">
-    <!-- Application Status Banner -->
-    {% if application %}    
-    <div class="alert 
-        {% if application.get_status_display == 'New' %} alert-primary
-        {% elif application.get_status_display == 'Pending Review' %} alert-warning text-dark
-        {% elif application.get_status_display == 'Approved' %} alert-success
-        {% elif application.get_status_display == 'Rejected' %} alert-danger
-        {% elif application.get_status_display == 'Waitlisted' %} alert-info
-        {% else %} alert-secondary
-        {% endif %} 
-        text-center fw-bold shadow-sm mb-4" role="alert">
-        
-        <i class="fas fa-home me-2"></i>Application Status: <strong>{{ application.get_status_display }}</strong>
-        <br>
-        <a href="{% url 'application_detail' application.id %}" class="btn btn-light btn-sm mt-2" target="_blank">
-            <i class="fas fa-external-link-alt me-1"></i>View Application
-        </a>
-    </div>
-    {% endif %}
+            <!-- Hero Body -->
+            <div class="px-4 py-4" style="background: #fff; border-top: 1px solid #f0f0f0;">
+                <div class="row align-items-center g-3">
 
-    <!-- Profile Overview Section -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <div class="row align-items-center">
-                <!-- Profile Photo Column -->
-                <div class="col-lg-3 text-center border-end">
-                    <div class="profile-photo-container mb-3">
-                        {% if applicant.photos.all %}
-                            <img src="{{ applicant.photos.first.large_url }}" class="img-fluid rounded-circle shadow-sm" style="width: 150px; height: 150px; object-fit: cover;" alt="Profile Picture">
-                        {% else %}
-                            <img src="{% static 'images/default-profile.png' %}" class="img-fluid rounded-circle shadow-sm" style="width: 150px; height: 150px; object-fit: cover;" alt="Default Profile">
-                        {% endif %}
-                    </div>
-
-                    <!-- Status & Broker Info -->
-                    <div class="mb-3">
-                        <span class="badge {% if applicant.placement_status == 'placed' %}bg-success{% elif applicant.placement_status == 'withdrawn' %}bg-danger{% else %}bg-secondary{% endif %} fs-6 px-3 py-2">
-                            <i class="fas fa-info-circle me-1"></i>
-                            {{ applicant.get_placement_status_display|default:"Unplaced" }}
-                        </span>
-                    </div>
-                    
-                    {% if applicant.placed_apartment %}
-                        <div class="small text-muted mb-2">
-                            <i class="fas fa-building me-1"></i> Placed in: <strong>{{ applicant.placed_apartment.building.name }}</strong>
-                        </div>
-                    {% endif %}
-
-                    {% if applicant.assigned_broker %}
-                        <div class="p-2 bg-light rounded shadow-sm">
-                            <small class="text-uppercase text-muted fw-bold d-block mb-2" style="font-size: 0.7rem;">Assigned Broker</small>
-                            <div class="text-center">
-                                <div class="mb-1">
-                                    <i class="fas fa-check-circle text-success fs-5"></i>
-                                </div>
-                                <div class="fw-bold text-dark small">
-                                    {% if applicant.assigned_broker.first_name %}
-                                        {{ applicant.assigned_broker.first_name }} {{ applicant.assigned_broker.last_name }}
-                                    {% elif applicant.assigned_broker.broker_profile.first_name %}
-                                        {{ applicant.assigned_broker.broker_profile.first_name }} {{ applicant.assigned_broker.broker_profile.last_name }}
-                                    {% else %}
-                                        {{ applicant.assigned_broker.email }}
+                    <!-- Left: Applicant Profile -->
+                    <div class="col-lg-4 col-md-5">
+                        <div class="d-flex align-items-center gap-3">
+                            <!-- Avatar -->
+                            <div style="flex-shrink: 0; position: relative;">
+                                {% if applicant.photos.all %}
+                                    <img src="{{ applicant.photos.first.large_url }}" class="rounded-circle" style="width: 72px; height: 72px; object-fit: cover; border: 3px solid #ffe502; box-shadow: 0 2px 12px rgba(0,0,0,0.15);">
+                                {% else %}
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 72px; height: 72px; background: linear-gradient(135deg, #ffe502, #ffb302); border: 3px solid #f0f0f0; box-shadow: 0 2px 12px rgba(0,0,0,0.1);">
+                                        <i class="fas fa-user" style="font-size: 28px; color: #1a1a1a;"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <!-- Info -->
+                            <div style="min-width: 0;">
+                                <div style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(0,0,0,0.5); margin-bottom: 2px;">Applicant</div>
+                                <h5 class="mb-1 fw-bold text-truncate" style="color: #1a1a1a; font-size: 1.1rem; max-width: 220px;">
+                                    {{ applicant.first_name }} {{ applicant.last_name }}
+                                </h5>
+                                <div class="d-flex flex-column gap-1">
+                                    {% if applicant.email %}
+                                    <button class="header-copy-btn" onclick="copyHeaderField(this, '{{ applicant.email }}')" title="Click to copy">
+                                        <i class="fas fa-envelope"></i>
+                                        <span class="header-copy-text text-truncate" style="max-width: 185px;">{{ applicant.email }}</span>
+                                        <i class="fas fa-copy header-copy-icon"></i>
+                                    </button>
+                                    {% endif %}
+                                    {% if applicant.formatted_phone %}
+                                    <button class="header-copy-btn" onclick="copyHeaderField(this, '{{ applicant.phone_number }}')" title="Click to copy">
+                                        <i class="fas fa-phone"></i>
+                                        <span class="header-copy-text">{{ applicant.formatted_phone }}</span>
+                                        <i class="fas fa-copy header-copy-icon"></i>
+                                    </button>
                                     {% endif %}
                                 </div>
                             </div>
                         </div>
-                    {% endif %}
-                </div>
+                    </div>
 
-                <!-- Basic Information Column -->
-                <div class="col-lg-9">
-                    <h5 class="card-title border-bottom pb-2 mb-3">
-                        <i class="fas fa-user text-primary me-2"></i>Personal Information
-                    </h5>
-                    <div class="row g-3">
-                        <div class="col-md-6 col-lg-4">
-                            <label class="text-muted small d-block"><i class="fas fa-birthday-cake text-warning me-1"></i>Date of Birth</label>
-                            <div class="fw-bold">{{ applicant.date_of_birth|default:"Not provided" }}</div>
+                    <!-- Vertical Divider (desktop) -->
+                    <div class="col-auto d-none d-md-block">
+                        <div style="width: 1px; height: 70px; background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.2), transparent);"></div>
+                    </div>
+
+                    <!-- Center: Key Details -->
+                    <div class="col-lg col-md">
+                        <div style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(0,0,0,0.5); margin-bottom: 4px;">
+                            <i class="fas fa-info-circle me-1"></i> Key Details
                         </div>
-                        
+                        <div class="d-flex flex-wrap align-items-center gap-3 mb-2">
+                            {% if applicant.date_of_birth %}
+                            <div class="d-flex align-items-center gap-1" style="font-size: 0.8rem; color: rgba(0,0,0,0.75);">
+                                <i class="fas fa-birthday-cake" style="font-size: 0.7rem; opacity: 0.6;"></i>
+                                <span style="font-weight: 500;">DOB</span>
+                                <span style="font-weight: 800;">{{ applicant.date_of_birth }}</span>
+                            </div>
+                            {% endif %}
+                            {% if applicant.desired_move_in_date %}
+                            <span class="d-inline-flex align-items-center gap-1" style="background: rgba(0,0,0,0.1); border-radius: 20px; padding: 3px 10px; font-size: 0.75rem; font-weight: 700; color: #1a1a1a;">
+                                <i class="fas fa-calendar-alt" style="font-size: 0.65rem; opacity: 0.7;"></i>
+                                Move-in {{ applicant.desired_move_in_date|date:"M d, Y" }}
+                            </span>
+                            {% endif %}
+                            {% if applicant.max_rent_budget %}
+                            <span class="d-inline-flex align-items-center gap-1" style="background: rgba(0,0,0,0.75); border-radius: 20px; padding: 3px 10px; font-size: 0.72rem; font-weight: 700; color: #ffe502; letter-spacing: 0.2px;">
+                                <i class="fas fa-dollar-sign" style="font-size: 0.6rem;"></i>
+                                Budget&nbsp;${{ applicant.max_rent_budget|floatformat:0|intcomma }}/mo
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center gap-2" style="font-size: 0.8rem; color: rgba(0,0,0,0.65);">
+                            {% if applicant.street_address_1 %}
+                            <div class="d-flex align-items-center gap-1">
+                                <i class="fas fa-map-marker-alt" style="opacity: 0.7;"></i>
+                                <span>{{ applicant.street_address_1 }}, {{ applicant.city }}, {{ applicant.get_state_display }} {{ applicant.zip_code }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Vertical Divider (desktop) -->
+                    <div class="col-auto d-none d-lg-block">
+                        <div style="width: 1px; height: 70px; background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.2), transparent);"></div>
+                    </div>
+
+                    <!-- Right: Broker Info -->
+                    <div class="col-lg-auto col-md-auto text-center" style="min-width: 110px;">
+                        {% if applicant.assigned_broker %}
+                        <div style="position: relative; display: inline-flex; flex-direction: column; align-items: center;">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; background: linear-gradient(135deg, #22c55e, #16a34a); box-shadow: 0 2px 8px rgba(34,197,94,0.3);">
+                                <i class="fas fa-user-tie" style="font-size: 1.1rem; color: #fff;"></i>
+                            </div>
+                            <div style="font-size: 0.7rem; font-weight: 700; color: rgba(0,0,0,0.5); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px;">Broker</div>
+                            <div class="fw-bold" style="font-size: 0.75rem; color: #1a1a1a; max-width: 120px;" title="{% if applicant.assigned_broker.first_name %}{{ applicant.assigned_broker.first_name }} {{ applicant.assigned_broker.last_name }}{% else %}{{ applicant.assigned_broker.email }}{% endif %}">
+                                {% if applicant.assigned_broker.first_name %}
+                                    {{ applicant.assigned_broker.first_name }} {{ applicant.assigned_broker.last_name }}
+                                {% elif applicant.assigned_broker.broker_profile.first_name %}
+                                    {{ applicant.assigned_broker.broker_profile.first_name }} {{ applicant.assigned_broker.broker_profile.last_name }}
+                                {% else %}
+                                    {{ applicant.assigned_broker.email }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div style="position: relative; display: inline-flex; flex-direction: column; align-items: center;">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; background: #f1f5f9;">
+                                <i class="fas fa-user-slash" style="font-size: 1.1rem; color: #94a3b8;"></i>
+                            </div>
+                            <div style="font-size: 0.7rem; font-weight: 700; color: rgba(0,0,0,0.3); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px;">No Broker</div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Application Status Banner (if any) -->
+            {% if application %}
+            <div class="px-4 py-2 d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, #f8fafc, #f1f5f9); border-top: 1px solid #ececec;">
+                <div class="d-flex align-items-center gap-2" style="font-size: 0.8rem;">
+                    <i class="fas fa-file-alt" style="color: #ffe502;"></i>
+                    <span class="text-muted">Active Application:</span>
+                    <span class="fw-bold">#{{ application.id }}</span>
+                    <span class="badge rounded-pill px-2 py-1" style="{% if application.get_status_display == 'New' %}background: #ffe502; color: #1a1a1a;{% elif application.get_status_display == 'Approved' %}background: #22c55e; color: #fff;{% elif application.get_status_display == 'Rejected' %}background: #ef4444; color: #fff;{% else %}background: rgba(0,0,0,0.1); color: #555;{% endif %} font-size: 0.7rem; font-weight: 600;">
+                        {{ application.get_status_display }}
+                    </span>
+                </div>
+                <a href="{% url 'application_detail' application.id %}" class="btn btn-sm" style="background: #1a1a1a; color: #ffe502; font-size: 0.72rem; font-weight: 600; padding: 4px 12px; border-radius: 20px;" target="_blank">
+                    <i class="fas fa-external-link-alt me-1" style="font-size: 0.65rem;"></i>View Application
+                </a>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+
+    <!-- Copy-to-clipboard Styles (matching broker_management) -->
+    <style>
+        .header-copy-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: none;
+            border: none;
+            padding: 2px 0;
+            font-size: 0.8rem;
+            color: rgba(0, 0, 0, 0.7);
+            cursor: pointer;
+            border-radius: 4px;
+            transition: color 0.15s;
+            text-align: left;
+            max-width: 100%;
+        }
+        .header-copy-btn:hover { color: #1a1a1a; }
+        .header-copy-btn .fa-envelope,
+        .header-copy-btn .fa-phone {
+            opacity: 0.6;
+            flex-shrink: 0;
+            font-size: 0.72rem;
+            width: 12px;
+        }
+        .header-copy-icon {
+            opacity: 0;
+            font-size: 0.65rem;
+            flex-shrink: 0;
+            transition: opacity 0.15s;
+            color: rgba(0,0,0,0.45);
+        }
+        .header-copy-btn:hover .header-copy-icon { opacity: 1; }
+        .header-copy-btn.copied { color: #16a34a; }
+        .header-copy-btn.copied .header-copy-icon { opacity: 1; color: #16a34a; }
+
+        /* Card header styling to match broker management */
+        .profile-card .card-header {
+            background: #1a1a1a;
+            color: #fff;
+            border: none;
+        }
+        .profile-card .card-header h5,
+        .profile-card .card-header h6 {
+            color: #fff;
+        }
+        .profile-card .card-header .header-icon {
+            color: #ffe502;
+        }
+    </style>
+
+    <script>
+    function copyHeaderField(btn, value) {
+        navigator.clipboard.writeText(value).then(function () {
+            var icon = btn.querySelector('.header-copy-icon');
+            var text = btn.querySelector('.header-copy-text');
+            var originalText = text ? text.textContent : '';
+
+            btn.classList.add('copied');
+            if (icon) { icon.classList.remove('fa-copy'); icon.classList.add('fa-check'); }
+            if (text) { text.textContent = 'Copied!'; }
+
+            setTimeout(function () {
+                btn.classList.remove('copied');
+                if (icon) { icon.classList.remove('fa-check'); icon.classList.add('fa-copy'); }
+                if (text) { text.textContent = originalText; }
+            }, 1500);
+        }).catch(function () {
+            var ta = document.createElement('textarea');
+            ta.value = value;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+        });
+    }
+    </script>
+
+    <div class="row g-4">
+        <!-- Left Column - Quick Actions & Activity -->
+        <div class="col-lg-3">
+            <!-- Quick Actions Card -->
+            <div class="card mb-4 shadow border-0 overflow-hidden" style="border-radius: 12px;">
+                <div class="card-header py-3" style="background: #1a1a1a;">
+                    <h6 class="mb-0 fw-bold text-white"><i class="fas fa-bolt me-2" style="color: #ffe502;"></i>Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    {% if applicant.email %}
+                    <a href="mailto:{{ applicant.email }}" class="btn btn-sm w-100 mb-2" style="background-color: #ffe502; color: #1a1a1a; border: none; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <i class="fas fa-envelope me-1"></i> Email Applicant
+                    </a>
+                    {% else %}
+                    <button class="btn btn-outline-secondary btn-sm w-100 mb-2" disabled>
+                        <i class="fas fa-envelope me-1"></i> Email (No Contact)
+                    </button>
+                    {% endif %}
+                    {% if applicant.phone_number %}
+                    <a href="tel:{{ applicant.phone_number }}" class="btn btn-sm w-100 mb-2" style="background-color: #ffcc02; color: #1a1a1a; border: none; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <i class="fas fa-phone me-1"></i> Call Applicant
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'broker_create_step1' %}?applicant_id={{ applicant.id }}" class="btn btn-sm w-100 mb-2" style="background-color: #ffb302; color: #1a1a1a; border: none; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <i class="fas fa-plus-circle me-1"></i> Create Application
+                    </a>
+                    <a href="{% url 'profile_step1' %}" class="btn btn-sm w-100 mb-2" style="background-color: #ffcc02; color: #1a1a1a; border: none; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <i class="fas fa-edit me-1"></i> Edit Profile
+                    </a>
+                    <hr style="opacity: 0.15;">
+                    <a href="{% url 'applicant_crm' applicant.id %}" class="btn btn-sm w-100 btn-outline-dark">
+                        <i class="fas fa-database me-1"></i> CRM
+                    </a>
+                </div>
+            </div>
+
+            <!-- Identification Summary -->
+            <div class="card mb-4 shadow border-0 overflow-hidden" style="border-radius: 12px;">
+                <div class="card-header py-3" style="background: #1a1a1a;">
+                    <h6 class="mb-0 fw-bold text-white"><i class="fas fa-id-card me-2" style="color: #ffe502;"></i>Identification</h6>
+                </div>
+                <div class="card-body">
+                    {% for doc in applicant.identification_documents.all %}
+                        {% if doc.document_image_front or doc.document_image_back %}
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <i class="fas fa-check-circle text-success" style="font-size: 0.85rem;"></i>
+                            <span class="small fw-semibold">{{ doc.get_id_type_display }}</span>
+                        </div>
+                        {% if doc.document_image_front %}
+                        <div class="mb-2">
+                            <img src="{{ doc.document_image_front.url }}" class="img-fluid rounded shadow-sm border" alt="Front" style="max-height: 120px; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'" onclick="window.open('{{ doc.document_image_front.url }}', '_blank')">
+                        </div>
+                        {% endif %}
+                        {% endif %}
+                    {% empty %}
+                        <div class="text-center py-2">
+                            <i class="far fa-id-card text-muted mb-2" style="font-size: 1.5rem; opacity: 0.3;"></i>
+                            <div class="text-muted small">No documents provided</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Pets Sidebar -->
+            {% if applicant.pets.all %}
+            <div class="card mb-4 shadow border-0 overflow-hidden" style="border-radius: 12px;">
+                <div class="card-header py-3" style="background: #1a1a1a;">
+                    <h6 class="mb-0 fw-bold text-white"><i class="fas fa-paw me-2" style="color: #ffe502;"></i>Pets</h6>
+                </div>
+                <div class="card-body">
+                    {% for pet in applicant.pets.all %}
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="fas fa-paw" style="color: #f59e0b; font-size: 0.8rem;"></i>
+                        <div>
+                            <span class="small fw-semibold">{{ pet.pet_type }}{% if pet.name %} — {{ pet.name }}{% endif %}</span>
+                            <span class="badge bg-light text-muted border ms-1" style="font-size: 0.6rem;">x{{ pet.quantity }}</span>
+                        </div>
+                    </div>
+                    {% if pet.description %}
+                    <div class="text-muted small mb-2 ps-4" style="font-style: italic; font-size: 0.72rem;">"{{ pet.description }}"</div>
+                    {% endif %}
+                    {% if pet.photos.all %}
+                    <div class="d-flex gap-2 ps-4 mb-2">
+                        {% for photo in pet.photos.all %}
+                        <img src="{{ photo.thumbnail_url }}" class="rounded shadow-sm border" alt="Pet" style="width: 40px; height: 40px; object-fit: cover; cursor: pointer;" onclick="window.open('{{ photo.url }}', '_blank')">
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column - Main Content -->
+        <div class="col-lg-9">
+
+            <!-- Smart Insights / Pre-Qualification Summary -->
+            {% if smart_insights %}
+            <div class="card mb-4 shadow border-0 overflow-hidden" style="border-radius: 12px;">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #1a1a1a, #2d2d2d);">
+                    <h5 class="mb-0 fw-bold text-white"><i class="fas fa-chart-line me-2" style="color: #ffe502;"></i>Pre-Qualification Summary</h5>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #ffe502, #f59e0b); color: #1a1a1a; font-weight: 600; font-size: 0.75rem;">Profile-Based Estimate</span>
+                        <button class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#privacyModal" style="font-size: 0.7rem; padding: 3px 8px; border-radius: 20px;">
+                            <i class="fas fa-shield-alt me-1"></i>Privacy
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body px-4 py-3">
+                    <div class="d-flex align-items-center gap-4 flex-wrap">
+                        <!-- Overall Score -->
+                        <div class="text-center" style="min-width: 80px;">
+                            <div class="fw-bold mb-0 {% if smart_insights.overall_score >= 80 %}text-success{% elif smart_insights.overall_score >= 60 %}text-primary{% elif smart_insights.overall_score >= 40 %}text-warning{% else %}text-danger{% endif %}" style="font-size: 2rem; line-height: 1;">{{ smart_insights.overall_score }}</div>
+                            <div class="badge mt-1 {% if smart_insights.overall_score >= 80 %}bg-success{% elif smart_insights.overall_score >= 60 %}bg-primary{% elif smart_insights.overall_score >= 40 %}bg-warning text-dark{% else %}bg-danger{% endif %}" style="font-size: 0.65rem;">
+                                {% if smart_insights.overall_score >= 80 %}Highly Qualified{% elif smart_insights.overall_score >= 60 %}Qualified{% elif smart_insights.overall_score >= 40 %}Needs Review{% else %}High Risk{% endif %}
+                            </div>
+                        </div>
+                        <div class="vr" style="opacity: 0.15;"></div>
+                        <!-- Metric Pills -->
+                        <div class="d-flex flex-wrap gap-4 flex-grow-1" style="font-size: 0.8rem;">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-dollar-sign {% if smart_insights.affordability.income_multiple >= 3 %}text-success{% else %}text-warning{% endif %}"></i>
+                                <div>
+                                    <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Affordability</div>
+                                    <div class="fw-semibold">{% if smart_insights.affordability.income_multiple > 0 %}{{ smart_insights.affordability.income_multiple|floatformat:1 }}x Income{% else %}No data{% endif %}</div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-briefcase text-primary"></i>
+                                <div>
+                                    <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Employment</div>
+                                    <div class="fw-semibold">{% if smart_insights.employment_stability.employment_length != 'Unknown' %}{{ smart_insights.employment_stability.employment_length }}{% else %}Not provided{% endif %}</div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-signal {% if smart_insights.confidence_level == 'High' %}text-success{% elif smart_insights.confidence_level == 'Medium' %}text-primary{% else %}text-muted{% endif %}"></i>
+                                <div>
+                                    <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Confidence</div>
+                                    <div class="fw-semibold">{{ smart_insights.confidence_level }}</div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                {% if smart_insights.red_flags %}<i class="fas fa-exclamation-triangle text-danger"></i>
+                                    <div><div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Red Flags</div><div class="fw-semibold text-danger">{{ smart_insights.red_flags|length }} Found</div></div>
+                                {% else %}<i class="fas fa-shield-alt text-success"></i>
+                                    <div><div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Red Flags</div><div class="fw-semibold text-success">None</div></div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-muted mb-0 mt-3" style="font-size: 0.72rem;"><i class="fas fa-info-circle me-1"></i>Estimates are based on the applicant's self-reported profile data, not verified documents.</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Personal Information -->
+            <div class="card mb-4 shadow border-0 overflow-hidden" style="border-radius: 12px;">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center" style="background: #1a1a1a;">
+                    <h5 class="mb-0 fw-bold text-white"><i class="fas fa-user me-2" style="color: #ffe502;"></i>Personal Information</h5>
+                </div>
+                <div class="card-body px-4 py-4">
+                    <div class="row g-4">
                         <div class="col-md-6 col-lg-4">
-                            <label class="text-muted small d-block"><i class="fas fa-calendar-alt text-warning me-1"></i>Desired Move-In</label>
-                            <div class="fw-bold">
+                            <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Date of Birth</div>
+                            <div class="fw-semibold" style="font-size: 0.85rem;">{{ applicant.date_of_birth|default:"Not provided" }}</div>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Desired Move-In</div>
+                            <div class="fw-semibold" style="font-size: 0.85rem;">
                                 {% if applicant.desired_move_in_date %}
-                                    <span class="badge bg-warning text-dark">{{ applicant.desired_move_in_date }}</span>
+                                    <span class="badge rounded-pill px-2 py-1" style="background: #ffe502; color: #1a1a1a; font-size: 0.72rem; font-weight: 600;">{{ applicant.desired_move_in_date|date:"M d, Y" }}</span>
                                 {% else %}
                                     <span class="text-muted">Not specified</span>
                                 {% endif %}
                             </div>
                         </div>
-                        
                         <div class="col-md-6 col-lg-4">
-                            <label class="text-muted small d-block"><i class="fas fa-phone text-warning me-1"></i>Phone</label>
-                            <div class="fw-bold">{{ applicant.formatted_phone|default:"Not provided" }}</div>
+                            <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Phone</div>
+                            <div class="fw-semibold" style="font-size: 0.85rem;">{{ applicant.formatted_phone|default:"Not provided" }}</div>
                         </div>
-                        
-                        <div class="col-12">
-                            <label class="text-muted small d-block"><i class="fas fa-envelope text-warning me-1"></i>Email</label>
-                            <div class="d-flex align-items-center email-copy-container" style="cursor: pointer;" onclick="navigator.clipboard.writeText('{{ applicant.email }}').then(() => alert('Email copied to clipboard!'));" title="Click to copy email">
-                                <div class="fw-bold text-nowrap me-2">{{ applicant.email|default:"Not provided" }}</div>
-                                <i class="fas fa-copy text-muted opacity-50 email-copy-icon"></i>
-                            </div>
-                            <style>
-                                .email-copy-container:hover .email-copy-icon { opacity: 1 !important; color: var(--bs-primary) !important; }
-                                .email-copy-container:hover .fw-bold { color: var(--bs-primary); text-decoration: underline; }
-                            </style>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Email</div>
+                            <div class="fw-semibold" style="font-size: 0.85rem;">{{ applicant.email|default:"Not provided" }}</div>
                         </div>
-                        
-                        <div class="col-12">
-                            <label class="text-muted small d-block"><i class="fas fa-home text-warning me-1"></i>Current Address</label>
-                            <div class="fw-bold">
+                        <div class="col-md-6 col-lg-8">
+                            <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Current Address</div>
+                            <div class="fw-semibold" style="font-size: 0.85rem;">
                                 {% if applicant.street_address_1 %}
                                     {{ applicant.street_address_1 }}{% if applicant.street_address_2 %}, {{ applicant.street_address_2 }}{% endif %}<br>
                                     {{ applicant.city }}, {{ applicant.get_state_display }} {{ applicant.zip_code }}
                                     {% if applicant.length_at_current_address %}
-                                        <div class="mt-1 small text-muted fw-normal">Length at address: {{ applicant.length_at_current_address }}</div>
+                                    <div class="mt-1"><span class="badge bg-light text-muted border" style="font-size: 0.65rem;">{{ applicant.length_at_current_address }} at this address</span></div>
                                     {% endif %}
                                 {% else %}
-                                    Not provided
+                                    <span class="text-muted">Not provided</span>
                                 {% endif %}
                             </div>
                         </div>
-                        
-                        <div class="col-md-12">
-                            <label class="text-muted small d-block"><i class="fas fa-id-card text-warning me-1"></i>Identification</label>
-                            <div class="d-flex flex-wrap gap-2 mt-1">
-                                {% for doc in applicant.identification_documents.all %}
-                                    {% if doc.document_image_front or doc.document_image_back %}
-                                        <span class="badge bg-soft-success border border-success text-success px-2 py-1">
-                                            <i class="fas fa-check-circle me-1"></i>{{ doc.get_id_type_display }}
-                                        </span>
-                                    {% endif %}
-                                {% empty %}
-                                    <span class="text-muted small">No documents provided</span>
-                                {% endfor %}
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Smart Insights Section (Only for Brokers, Admins, Staff & Owners) -->
-    {% if smart_insights %}
-    <div class="card shadow-sm border-info mb-4">
-        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Smart Insights</h5>
-            <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#privacyModal">
-                <i class="fas fa-shield-alt me-1"></i>Privacy Info
-            </button>
-        </div>
-        <div class="card-body">
-            <!-- Privacy Notice -->
-            <div class="alert alert-light border-start border-4 border-info py-2 mb-4">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-lock text-info me-3 fa-lg"></i>
-                    <div class="small text-muted">
-                        <strong>Privacy Protected:</strong> Analysis performed locally with rule-based algorithms. 
-                        No personal data sent to external services.
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row g-4 mb-4">
-                <!-- Overall Score -->
-                <div class="col-md-4 text-center border-end">
-                    <div class="info-label text-muted small text-uppercase fw-bold mb-2">Overall Score</div>
-                    <div class="d-inline-block position-relative">
-                        <span class="{% if smart_insights.overall_score >= 80 %}text-success{% elif smart_insights.overall_score >= 60 %}text-warning{% else %}text-danger{% endif %} fw-bold display-4">
-                            {{ smart_insights.overall_score }}
-                        </span>
-                        <span class="text-muted fs-4">/100</span>
-                    </div>
-                    <div class="progress mt-3 mx-auto" style="height: 10px; max-width: 200px;">
-                        <div class="progress-bar bg-{% if smart_insights.overall_score >= 80 %}success{% elif smart_insights.overall_score >= 60 %}warning{% else %}danger{% endif %}" 
-                             style="width: {{ smart_insights.overall_score }}%"></div>
-                    </div>
-                    <div class="mt-2">
-                        <span class="badge bg-{% if smart_insights.confidence_level == 'High' %}success{% elif smart_insights.confidence_level == 'Medium' %}warning{% else %}secondary{% endif %}">
-                            Data Confidence: {{ smart_insights.confidence_level }}
-                        </span>
-                    </div>
-                </div>
-
-                <!-- Assessment Summary -->
-                <div class="col-md-8">
-                    <div class="info-label text-muted small text-uppercase fw-bold mb-2">Assessment</div>
-                    <div class="p-3 bg-light rounded border">
-                        {{ smart_insights.summary|safe }}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Detailed Analysis -->
-            <div class="row g-3">
-                <!-- Affordability Analysis -->
-                <div class="col-md-6 col-lg-4">
-                    <div class="h-100 p-3 bg-white border rounded shadow-sm">
-                        <h6 class="border-bottom pb-2 mb-3">
-                            <i class="fas fa-dollar-sign text-warning me-2"></i>Affordability
-                        </h6>
-                        
-                        <!-- 1. Suggested Max Budget -->
-                         <div class="mb-1">
-                            <small class="text-muted d-block">Applicants Suggested Max Budget:</small>
-                            <span class="fw-bold text-dark">
-                                {% if applicant.max_rent_budget %}
-                                    ${{ applicant.max_rent_budget|floatformat:0|intcomma }}/mo
-                                {% else %}
-                                    <span class="text-muted fst-italic">Not specified</span>
-                                {% endif %}
-                            </span>
-                        </div>
-
-                        <!-- 2. Income Multiple -->
-                        {% if smart_insights.affordability.income_multiple > 0 %}
-                            <div class="mb-2 mt-2">
-                             <div class="text-secondary small fw-bold">Income Multiple:</div>
-                             {% if smart_insights.affordability.income_multiple >= 3.0 %}
-                                 <span class="badge bg-success">{{ smart_insights.affordability.income_multiple|floatformat:1 }}x</span>
-                             {% elif smart_insights.affordability.income_multiple >= 2.5 %}
-                                 <span class="badge bg-warning text-dark">{{ smart_insights.affordability.income_multiple|floatformat:1 }}x</span>
-                             {% else %}
-                                 <span class="badge bg-danger">{{ smart_insights.affordability.income_multiple|floatformat:1 }}x</span>
-                             {% endif %}
-                        </div>
-                        {% endif %}
-
-                        <!-- 3. Details / Explanation -->
-                        <div class="text-muted small mt-2 mb-2">
-                            {{ smart_insights.affordability.details }}
-                        </div>
-
-                        <!-- 4. Recommended Max Rent -->
-                        {% if smart_insights.affordability.recommended_rent > 0 %}
-                            <div class="mb-1 pt-2 border-top">
-                                <small class="text-muted d-block">Recommended Max Rent:</small>
-                                <span class="text-success fw-bold">${{ smart_insights.affordability.recommended_rent|floatformat:0|intcomma }}/mo</span>
-                            </div>
-                        {% endif %}
-
-                        {% if smart_insights.affordability.missing_fields %}
-                        <div class="alert alert-warning p-2 small mt-2 mb-0 border-0 bg-warning bg-opacity-10 text-warning-emphasis">
-                            <i class="fas fa-exclamation-circle me-1"></i>
-                            Missing: {{ smart_insights.affordability.missing_fields|join:", " }}
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                <!-- Employment Stability -->
-                <div class="col-md-6 col-lg-4">
-                    <div class="h-100 p-3 bg-white border rounded shadow-sm">
-                        <h6 class="border-bottom pb-2 mb-3">
-                            <i class="fas fa-briefcase text-info me-2"></i>Employment
-                        </h6>
-                        <div class="small mb-1"><strong>Length:</strong> {{ smart_insights.employment_stability.employment_length }}</div>
-                        <div class="small mb-2"><strong>Job Count:</strong> {{ smart_insights.employment_stability.job_count }}</div>
-                        {% if smart_insights.employment_stability.strengths %}
-                            {% for strength in smart_insights.employment_stability.strengths %}
-                                <div class="small text-success mb-1">
-                                    <i class="fas fa-check-circle me-1"></i>{{ strength }}
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-                        {% if smart_insights.employment_stability.concerns %}
-                            {% for concern in smart_insights.employment_stability.concerns %}
-                                <div class="small text-warning mb-1">
-                                    <i class="fas fa-exclamation-triangle me-1"></i>{{ concern }}
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-
-                        {% if smart_insights.employment_stability.missing_fields %}
-                        <div class="alert alert-warning p-2 small mt-2 mb-0 border-0 bg-warning bg-opacity-10 text-warning-emphasis">
-                            <i class="fas fa-exclamation-circle me-1"></i>
-                            Missing: {{ smart_insights.employment_stability.missing_fields|join:", " }}
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                <!-- Rental History -->
-                <div class="col-md-6 col-lg-4">
-                    <div class="h-100 p-3 bg-white border rounded shadow-sm">
-                        <h6 class="border-bottom pb-2 mb-3">
-                            <i class="fas fa-home text-primary me-2"></i>Rental History
-                        </h6>
-                        <div class="small mb-2"><strong>Previous Addresses:</strong> {{ smart_insights.rental_history.address_count }}</div>
-                        {% if smart_insights.rental_history.strengths %}
-                            {% for strength in smart_insights.rental_history.strengths %}
-                                <div class="small text-success mb-1">
-                                    <i class="fas fa-check-circle me-1"></i>{{ strength }}
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-                        {% if smart_insights.rental_history.concerns %}
-                            {% for concern in smart_insights.rental_history.concerns %}
-                                <div class="small text-warning mb-1">
-                                    <i class="fas fa-exclamation-triangle me-1"></i>{{ concern }}
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-
-                        {% if smart_insights.rental_history.missing_fields %}
-                        <div class="alert alert-warning p-2 small mt-2 mb-0 border-0 bg-warning bg-opacity-10 text-warning-emphasis">
-                            <i class="fas fa-exclamation-circle me-1"></i>
-                            Missing: {{ smart_insights.rental_history.missing_fields|join:", " }}
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                <!-- Red Flags -->
-                {% if smart_insights.red_flags %}
-                <div class="col-12 mt-3">
-                    <div class="p-3 bg-soft-danger border border-danger rounded">
-                        <h6 class="text-danger mb-2">
-                            <i class="fas fa-flag me-2"></i>Concerns ({{ smart_insights.red_flags|length }})
-                        </h6>
-                        <ul class="mb-0 small text-danger">
-                            {% for flag in smart_insights.red_flags %}
-                                <li>{{ flag }}</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Employment & Income Section -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-dark text-white">
-            <h5 class="mb-0"><i class="fas fa-briefcase me-2"></i>Employment & Income</h5>
-        </div>
-        <div class="card-body">
-            <!-- Employment Status -->
-            <div class="mb-4">
-                <span class="text-muted small text-uppercase fw-bold d-block mb-1">Current Status</span>
-                <span class="badge bg-primary fs-6">{{ applicant.get_employment_status_display|default:"Not specified" }}</span>
-            </div>
-            
-            <!-- Primary Employment Information -->
-            <div class="p-3 bg-light rounded border mb-4">
-                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-                    <h6 class="text-secondary mb-0">Primary Employment Verification</h6>
-                    {% if not applicant.company_name or not applicant.position or not applicant.employment_start_date %}
-                        <span class="badge bg-danger">Incomplete Data</span>
-                    {% else %}
-                        <span class="badge bg-success">Complete</span>
+            <!-- Employment & Income -->
+            <div class="card mb-4 shadow border-0 overflow-hidden" style="border-radius: 12px;">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center" style="background: #1a1a1a;">
+                    <h5 class="mb-0 fw-bold text-white"><i class="fas fa-briefcase me-2" style="color: #ffe502;"></i>Employment & Income</h5>
+                    {% if applicant.employment_status %}
+                    <span class="badge rounded-pill px-3 py-2" style="background: #ffe502; color: #1a1a1a; font-weight: 600; font-size: 0.72rem;">{{ applicant.get_employment_status_display }}</span>
                     {% endif %}
                 </div>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="text-muted small d-block">Employer</label>
-                        <div class="fw-bold">
-                            {% if applicant.company_name %}
-                                {{ applicant.company_name }}
+                <div class="card-body px-4 py-4">
+                    <!-- Primary Employment -->
+                    <div class="p-3 rounded mb-3" style="background: #fafafa; border: 1px solid #f0f0f0;">
+                        <div class="d-flex justify-content-between align-items-center mb-3" style="border-bottom: 1px solid #f0f0f0; padding-bottom: 8px;">
+                            <div class="text-uppercase fw-bold text-muted" style="font-size: 0.6rem; letter-spacing: 1px;">Primary Employment</div>
+                            {% if not applicant.company_name or not applicant.position or not applicant.employment_start_date %}
+                                <span class="badge rounded-pill bg-danger-subtle text-danger px-2 py-1" style="font-size: 0.65rem;">Incomplete</span>
                             {% else %}
-                                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>
+                                <span class="badge rounded-pill bg-success-subtle text-success px-2 py-1" style="font-size: 0.65rem;"><i class="fas fa-check me-1"></i>Complete</span>
                             {% endif %}
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="text-muted small d-block">Position</label>
-                        <div class="fw-bold">
-                            {% if applicant.position %}
-                                {{ applicant.position }}
-                            {% else %}
-                                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="text-muted small d-block">Start Date (Stability Score)</label>
-                        <div class="fw-bold">
-                            {% if applicant.employment_start_date %}
-                                {{ applicant.employment_start_date }}
-                            {% else %}
-                                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="text-muted small d-block">Annual Income</label>
-                        <div class="fw-bold">
-                            {% if applicant.annual_income %}
-                                <span class="text-success">${{ applicant.annual_income|floatformat:2|intcomma }}</span>
-                            {% else %}
-                                <span class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Unverified</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    {% if applicant.supervisor_name or applicant.supervisor_email or applicant.supervisor_phone %}
-                    <div class="col-12 mt-3 pt-3 border-top">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="text-muted small d-block">Supervisor</label>
-                                <div class="fw-bold">{{ applicant.supervisor_name|default:"Not provided" }}</div>
+                                <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Employer</div>
+                                <div class="fw-semibold" style="font-size: 0.85rem;">
+                                    {% if applicant.company_name %}{{ applicant.company_name }}{% else %}<span class="text-danger" style="font-size: 0.8rem;"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>{% endif %}
+                                </div>
                             </div>
                             <div class="col-md-6">
-                                <label class="text-muted small d-block">Contact</label>
-                                <div class="fw-bold">
-                                    {% if applicant.supervisor_phone %}<i class="fas fa-phone me-1 small"></i>{{ applicant.supervisor_phone }}{% endif %}
-                                    {% if applicant.supervisor_phone and applicant.supervisor_email %} | {% endif %}
-                                    {% if applicant.supervisor_email %}<i class="fas fa-envelope me-1 small"></i>{{ applicant.supervisor_email }}{% endif %}
-                                    {% if not applicant.supervisor_phone and not applicant.supervisor_email %}
-                                        Not provided
+                                <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Position</div>
+                                <div class="fw-semibold" style="font-size: 0.85rem;">
+                                    {% if applicant.position %}{{ applicant.position }}{% else %}<span class="text-danger" style="font-size: 0.8rem;"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>{% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Start Date</div>
+                                <div class="fw-semibold" style="font-size: 0.85rem;">
+                                    {% if applicant.employment_start_date %}{{ applicant.employment_start_date }}{% else %}<span class="text-danger" style="font-size: 0.8rem;"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>{% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Annual Income</div>
+                                <div class="fw-semibold" style="font-size: 0.85rem;">
+                                    {% if applicant.annual_income %}
+                                        <span class="text-success fw-bold">${{ applicant.annual_income|floatformat:2|intcomma }}</span>
+                                    {% else %}
+                                        <span class="text-warning" style="font-size: 0.8rem;"><i class="fas fa-exclamation-triangle me-1"></i>Unverified</span>
                                     {% endif %}
                                 </div>
                             </div>
                         </div>
+                        {% if applicant.supervisor_name or applicant.supervisor_email or applicant.supervisor_phone %}
+                        <div class="mt-3 pt-3" style="border-top: 1px solid #f0f0f0;">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Supervisor</div>
+                                    <div class="fw-semibold" style="font-size: 0.85rem;">{{ applicant.supervisor_name|default:"Not provided" }}</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Contact</div>
+                                    <div class="fw-semibold" style="font-size: 0.85rem;">
+                                        {% if applicant.supervisor_phone %}<i class="fas fa-phone me-1" style="font-size: 0.7rem; opacity: 0.6;"></i>{{ applicant.supervisor_phone }}{% endif %}
+                                        {% if applicant.supervisor_phone and applicant.supervisor_email %} | {% endif %}
+                                        {% if applicant.supervisor_email %}<i class="fas fa-envelope me-1" style="font-size: 0.7rem; opacity: 0.6;"></i>{{ applicant.supervisor_email }}{% endif %}
+                                        {% if not applicant.supervisor_phone and not applicant.supervisor_email %}Not provided{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Student Info -->
+                    {% if applicant.employment_status == 'student' %}
+                    <div class="p-3 rounded mb-3" style="background: #fafafa; border: 1px solid #f0f0f0;">
+                        <div class="text-uppercase fw-bold text-muted mb-3" style="font-size: 0.6rem; letter-spacing: 1px; border-bottom: 1px solid #f0f0f0; padding-bottom: 8px;">Student Information</div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">School</div>
+                                <div class="fw-semibold" style="font-size: 0.85rem;">{{ applicant.school_name|default:"Not provided" }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Expected Graduation</div>
+                                <div class="fw-semibold" style="font-size: 0.85rem;">{{ applicant.year_of_graduation|default:"Not provided" }}</div>
+                            </div>
+                        </div>
                     </div>
                     {% endif %}
-                </div>
-            </div>
-            
-            <!-- Student Information -->
-            {% if applicant.employment_status == 'student' %}
-                <div class="p-3 bg-light rounded border mb-4">
-                    <h6 class="border-bottom pb-2 mb-3 text-secondary">Student Information</h6>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="text-muted small d-block">School</label>
-                            <div class="fw-bold">{{ applicant.school_name|default:"Not provided" }}</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="text-muted small d-block">Expected Graduation</label>
-                            <div class="fw-bold">{{ applicant.year_of_graduation|default:"Not provided" }}</div>
-                        </div>
-                    </div>
-                </div>
-            {% endif %}
-            
-            <!-- Additional Income & Assets -->
-            <div class="row">
-                <!-- Additional Jobs -->
-                {% if applicant.jobs.all %}
-                <div class="col-12 mb-3">
-                    <h6 class="text-secondary mb-3">Additional Jobs</h6>
-                    <div class="row g-3">
+
+                    <!-- Additional Jobs -->
+                    {% if applicant.jobs.all %}
+                    <div class="text-uppercase fw-bold text-muted mb-2 mt-3" style="font-size: 0.6rem; letter-spacing: 1px;">Additional Jobs</div>
+                    <div class="row g-3 mb-3">
                         {% for job in applicant.jobs.all %}
                         <div class="col-md-6">
-                            <div class="card h-100 border-0 bg-light">
-                                <div class="card-body p-3">
-                                    <h6 class="mb-2">{{ job.company_name }} <small class="text-muted">- {{ job.position }}</small></h6>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="text-success fw-bold">${{ job.annual_income|floatformat:2|intcomma }}</span>
-                                        <span class="badge bg-secondary">{{ job.get_job_type_display }}</span>
-                                    </div>
+                            <div class="p-3 rounded" style="background: #fafafa; border: 1px solid #f0f0f0;">
+                                <div class="fw-semibold" style="font-size: 0.85rem;">{{ job.company_name }} <span class="text-muted">— {{ job.position }}</span></div>
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <span class="text-success fw-bold" style="font-size: 0.85rem;">${{ job.annual_income|floatformat:2|intcomma }}</span>
+                                    <span class="badge bg-light text-muted border" style="font-size: 0.65rem;">{{ job.get_job_type_display }}</span>
                                 </div>
                             </div>
                         </div>
                         {% endfor %}
                     </div>
-                </div>
-                {% endif %}
-                
-                <!-- Income Sources -->
-                {% if applicant.income_sources.all %}
-                <div class="col-md-6 mb-3">
-                    <h6 class="text-secondary mb-2">Other Income</h6>
-                    <ul class="list-group">
-                        {% for income in applicant.income_sources.all %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center bg-light border-0 mb-1 rounded">
-                            <div>
-                                <div class="fw-bold">{{ income.income_source }}</div>
-                                <small class="text-muted">{{ income.get_source_type_display }}</small>
-                            </div>
-                            <span class="text-success fw-bold">${{ income.average_annual_income|floatformat:2|intcomma }}</span>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% endif %}
-                
-                <!-- Assets -->
-                {% if applicant.assets.all %}
-                <div class="col-md-6 mb-3">
-                    <h6 class="text-secondary mb-2">Financial Assets</h6>
-                    <ul class="list-group">
-                        {% for asset in applicant.assets.all %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center bg-light border-0 mb-1 rounded">
-                            <div>
-                                <div class="fw-bold">{{ asset.asset_name }}</div>
-                                <small class="text-muted">{{ asset.get_asset_type_display }}</small>
-                            </div>
-                            <span class="text-info fw-bold">${{ asset.account_balance|floatformat:2|intcomma }}</span>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <!-- Rental History Section -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-dark text-white">
-            <h5 class="mb-0"><i class="fas fa-history me-2"></i>Rental History</h5>
-        </div>
-        <div class="card-body">
-            <!-- Current Residence Verification -->
-            <div class="p-3 bg-light rounded border mb-4">
-                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-                    <h6 class="text-secondary mb-0">Current Residence Verification</h6>
-                    {% if not applicant.housing_status or not applicant.current_address_years and not applicant.current_address_months or not applicant.monthly_rent %}
-                        <span class="badge bg-danger">Incomplete Data</span>
-                    {% else %}
-                        <span class="badge bg-success">Complete</span>
                     {% endif %}
-                </div>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="text-muted small d-block">Housing Status</label>
-                        <div class="fw-bold fs-5">
-                            {% if applicant.housing_status %}
-                                {{ applicant.get_housing_status_display }}
-                            {% else %}
-                                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <label class="text-muted small d-block">Time at Address (Stability Score)</label>
-                        <div class="fw-bold">
-                            {% if applicant.current_address_years > 0 or applicant.current_address_months > 0 %}
-                                {% if applicant.current_address_years > 0 %}{{ applicant.current_address_years }} Year{{ applicant.current_address_years|pluralize }}{% endif %}
-                                {% if applicant.current_address_years > 0 and applicant.current_address_months > 0 %}, {% endif %}
-                                {% if applicant.current_address_months > 0 %}{{ applicant.current_address_months }} Month{{ applicant.current_address_months|pluralize }}{% endif %}
-                            {% else %}
-                                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>
-                            {% endif %}
-                        </div>
-                    </div>
 
-                    <div class="col-md-6">
-                        <label class="text-muted small d-block">Current Rent</label>
-                        <div class="fw-bold">
-                            {% if applicant.monthly_rent %}
-                                <span class="text-success">${{ applicant.monthly_rent|floatformat:2|intcomma }}</span>
-                            {% else %}
-                                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="text-muted small d-block">Reason for Moving</label>
-                        <div class="fw-bold">
-                            {% if applicant.reason_for_moving %}
-                                "{{ applicant.reason_for_moving }}"
-                            {% else %}
-                                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="col-12 mt-3 pt-3 border-top">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="text-muted small d-block">Landlord Name</label>
-                                <div class="fw-bold">
-                                    {% if applicant.current_landlord_name %}
-                                        {{ applicant.current_landlord_name }}
-                                    {% else %}
-                                        <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>
-                                    {% endif %}
+                    <!-- Income Sources & Assets -->
+                    <div class="row">
+                        {% if applicant.income_sources.all %}
+                        <div class="col-md-6 mb-3">
+                            <div class="text-uppercase fw-bold text-muted mb-2" style="font-size: 0.6rem; letter-spacing: 1px;">Other Income</div>
+                            {% for income in applicant.income_sources.all %}
+                            <div class="d-flex justify-content-between align-items-center p-2 rounded mb-1" style="background: #fafafa; border: 1px solid #f0f0f0; font-size: 0.85rem;">
+                                <div>
+                                    <div class="fw-semibold">{{ income.income_source }}</div>
+                                    <div class="text-muted" style="font-size: 0.65rem;">{{ income.get_source_type_display }}</div>
                                 </div>
+                                <span class="text-success fw-bold">${{ income.average_annual_income|floatformat:2|intcomma }}</span>
                             </div>
-                            <div class="col-md-6">
-                                <label class="text-muted small d-block">Landlord Contact (Reference Required)</label>
-                                <div class="fw-bold">
-                                    {% if applicant.current_landlord_phone or applicant.current_landlord_email %}
-                                        {% if applicant.current_landlord_phone %}<i class="fas fa-phone me-1 small"></i>{{ applicant.current_landlord_phone }}{% endif %}
-                                        {% if applicant.current_landlord_phone and applicant.current_landlord_email %} | {% endif %}
-                                        {% if applicant.current_landlord_email %}<i class="fas fa-envelope me-1 small"></i>{{ applicant.current_landlord_email }}{% endif %}
-                                    {% else %}
-                                        <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Rent & Background History -->
-            <div class="p-3 bg-light rounded border mb-4">
-                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-                    <h6 class="text-secondary mb-0">Rent & Background History</h6>
-                    {% if applicant.evicted_before is None or not applicant.previous_landlord_name %}
-                        <span class="badge bg-danger">Incomplete Data</span>
-                    {% elif applicant.evicted_before %}
-                        <span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i>Risk Detected</span>
-                    {% else %}
-                        <span class="badge bg-success">Clear</span>
-                    {% endif %}
-                </div>
-                <div class="row g-3">
-                    <!-- Eviction Check -->
-                    <div class="col-md-6">
-                        <label class="text-muted small d-block">Evicted Before?</label>
-                        <div class="fw-bold">
-                            {% if applicant.evicted_before is True %}
-                                <span class="badge bg-danger">YES - Eviction Record</span>
-                            {% elif applicant.evicted_before is False %}
-                                <span class="badge bg-success">NO</span>
-                            {% else %}
-                                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing (Required)</span>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <!-- Previous Landlord (Reference) -->
-                    <div class="col-md-6">
-                        <label class="text-muted small d-block">Previous Landlord Reference</label>
-                        <div class="fw-bold">
-                            {% if applicant.previous_landlord_name %}
-                                {{ applicant.previous_landlord_name }}
-                            {% else %}
-                                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                   
-                   {% if applicant.evicted_before %}
-                   <div class="col-12">
-                        <label class="text-muted small d-block">Eviction Explanation</label>
-                        <div class="p-2 bg-warning bg-opacity-10 border border-warning rounded text-dark">
-                            <i class="fas fa-info-circle me-1"></i>"{{ applicant.eviction_explanation|default:"No explanation provided" }}"
-                        </div>
-                   </div>
-                   {% endif %}
-
-                   {% if applicant.previous_landlord_contact %}
-                   <div class="col-12">
-                        <label class="text-muted small d-block">Previous Landlord Contact</label>
-                        <div class="fw-bold">
-                            {{ applicant.previous_landlord_contact }}
-                        </div>
-                   </div>
-                   {% elif applicant.previous_landlord_name %}
-                    <div class="col-12">
-                        <label class="text-muted small d-block">Previous Landlord Contact</label>
-                        <div class="fw-bold">
-                             <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing (Reference Required)</span>
-                        </div>
-                   </div>
-                   {% endif %}
-
-
-                </div>
-            </div>
-            
-
-            <!-- Previous Addresses -->
-            {% if applicant.previous_addresses.all %}
-                <h6 class="border-bottom pb-2 mb-3 text-secondary">Previous Addresses</h6>
-                <div class="row g-3">
-                    {% for address in applicant.previous_addresses.all %}
-                        <div class="col-md-6">
-                            <div class="card h-100 border-0 bg-light shadow-sm">
-                                <div class="card-body p-3">
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <h6 class="mb-0 text-primary">Previous #{{ address.order }}</h6>
-                                        <span class="badge bg-secondary">{{ address.length_at_address|default:"N/A" }}</span>
-                                    </div>
-                                    <div class="small fw-bold mb-2">
-                                        {{ address.street_address_1 }}{% if address.street_address_2 %}, {{ address.street_address_2 }}{% endif %}<br>
-                                        {{ address.city }}, {{ address.get_state_display }} {{ address.zip_code }}
-                                    </div>
-                                    {% if address.landlord_name %}
-                                        <div class="small text-muted">
-                                            <i class="fas fa-user me-1"></i>Landlord: {{ address.landlord_name }}
-                                            {% if address.landlord_phone %}<br><i class="fas fa-phone me-1"></i>{{ address.landlord_phone }}{% endif %}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- Preferences Section -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-dark text-white">
-            <h5 class="mb-0"><i class="fas fa-star me-2"></i>Housing Preferences</h5>
-        </div>
-        <div class="card-body">
-            <!-- Preferences Verification -->
-            <div class="p-3 bg-light rounded border mb-4">
-                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-                    <h6 class="text-secondary mb-0">Preferences Verification</h6>
-                    {% if not applicant.max_rent_budget or not applicant.desired_move_in_date or not applicant.min_bedrooms %}
-                        <span class="badge bg-danger">Incomplete Data</span>
-                    {% else %}
-                        <span class="badge bg-success">Complete</span>
-                    {% endif %}
-                </div>
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="text-muted small d-block">Bedrooms</label>
-                        <div class="fw-bold">
-                            {% if applicant.min_bedrooms or applicant.max_bedrooms %}
-                                {{ applicant.min_bedrooms|default:"0" }} - {{ applicant.max_bedrooms|default:"ANY" }}
-                            {% else %}
-                                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="text-muted small d-block">Bathrooms</label>
-                        <div class="fw-bold">
-                            {% if applicant.min_bathrooms or applicant.max_bathrooms %}
-                                {{ applicant.min_bathrooms|default:"1" }} - {{ applicant.max_bathrooms|default:"ANY" }}
-                            {% else %}
-                                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="text-muted small d-block">Max Budget</label>
-                        <div class="fw-bold">
-                            {% if applicant.max_rent_budget %}
-                                <span class="text-success">${{ applicant.max_rent_budget|floatformat:0|intcomma }}</span>
-                            {% else %}
-                                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="text-muted small d-block">Move-In Date</label>
-                        <div class="fw-bold">
-                            {% if applicant.desired_move_in_date %}
-                                {{ applicant.desired_move_in_date|date:"M d, Y" }}
-                            {% else %}
-                                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                <div class="row g-3 mt-1">
-                     <div class="col-md-3">
-                        <label class="text-muted small d-block">Roommates</label>
-                        <span class="badge {% if applicant.open_to_roommates %}bg-success{% else %}bg-secondary{% endif %}">
-                            {{ applicant.open_to_roommates|yesno:"Open to,Not open to" }}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <!-- Neighborhoods -->
-                <div class="col-md-6 mb-4">
-                    <h6 class="border-bottom pb-2 mb-3 text-secondary">
-                        <i class="fas fa-map-marker-alt me-2"></i>Neighborhoods
-                    </h6>
-                    <div class="d-flex flex-wrap gap-2">
-                        {% if applicant.neighborhood_preferences.all %}
-                            {% for neighborhood in applicant.neighborhood_preferences.all %}
-                                <span class="badge bg-soft-warning border border-warning text-dark px-2 py-1">{{ neighborhood.name }}</span>
                             {% endfor %}
-                        {% else %}
-                            <div class="alert alert-warning py-2 mb-0 w-100">
-                                <i class="fas fa-exclamation-triangle me-2"></i><strong>No neighborhoods specified</strong>
+                        </div>
+                        {% endif %}
+                        {% if applicant.assets.all %}
+                        <div class="col-md-6 mb-3">
+                            <div class="text-uppercase fw-bold text-muted mb-2" style="font-size: 0.6rem; letter-spacing: 1px;">Financial Assets</div>
+                            {% for asset in applicant.assets.all %}
+                            <div class="d-flex justify-content-between align-items-center p-2 rounded mb-1" style="background: #fafafa; border: 1px solid #f0f0f0; font-size: 0.85rem;">
+                                <div>
+                                    <div class="fw-semibold">{{ asset.asset_name }}</div>
+                                    <div class="text-muted" style="font-size: 0.65rem;">{{ asset.get_asset_type_display }}</div>
+                                </div>
+                                <span class="fw-bold" style="color: #3b82f6;">${{ asset.account_balance|floatformat:2|intcomma }}</span>
                             </div>
+                            {% endfor %}
+                        </div>
                         {% endif %}
                     </div>
-                    
-                    {% if applicant.neighborhoodpreference_set.all %}
-                        <div class="mt-3">
-                            <small class="text-muted text-uppercase fw-bold d-block mb-2" style="font-size: 0.7rem;">Ranked Order</small>
-                            <ol class="list-group list-group-numbered">
-                                {% for preference in applicant.neighborhoodpreference_set.all %}
-                                    <li class="list-group-item list-group-item-sm bg-light border-0 py-1 mb-1 rounded">{{ preference.neighborhood.name }}</li>
-                                {% endfor %}
-                            </ol>
+                </div>
+            </div>
+
+            <!-- Rental History -->
+            <div class="card mb-4 shadow border-0 overflow-hidden" style="border-radius: 12px;">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center" style="background: #1a1a1a;">
+                    <h5 class="mb-0 fw-bold text-white"><i class="fas fa-history me-2" style="color: #ffe502;"></i>Rental History</h5>
+                </div>
+                <div class="card-body px-4 py-4">
+                    <!-- Current Residence -->
+                    <div class="p-3 rounded mb-3" style="background: #fafafa; border: 1px solid #f0f0f0;">
+                        <div class="d-flex justify-content-between align-items-center mb-3" style="border-bottom: 1px solid #f0f0f0; padding-bottom: 8px;">
+                            <div class="text-uppercase fw-bold text-muted" style="font-size: 0.6rem; letter-spacing: 1px;">Current Residence</div>
+                            {% if not applicant.housing_status or not applicant.current_address_years and not applicant.current_address_months or not applicant.monthly_rent %}
+                                <span class="badge rounded-pill bg-danger-subtle text-danger px-2 py-1" style="font-size: 0.65rem;">Incomplete</span>
+                            {% else %}
+                                <span class="badge rounded-pill bg-success-subtle text-success px-2 py-1" style="font-size: 0.65rem;"><i class="fas fa-check me-1"></i>Complete</span>
+                            {% endif %}
                         </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Housing Status</div>
+                                <div class="fw-semibold" style="font-size: 0.85rem;">
+                                    {% if applicant.housing_status %}{{ applicant.get_housing_status_display }}{% else %}<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>{% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Time at Address</div>
+                                <div class="fw-semibold" style="font-size: 0.85rem;">
+                                    {% if applicant.current_address_years > 0 or applicant.current_address_months > 0 %}
+                                        {% if applicant.current_address_years > 0 %}{{ applicant.current_address_years }} Year{{ applicant.current_address_years|pluralize }}{% endif %}
+                                        {% if applicant.current_address_years > 0 and applicant.current_address_months > 0 %}, {% endif %}
+                                        {% if applicant.current_address_months > 0 %}{{ applicant.current_address_months }} Month{{ applicant.current_address_months|pluralize }}{% endif %}
+                                    {% else %}<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>{% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Current Rent</div>
+                                <div class="fw-semibold" style="font-size: 0.85rem;">
+                                    {% if applicant.monthly_rent %}<span class="text-success fw-bold">${{ applicant.monthly_rent|floatformat:2|intcomma }}</span>{% else %}<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>{% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Reason for Moving</div>
+                                <div class="fw-semibold" style="font-size: 0.85rem;">
+                                    {% if applicant.reason_for_moving %}"{{ applicant.reason_for_moving }}"{% else %}<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3 pt-3" style="border-top: 1px solid #f0f0f0;">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Landlord Name</div>
+                                    <div class="fw-semibold" style="font-size: 0.85rem;">
+                                        {% if applicant.current_landlord_name %}{{ applicant.current_landlord_name }}{% else %}<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>{% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Landlord Contact</div>
+                                    <div class="fw-semibold" style="font-size: 0.85rem;">
+                                        {% if applicant.current_landlord_phone or applicant.current_landlord_email %}
+                                            {% if applicant.current_landlord_phone %}<i class="fas fa-phone me-1" style="font-size: 0.7rem; opacity: 0.6;"></i>{{ applicant.current_landlord_phone }}{% endif %}
+                                            {% if applicant.current_landlord_phone and applicant.current_landlord_email %} | {% endif %}
+                                            {% if applicant.current_landlord_email %}<i class="fas fa-envelope me-1" style="font-size: 0.7rem; opacity: 0.6;"></i>{{ applicant.current_landlord_email }}{% endif %}
+                                        {% else %}<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Background History -->
+                    <div class="p-3 rounded mb-3" style="background: #fafafa; border: 1px solid #f0f0f0;">
+                        <div class="d-flex justify-content-between align-items-center mb-3" style="border-bottom: 1px solid #f0f0f0; padding-bottom: 8px;">
+                            <div class="text-uppercase fw-bold text-muted" style="font-size: 0.6rem; letter-spacing: 1px;">Background History</div>
+                            {% if applicant.evicted_before is None or not applicant.previous_landlord_name %}
+                                <span class="badge rounded-pill bg-danger-subtle text-danger px-2 py-1" style="font-size: 0.65rem;">Incomplete</span>
+                            {% elif applicant.evicted_before %}
+                                <span class="badge rounded-pill bg-danger px-2 py-1 text-white" style="font-size: 0.65rem;"><i class="fas fa-exclamation-triangle me-1"></i>Risk Detected</span>
+                            {% else %}
+                                <span class="badge rounded-pill bg-success-subtle text-success px-2 py-1" style="font-size: 0.65rem;"><i class="fas fa-check me-1"></i>Clear</span>
+                            {% endif %}
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Evicted Before?</div>
+                                <div class="fw-semibold" style="font-size: 0.85rem;">
+                                    {% if applicant.evicted_before is True %}
+                                        <span class="badge bg-danger rounded-pill px-2 py-1" style="font-size: 0.7rem;">YES — Eviction Record</span>
+                                    {% elif applicant.evicted_before is False %}
+                                        <span class="badge bg-success rounded-pill px-2 py-1" style="font-size: 0.7rem;">NO</span>
+                                    {% else %}
+                                        <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing (Required)</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Previous Landlord</div>
+                                <div class="fw-semibold" style="font-size: 0.85rem;">
+                                    {% if applicant.previous_landlord_name %}{{ applicant.previous_landlord_name }}{% else %}<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>{% endif %}
+                                </div>
+                            </div>
+                            {% if applicant.evicted_before %}
+                            <div class="col-12">
+                                <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Eviction Explanation</div>
+                                <div class="p-2 rounded" style="background: #fefce8; border: 1px solid #fef08a; font-size: 0.85rem;">
+                                    <i class="fas fa-info-circle me-1 text-warning"></i>"{{ applicant.eviction_explanation|default:"No explanation provided" }}"
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% if applicant.previous_landlord_contact %}
+                            <div class="col-12">
+                                <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Previous Landlord Contact</div>
+                                <div class="fw-semibold" style="font-size: 0.85rem;">{{ applicant.previous_landlord_contact }}</div>
+                            </div>
+                            {% elif applicant.previous_landlord_name %}
+                            <div class="col-12">
+                                <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Previous Landlord Contact</div>
+                                <div class="fw-semibold" style="font-size: 0.85rem;"><span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing (Reference Required)</span></div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Previous Addresses -->
+                    {% if applicant.previous_addresses.all %}
+                    <div class="text-uppercase fw-bold text-muted mb-2 mt-3" style="font-size: 0.6rem; letter-spacing: 1px;">Previous Addresses</div>
+                    <div class="row g-3">
+                        {% for address in applicant.previous_addresses.all %}
+                        <div class="col-md-6">
+                            <div class="p-3 rounded" style="background: #fafafa; border: 1px solid #f0f0f0;">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="fw-bold" style="font-size: 0.8rem; color: #1a1a1a;">Previous #{{ address.order }}</span>
+                                    <span class="badge bg-light text-muted border" style="font-size: 0.6rem;">{{ address.length_at_address|default:"N/A" }}</span>
+                                </div>
+                                <div class="small fw-semibold mb-2" style="font-size: 0.8rem;">
+                                    {{ address.street_address_1 }}{% if address.street_address_2 %}, {{ address.street_address_2 }}{% endif %}<br>
+                                    {{ address.city }}, {{ address.get_state_display }} {{ address.zip_code }}
+                                </div>
+                                {% if address.landlord_name %}
+                                <div class="text-muted" style="font-size: 0.72rem;">
+                                    <i class="fas fa-user me-1"></i>{{ address.landlord_name }}
+                                    {% if address.landlord_phone %}<br><i class="fas fa-phone me-1"></i>{{ address.landlord_phone }}{% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
                     {% endif %}
                 </div>
+            </div>
 
-                <!-- Amenities -->
-                <div class="col-md-6 mb-4">
-                    <h6 class="border-bottom pb-2 mb-3 text-secondary">
-                        <i class="fas fa-concierge-bell me-2"></i>Amenities & Priorites
-                    </h6>
-                    <div class="row g-3">
-                        <!-- Apartment Features -->
-                        <div class="col-6">
-                            <small class="text-secondary fw-bold text-uppercase d-block mb-2" style="font-size: 0.7rem;">Apartment Features</small>
+            <!-- Housing Preferences -->
+            <div class="card mb-4 shadow border-0 overflow-hidden" style="border-radius: 12px;">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center" style="background: #1a1a1a;">
+                    <h5 class="mb-0 fw-bold text-white"><i class="fas fa-star me-2" style="color: #ffe502;"></i>Housing Preferences</h5>
+                    {% if applicant.max_rent_budget and applicant.desired_move_in_date and applicant.min_bedrooms %}
+                    <span class="badge rounded-pill bg-success-subtle text-success px-3 py-2" style="font-size: 0.7rem;"><i class="fas fa-check me-1"></i>Complete</span>
+                    {% else %}
+                    <span class="badge rounded-pill bg-danger-subtle text-danger px-3 py-2" style="font-size: 0.7rem;">Incomplete</span>
+                    {% endif %}
+                </div>
+                <div class="card-body px-4 py-4">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-3">
+                            <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Bedrooms</div>
+                            <div class="fw-semibold" style="font-size: 0.85rem;">
+                                {% if applicant.min_bedrooms or applicant.max_bedrooms %}
+                                    {{ applicant.min_bedrooms|default:"0" }} – {{ applicant.max_bedrooms|default:"Any" }}
+                                {% else %}<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>{% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Bathrooms</div>
+                            <div class="fw-semibold" style="font-size: 0.85rem;">
+                                {% if applicant.min_bathrooms or applicant.max_bathrooms %}
+                                    {{ applicant.min_bathrooms|default:"1" }} – {{ applicant.max_bathrooms|default:"Any" }}
+                                {% else %}<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>{% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Max Budget</div>
+                            <div class="fw-semibold" style="font-size: 0.85rem;">
+                                {% if applicant.max_rent_budget %}<span class="text-success fw-bold">${{ applicant.max_rent_budget|floatformat:0|intcomma }}</span>{% else %}<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>{% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Move-In Date</div>
+                            <div class="fw-semibold" style="font-size: 0.85rem;">
+                                {% if applicant.desired_move_in_date %}{{ applicant.desired_move_in_date|date:"M d, Y" }}{% else %}<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Missing</span>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+                        <!-- Neighborhoods -->
+                        <div class="col-md-6">
+                            <div class="text-uppercase fw-bold text-muted mb-2" style="font-size: 0.6rem; letter-spacing: 1px;">
+                                <i class="fas fa-map-marker-alt me-1"></i>Preferred Neighborhoods
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% if applicant.neighborhood_preferences.all %}
+                                    {% for neighborhood in applicant.neighborhood_preferences.all %}
+                                    <span class="badge rounded-pill px-2 py-1 shadow-sm" style="font-size: 0.7rem; background: #fffbe8; color: #7a5c00; border: 1px solid #ffe066; font-weight: 500;">{{ neighborhood.name }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-muted small">No neighborhoods specified</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Amenities -->
+                        <div class="col-md-6">
+                            <div class="text-uppercase fw-bold text-muted mb-2" style="font-size: 0.6rem; letter-spacing: 1px;">
+                                <i class="fas fa-concierge-bell me-1"></i>Amenity Preferences
+                            </div>
                             <div class="d-flex flex-wrap gap-2">
                                 {% if applicant.apartment_amenity_preferences.all %}
                                     {% for pref in applicant.apartment_amenity_preferences.all %}
-                                        <div class="badge bg-light border text-dark p-0 d-flex align-items-center overflow-hidden">
-                                            <span class="px-2 py-1">{{ pref.amenity.name }}</span>
-                                            <span class="px-2 py-1 fw-bold text-white small" 
-                                                  style="background-color: {% if pref.priority_level == 4 %}#dc3545{% elif pref.priority_level == 3 %}#fd7e14{% else %}#ffc107{% endif %};">
-                                                {{ pref.get_priority_level_display }}
-                                            </span>
-                                        </div>
+                                    <span class="badge rounded-pill px-2 py-1 shadow-sm" style="font-size: 0.7rem; background: {% if pref.priority_level == 4 %}#fef2f2{% elif pref.priority_level == 3 %}#fff7ed{% else %}#fefce8{% endif %}; color: {% if pref.priority_level == 4 %}#dc2626{% elif pref.priority_level == 3 %}#ea580c{% else %}#854d0e{% endif %}; border: 1px solid {% if pref.priority_level == 4 %}#fecaca{% elif pref.priority_level == 3 %}#fed7aa{% else %}#fef08a{% endif %}; font-weight: 500;">
+                                        {{ pref.amenity.name }} · {{ pref.get_priority_level_display }}
+                                    </span>
                                     {% endfor %}
                                 {% else %}
-                                    <span class="text-muted small italic">None selected</span>
+                                    <span class="text-muted small">None selected</span>
                                 {% endif %}
-                            </div>
-                        </div>
-
-                        <!-- Building Amenities -->
-                        <div class="col-6">
-                            <small class="text-secondary fw-bold text-uppercase d-block mb-2" style="font-size: 0.7rem;">Building Amenities</small>
-                            <div class="d-flex flex-wrap gap-2">
                                 {% if applicant.building_amenity_preferences.all %}
                                     {% for pref in applicant.building_amenity_preferences.all %}
-                                        <div class="badge bg-light border text-dark p-0 d-flex align-items-center overflow-hidden">
-                                            <span class="px-2 py-1">{{ pref.amenity.name }}</span>
-                                            <span class="px-2 py-1 fw-bold text-white small" 
-                                                  style="background-color: {% if pref.priority_level == 4 %}#dc3545{% elif pref.priority_level == 3 %}#fd7e14{% else %}#ffc107{% endif %};">
-                                                {{ pref.get_priority_level_display }}
-                                            </span>
-                                        </div>
+                                    <span class="badge rounded-pill px-2 py-1 shadow-sm" style="font-size: 0.7rem; background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-weight: 500;">
+                                        {{ pref.amenity.name }} · {{ pref.get_priority_level_display }}
+                                    </span>
                                     {% endfor %}
-                                {% else %}
-                                    <span class="text-muted small italic">None selected</span>
                                 {% endif %}
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Pets Section -->
-    {% if applicant.pets.all %}
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-dark text-white">
-            <h5 class="mb-0"><i class="fas fa-paw me-2"></i>Pets</h5>
-        </div>
-        <div class="card-body">
-            <div class="row g-3">
-                {% for pet in applicant.pets.all %}
-                    <div class="col-md-6">
-                        <div class="p-3 bg-light rounded border h-100">
-                            <h6 class="text-primary mb-2">
-                                <i class="fas fa-paw text-warning me-2"></i>
-                                {{ pet.pet_type }}{% if pet.name %} - {{ pet.name }}{% endif %}
-                                <span class="badge bg-secondary float-end">Qty: {{ pet.quantity }}</span>
-                            </h6>
-                            {% if pet.description %}
-                                <p class="small text-muted mb-3 italic">"{{ pet.description }}"</p>
-                            {% endif %}
-                            
-                            {% if pet.photos.all %}
-                                <div class="row g-2">
-                                    {% for photo in pet.photos.all %}
-                                        <div class="col-4">
-                                            <img src="{{ photo.thumbnail_url }}" class="img-fluid rounded shadow-sm border" alt="Pet Photo" style="cursor: pointer;" onclick="window.open('{{ photo.url }}', '_blank')">
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
+                    {% if applicant.open_to_roommates is not None %}
+                    <div class="mt-3 pt-3" style="border-top: 1px solid #f0f0f0;">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Roommates</div>
+                            <span class="badge rounded-pill px-2 py-1 {% if applicant.open_to_roommates %}bg-success-subtle text-success{% else %}bg-light text-muted border{% endif %}" style="font-size: 0.65rem;">
+                                {{ applicant.open_to_roommates|yesno:"Open to,Not open to" }}
+                            </span>
                         </div>
                     </div>
-                {% endfor %}
+                    {% endif %}
+                </div>
             </div>
-        </div>
-    </div>
-    {% endif %}
 
-
-    <!-- Identification Documents Section -->
-    {% if applicant.identification_documents.all %}
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-dark text-white">
-            <h5 class="mb-0"><i class="fas fa-id-card me-2"></i>Identification Documents</h5>
-        </div>
-        <div class="card-body">
-            {% for doc in applicant.identification_documents.all %}
-                {% if doc.document_image_front or doc.document_image_back %}
-                    <div class="p-3 bg-light rounded border mb-3">
-                        <h6 class="text-primary mb-3 border-bottom pb-2">{{ doc.get_id_type_display }}</h6>
-                        <div class="row g-4 justify-content-center">
-                            {% if doc.document_image_front %}
-                                <div class="col-md-5">
-                                    <div class="text-center">
-                                        <small class="text-muted d-block mb-2 text-uppercase fw-bold">Front</small>
-                                        <div class="position-relative d-inline-block">
-                                            <img src="{{ doc.document_image_front.url }}" 
-                                                 class="img-fluid rounded shadow border" 
-                                                 alt="Front" 
-                                                 style="max-height: 200px; cursor: pointer; transition: transform 0.2s;" 
-                                                 onmouseover="this.style.transform='scale(1.02)'" 
-                                                 onmouseout="this.style.transform='scale(1)'"
-                                                 onclick="window.open('{{ doc.document_image_front.url }}', '_blank')">
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endif %}
-                            
-                            {% if doc.document_image_back %}
-                                <div class="col-md-5">
-                                    <div class="text-center">
-                                        <small class="text-muted d-block mb-2 text-uppercase fw-bold">Back</small>
-                                        <div class="position-relative d-inline-block">
-                                            <img src="{{ doc.document_image_back.url }}" 
-                                                 class="img-fluid rounded shadow border" 
-                                                 alt="Back" 
-                                                 style="max-height: 200px; cursor: pointer; transition: transform 0.2s;" 
-                                                 onmouseover="this.style.transform='scale(1.02)'" 
-                                                 onmouseout="this.style.transform='scale(1)'"
-                                                 onclick="window.open('{{ doc.document_image_back.url }}', '_blank')">
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endif %}
-                        </div>
-                        {% if doc.document_number %}
-                            <div class="mt-3 text-center">
-                                <span class="badge bg-white border text-muted">ID Number: {{ doc.document_number }}</span>
+            <!-- Matching Apartments -->
+            <div class="card mb-4 shadow border-0 overflow-hidden" style="border-radius: 12px;">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #1a1a1a, #2d2d2d);">
+                    <h5 class="mb-0 fw-bold text-white"><i class="fas fa-home me-2" style="color: #ffe502;"></i>Matching Apartments</h5>
+                    {% if matching_apartments %}
+                    <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #ffe502, #f59e0b); color: #1a1a1a; font-weight: 600; font-size: 0.75rem;">{{ matching_apartments|length }} Matches</span>
+                    {% endif %}
+                </div>
+                <div class="card-body px-4 py-4">
+                    {% if matching_apartments %}
+                        <div class="row g-4">
+                            {% for match in matching_apartments %}
+                            <div class="col-lg-6">
+                                {% include 'includes/smart_match_card.html' with match=match apartment=match.apartment show_image=True show_recommend_button=True %}
                             </div>
+                            {% endfor %}
+                        </div>
+                        {% if matching_apartments|length >= 10 %}
+                        <div class="text-center mt-4">
+                            <span class="text-muted" style="font-size: 0.72rem;"><i class="fas fa-info-circle me-1"></i>Showing top 10 matches.</span>
+                        </div>
                         {% endif %}
-                    </div>
-                {% endif %}
-            {% endfor %}
-            <div class="text-muted small">
-                <i class="fas fa-info-circle me-1"></i>{{ applicant.identification_documents.count }} identification document(s) on file.
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-search fa-3x text-muted mb-3" style="opacity: 0.15;"></i>
+                            <h6 class="text-muted mb-1" style="font-size: 0.9rem;">No Matching Apartments Found</h6>
+                            <p class="text-muted small mx-auto mb-0" style="max-width: 400px; font-size: 0.75rem;">
+                                {% if not applicant.max_rent_budget %}
+                                    Complete the applicant's housing preferences (budget, location, etc.) to start finding matches.
+                                {% else %}
+                                    No apartments currently match this applicant's criteria.
+                                {% endif %}
+                            </p>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
-        </div>
-    </div>
-    {% endif %}
 
-    <!-- Matching Apartments Section -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="fas fa-home me-2"></i>Matching Apartments</h5>
-            {% if matching_apartments %}
-                <span class="badge bg-white text-primary">{{ matching_apartments|length }} Matches Found</span>
-            {% endif %}
-        </div>
-        <div class="card-body">
-            {% if matching_apartments %}
-                <div class="row g-4">
-                    {% for match in matching_apartments %}
-                    <div class="col-lg-6">
-                        {% include 'includes/smart_match_card.html' with match=match apartment=match.apartment show_image=True show_recommend_button=True %}
-                    </div>
-                    {% endfor %}
-                </div>
-                {% if matching_apartments|length >= 10 %}
-                    <div class="text-center mt-4">
-                        <small class="text-muted">
-                            <i class="fas fa-info-circle me-1"></i>Showing top 10 matches.
-                        </small>
-                    </div>
-                {% endif %}
-            {% else %}
-                <div class="text-center py-5">
-                    <i class="fas fa-search fa-3x text-muted mb-3 opacity-25"></i>
-                    <h5 class="text-muted">No Matching Apartments Found</h5>
-                    <p class="text-muted small mx-auto" style="max-width: 400px;">
-                        {% if not applicant.max_rent_budget %}
-                            Complete the applicant's housing preferences (budget, location, etc.) to start finding matching apartments.
-                        {% else %}
-                            No apartments currently match this applicant's criteria. Consider adjusting search parameters.
-                        {% endif %}
-                    </p>
-                </div>
-            {% endif %}
         </div>
     </div>
+
 </div>
 
 <!-- Privacy Information Modal -->
 <div class="modal fade" id="privacyModal" tabindex="-1" aria-labelledby="privacyModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="privacyModalLabel">
-                    <i class="fas fa-shield-alt me-2"></i>Smart Insights Privacy & Security
+        <div class="modal-content border-0 overflow-hidden" style="border-radius: 16px;">
+            <div class="modal-header py-3" style="background: #1a1a1a;">
+                <h5 class="modal-title text-white fw-bold" id="privacyModalLabel">
+                    <i class="fas fa-shield-alt me-2" style="color: #ffe502;"></i>Smart Insights Privacy & Security
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -1057,26 +923,6 @@
                             <p class="mb-0"><strong>4. Instant Results:</strong> Generates insights in real-time without external network requests</p>
                         </div>
                         
-                        <h6 class="text-warning"><i class="fas fa-info-circle me-2"></i>What Gets Analyzed</h6>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <ul class="list-unstyled small">
-                                    <li>📊 Income amounts and ratios</li>
-                                    <li>📅 Employment duration calculations</li>
-                                    <li>🏠 Housing history patterns</li>
-                                    <li>💼 Job count and stability</li>
-                                </ul>
-                            </div>
-                            <div class="col-md-6">
-                                <ul class="list-unstyled small">
-                                    <li>🚩 Missing information flags</li>
-                                    <li>⚖️ Income-to-rent ratios</li>
-                                    <li>📋 Data completeness scores</li>
-                                    <li>✅ Verification recommendations</li>
-                                </ul>
-                            </div>
-                        </div>
-                        
                         <div class="alert alert-success mt-3">
                             <h6 class="alert-heading">🔒 Privacy Guarantee</h6>
                             <p class="mb-0">
@@ -1088,8 +934,8 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+            <div class="modal-footer border-0">
+                <button type="button" class="btn fw-bold px-4" style="background: #1a1a1a; color: #ffe502; border: none; border-radius: 20px;" data-bs-dismiss="modal">
                     <i class="fas fa-thumbs-up me-2"></i>Understood
                 </button>
             </div>

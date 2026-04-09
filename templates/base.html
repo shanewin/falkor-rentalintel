@@ -173,16 +173,18 @@
     <!-- Main Content Area -->
     <div class="content">
         {% if messages %}
-        <div class="container mt-3" style="max-width: 900px;">
+        <div class="falkor-toast-container" id="falkorToasts">
             {% for message in messages %}
-            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show shadow-sm border-0" role="alert"
-                 style="border-radius: 10px; font-size: 0.9rem;{% if message.tags == 'success' %} background: linear-gradient(135deg, #d4edda, #c3e6cb); color: #155724; border-left: 4px solid #28a745;{% elif message.tags == 'error' %} background: linear-gradient(135deg, #f8d7da, #f5c6cb); color: #721c24; border-left: 4px solid #dc3545;{% elif message.tags == 'warning' %} background: linear-gradient(135deg, #fff3cd, #ffeeba); color: #856404; border-left: 4px solid #ffc107;{% else %} background: linear-gradient(135deg, #d1ecf1, #bee5eb); color: #0c5460; border-left: 4px solid #17a2b8;{% endif %}">
-                {% if message.tags == 'success' %}<i class="fas fa-check-circle me-2"></i>
-                {% elif message.tags == 'error' %}<i class="fas fa-exclamation-circle me-2"></i>
-                {% elif message.tags == 'warning' %}<i class="fas fa-exclamation-triangle me-2"></i>
-                {% else %}<i class="fas fa-info-circle me-2"></i>{% endif %}
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <div class="falkor-toast toast-{{ message.tags|default:'info' }}" role="alert">
+                <div class="falkor-toast-icon">
+                    {% if message.tags == 'success' %}<i class="fas fa-check"></i>
+                    {% elif message.tags == 'error' %}<i class="fas fa-xmark"></i>
+                    {% elif message.tags == 'warning' %}<i class="fas fa-exclamation"></i>
+                    {% else %}<i class="fas fa-info"></i>{% endif %}
+                </div>
+                <div class="falkor-toast-body">{{ message }}</div>
+                <button class="falkor-toast-close" onclick="dismissToast(this)" aria-label="Close">&times;</button>
+                <div class="falkor-toast-progress"></div>
             </div>
             {% endfor %}
         </div>
@@ -206,6 +208,22 @@
             $('.select2').select2({
                 theme: 'bootstrap-5',
                 width: '100%'
+            });
+        });
+    </script>
+
+    <script>
+        /* Toast auto-dismiss */
+        function dismissToast(btn) {
+            var toast = btn.closest('.falkor-toast');
+            toast.classList.add('toast-dismiss');
+            setTimeout(function(){ toast.remove(); }, 350);
+        }
+        document.addEventListener('DOMContentLoaded', function(){
+            document.querySelectorAll('.falkor-toast').forEach(function(t){
+                setTimeout(function(){
+                    if(t.parentNode){ t.classList.add('toast-dismiss'); setTimeout(function(){ t.remove(); }, 350); }
+                }, 5000);
             });
         });
     </script>

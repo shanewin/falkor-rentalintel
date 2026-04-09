@@ -63,7 +63,7 @@ class PersonalInfoForm(forms.ModelForm):
         choices=BOOLEAN_CHOICES,
         widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
         coerce=lambda x: str(x) == 'True',
-        required=False,
+        required=True,
         initial=None
     )
     
@@ -71,7 +71,7 @@ class PersonalInfoForm(forms.ModelForm):
         choices=BOOLEAN_CHOICES,
         widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
         coerce=lambda x: str(x) == 'True',
-        required=False,
+        required=True,
         initial=None
     )
     
@@ -79,7 +79,7 @@ class PersonalInfoForm(forms.ModelForm):
         choices=BOOLEAN_CHOICES,
         widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
         coerce=lambda x: str(x) == 'True',
-        required=False,
+        required=True,
         initial=None
     )
     
@@ -121,9 +121,13 @@ class PersonalInfoForm(forms.ModelForm):
                 'class': 'form-control', 
                 'type': 'date'
             }),
-            'ssn': forms.TextInput(attrs={
-                'class': 'form-control', 
-                'pattern': '[0-9]{3}-[0-9]{2}-[0-9]{4}'
+            'ssn': forms.PasswordInput(render_value=True, attrs={
+                'class': 'form-control ssn-input',
+                'placeholder': '•••-••-••••',
+                'inputmode': 'numeric',
+                'maxlength': '11',
+                'autocomplete': 'off',
+                'pattern': '[0-9]{3}-[0-9]{2}-[0-9]{4}',
             }),
             
             # Address fields
@@ -201,6 +205,13 @@ class PersonalInfoForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.draft_mode = kwargs.pop('draft_mode', False)
         super().__init__(*args, **kwargs)
+        
+        # In draft mode (plain "Save"), make ALL fields optional so the
+        # applicant can save partial progress and jump between sections.
+        # In non-draft mode ("Save & Continue"), required fields are enforced.
+        if self.draft_mode:
+            for field in self.fields.values():
+                field.required = False
         
         # Landlord fields are required if renting
         # We handle the visual asterisk in the template
@@ -386,7 +397,14 @@ class IncomeForm(forms.ModelForm):
         }
         
     def __init__(self, *args, **kwargs):
+        self.draft_mode = kwargs.pop('draft_mode', False)
         super().__init__(*args, **kwargs)
+        
+        # In draft mode (plain "Save"), make ALL fields optional so the
+        # applicant can save partial progress and jump between sections.
+        if self.draft_mode:
+            for field in self.fields.values():
+                field.required = False
         
         # Add basic form styling
         for field_name, field in self.fields.items():

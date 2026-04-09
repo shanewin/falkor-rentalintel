@@ -38,6 +38,48 @@
         </div>
     </div>
 
+    <!-- ── Availability Status Bar ─────────────────────────────────── -->
+    <div class="availability-bar mb-4 d-flex flex-wrap align-items-center gap-3">
+        {% if apartment.status == 'available' %}
+            {% if availability and availability.available_date %}
+                <span class="avail-pill avail-soon"><i class="fas fa-calendar-check me-2"></i>Available {{ availability.available_date|date:"M d, Y" }}</span>
+            {% else %}
+                <span class="avail-pill avail-now"><i class="fas fa-check-circle me-2"></i>Available Now</span>
+            {% endif %}
+        {% elif apartment.status == 'pending' %}
+            <span class="avail-pill avail-pending"><i class="fas fa-hourglass-half me-2"></i>Application Pending</span>
+        {% else %}
+            <span class="avail-pill avail-taken"><i class="fas fa-times-circle me-2"></i>No Longer Available</span>
+        {% endif %}
+        {% if apartment.lease_duration %}
+            <span class="avail-meta"><i class="fas fa-file-contract me-1"></i>{{ apartment.lease_duration }}</span>
+        {% endif %}
+        {% if apartment.deposit_price %}
+            <span class="avail-meta"><i class="fas fa-shield-alt me-1"></i>${{ apartment.deposit_price|floatformat:0 }} deposit</span>
+        {% endif %}
+        {% if apartment.broker_fee_required %}
+            <span class="avail-meta avail-fee"><i class="fas fa-user-tie me-1"></i>Broker fee req.</span>
+        {% else %}
+            <span class="avail-meta avail-no-fee"><i class="fas fa-user-tie me-1"></i>No broker fee</span>
+        {% endif %}
+    </div>
+
+    <!-- ── Concessions Banner ───────────────────────────────────────── -->
+    {% if concessions %}
+    {% with concession=concessions.first %}
+    <div class="concessions-banner mb-4">
+        <div class="conc-icon"><i class="fas fa-gift"></i></div>
+        <div class="conc-body">
+            <span class="conc-label">Special Offer</span>
+            {% if concession.months_free %}<strong class="conc-highlight">{{ concession.months_free|floatformat:0 }} Month{% if concession.months_free > 1 %}s{% endif %} Free</strong>{% endif %}
+            {% if concession.name %} &mdash; {{ concession.name }}{% endif %}
+            {% if concession.lease_terms %}<span class="conc-sub ms-2">· {{ concession.lease_terms }}</span>{% endif %}
+            {% if apartment.net_price %}<span class="ms-3">→ Net effective: <strong>${{ apartment.net_price|floatformat:0 }}/mo</strong></span>{% endif %}
+        </div>
+    </div>
+    {% endwith %}
+    {% endif %}
+
     <div class="row g-4">
         <!-- Main Content (Left) -->
         <div class="col-lg-8">
@@ -153,6 +195,34 @@
                 {% endif %}
             </div>
             
+            <!-- Monthly Cost Estimator -->
+            <div class="mb-5" id="cost-estimator-section">
+                <hr class="my-5">
+                <h4 class="fw-bold mb-1">Monthly Cost Estimator</h4>
+                <p class="text-muted small mb-4">Toggle add-ons to build your all-in monthly budget.</p>
+                <div class="cost-estimator-card" id="cost-estimator-card">
+                    <div class="text-center py-5 text-muted">
+                        <i class="fas fa-calculator fa-2x mb-2 d-block opacity-25"></i>
+                        <small>Loading estimator...</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nearby Places / POIs -->
+            <div class="mb-5" id="nearby-places-section">
+                <hr class="my-5">
+                <h4 class="fw-bold mb-1">What's Nearby</h4>
+                <p class="text-muted small mb-4">Explore places within reach of this apartment.</p>
+                <div class="poi-tabs mb-4">
+                    <button class="poi-tab-btn active" data-category="restaurant"><i class="fas fa-utensils me-1"></i>Restaurants</button>
+                    <button class="poi-tab-btn" data-category="grocery"><i class="fas fa-shopping-basket me-1"></i>Grocery</button>
+                    <button class="poi-tab-btn" data-category="gym"><i class="fas fa-dumbbell me-1"></i>Gym</button>
+                    <button class="poi-tab-btn" data-category="transit"><i class="fas fa-subway me-1"></i>Transit</button>
+                    <button class="poi-tab-btn" data-category="cafe"><i class="fas fa-coffee me-1"></i>Coffee</button>
+                </div>
+                <div id="poi-results"><div class="text-center py-4"><i class="fas fa-spinner fa-spin text-muted"></i></div></div>
+            </div>
+
             <!-- Neighborhood & Lifestyle -->
             <div class="mb-5">
                 <hr class="my-5">
@@ -224,9 +294,12 @@
                 {% endif %}
 
                 {% if not apartment.building.walk_score and not apartment.building.nearby_schools.exists %}
-                <div class="alert alert-light border text-center py-4">
-                    <i class="fas fa-map-marked-alt fa-2x text-muted mb-3 d-block"></i>
-                    <p class="mb-1 text-muted">Neighborhood data is being gathered for this property.</p>
+                <div class="neighborhood-map-wrapper">
+                    <div id="neighborhood-mini-map"></div>
+                    <div class="nbmap-label">
+                        <i class="fas fa-map-marker-alt me-1"></i>
+                        {{ apartment.building.neighborhood|default:apartment.building.city }} Neighborhood
+                    </div>
                 </div>
                 {% endif %}
             </div>
@@ -587,174 +660,333 @@ function copyToClipboard(text) {
 <script src='https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.js'></script>
 <script src="{% static 'js/forms.js' %}"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const token = '{{ mapbox_token }}';
-    const originLat = {{ apartment.building.latitude|default:"null" }};
-    const originLng = {{ apartment.building.longitude|default:"null" }};
-    const price = {{ apartment.rent_price|default:0 }};
+(function () {
+    /* ─── Configuration ──────────────────────────────────────────────── */
+    const MAPBOX_TOKEN  = '{{ mapbox_token }}';
+    let   originLat     = {{ apartment.building.latitude|default:"null" }};
+    let   originLng     = {{ apartment.building.longitude|default:"null" }};
+    const RENT_PRICE    = {{ apartment.rent_price|default:0 }};
+    const STREET_ADDR   = '{{ apartment.building.street_address_1|escapejs }}';
+    const CITY          = '{{ apartment.building.city|escapejs }}';
+    const STATE         = '{{ apartment.building.state|escapejs }}';
+    const COST_DATA     = {{ cost_estimator_json|safe }};
+    const LS_KEY        = 'falkor_destinations'; /* fixed: was 'doorway_destinations' in old saves */
 
-    if (!token || !originLat || !originLng) {
-        const mapEl = document.getElementById('map');
-        if (mapEl) mapEl.innerHTML = '<div class="alert alert-light m-3 text-center py-5"><i class="fas fa-map-marker-alt fa-2x text-muted mb-3 d-block"></i>Map coordinates not available.</div>';
-        return;
+    if (!MAPBOX_TOKEN) return;
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+
+    /* ─── Map helpers ────────────────────────────────────────────────── */
+    function initMainMap(lat, lng) {
+        const el = document.getElementById('map');
+        if (!el) return;
+        try {
+            const map = new mapboxgl.Map({ container: 'map', style: 'mapbox://styles/mapbox/light-v11', center: [lng, lat], zoom: 15 });
+            map.addControl(new mapboxgl.NavigationControl(), 'bottom-right');
+            const marker = document.createElement('div');
+            marker.className = 'map-marker';
+            marker.innerHTML = `<div class="badge bg-dark shadow-sm border border-white p-2">$${Math.floor(RENT_PRICE).toLocaleString()}</div>`;
+            new mapboxgl.Marker(marker).setLngLat([lng, lat]).addTo(map);
+        } catch (e) { console.error('Map error:', e); }
     }
 
-    // 1. Map Initialization
-    mapboxgl.accessToken = token;
-    try {
-        const map = new mapboxgl.Map({
-            container: 'map',
-            style: 'mapbox://styles/mapbox/light-v11',
-            center: [originLng, originLat],
-            zoom: 15
-        });
-
-        map.addControl(new mapboxgl.NavigationControl(), 'bottom-right');
-
-        const el = document.createElement('div');
-        el.className = 'map-marker';
-        el.innerHTML = `<div class="badge bg-dark shadow-sm border border-white p-2">$${Math.floor(price).toLocaleString()}</div>`;
-
-        new mapboxgl.Marker(el)
-            .setLngLat([originLng, originLat])
-            .addTo(map);
-
-    } catch (e) {
-        console.error('Mapbox error:', e);
+    function initNeighborhoodMap(lat, lng) {
+        const el = document.getElementById('neighborhood-mini-map');
+        if (!el) return;
+        try {
+            const map = new mapboxgl.Map({ container: 'neighborhood-mini-map', style: 'mapbox://styles/mapbox/streets-v12', center: [lng, lat], zoom: 13.5, interactive: false });
+            const m = document.createElement('div');
+            m.className = 'map-marker';
+            m.innerHTML = `<div class="badge bg-dark shadow-sm border border-white p-2"><i class="fas fa-home"></i></div>`;
+            new mapboxgl.Marker(m).setLngLat([lng, lat]).addTo(map);
+        } catch (e) { console.error('Neighborhood map error:', e); }
     }
 
-    // 2. Travel Times Logic
-    let currentMode = 'driving';
-    let destinations = JSON.parse(localStorage.getItem('falkor_destinations') || '[]');
-
-    const destinationsList = document.getElementById('destinations-list');
-    const noDestMsg = document.getElementById('no-destinations');
-    const searchInput = document.getElementById('destination-search');
-    const resultsPanel = document.getElementById('search-results');
-
-    renderDestinations();
-
-    // Mode Toggle
-    document.querySelectorAll('.transport-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.transport-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            currentMode = this.dataset.mode;
-            renderDestinations();
-        });
-    });
-
-    // Autocomplete
-    let searchTimeout;
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            clearTimeout(searchTimeout);
-            const query = this.value;
-            if (query.length < 3) {
-                resultsPanel.style.display = 'none';
-                return;
-            }
-
-            searchTimeout = setTimeout(() => {
-                fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&proximity=${originLng},${originLat}&bbox=${originLng-1},${originLat-1},${originLng+1},${originLat+1}`)
-                    .then(r => r.json())
-                    .then(data => {
-                        resultsPanel.innerHTML = '';
-                        if (data.features && data.features.length > 0) {
-                            data.features.forEach(feature => {
-                                const item = document.createElement('button');
-                                item.className = 'list-group-item list-group-item-action small py-2';
-                                item.textContent = feature.place_name;
-                                item.onclick = () => {
-                                    addDestination(feature);
-                                    resultsPanel.style.display = 'none';
-                                    searchInput.value = '';
-                                };
-                                resultsPanel.appendChild(item);
-                            });
-                            resultsPanel.style.display = 'block';
-                        } else {
-                            resultsPanel.style.display = 'none';
-                        }
-                    });
-            }, 300);
-        });
+    function onCoordsReady(lat, lng) {
+        originLat = lat; originLng = lng;
+        initMainMap(lat, lng);
+        initNeighborhoodMap(lat, lng);
+        initPOIs(lat, lng);
+        initTravelTimes(lat, lng);
     }
 
-    function addDestination(feature) {
-        const newDest = {
-            id: Date.now(),
-            name: feature.text,
-            address: feature.place_name,
-            lng: feature.center[0],
-            lat: feature.center[1]
-        };
-        destinations.push(newDest);
-        localStorage.setItem('doorway_destinations', JSON.stringify(destinations));
-        renderDestinations();
-    }
-
-    window.removeDestination = function(id) {
-        destinations = destinations.filter(d => d.id !== id);
-        localStorage.setItem('doorway_destinations', JSON.stringify(destinations));
-        renderDestinations();
-    };
-
-    function renderDestinations() {
-        if (!destinationsList) return;
-        if (destinations.length === 0) {
-            destinationsList.innerHTML = '';
-            if (noDestMsg) noDestMsg.style.display = 'block';
-            return;
-        }
-
-        if (noDestMsg) noDestMsg.style.display = 'none';
-        destinationsList.innerHTML = destinations.map(d => `
-            <div class="destination-item" id="dest-${d.id}">
-                <div class="dest-icon"><i class="fas fa-location-arrow"></i></div>
-                <div class="dest-info">
-                    <div class="fw-bold small mb-0">${d.name}</div>
-                    <div class="extra-small text-muted" style="font-size: 0.7rem;">${d.address.split(',')[0]}</div>
-                </div>
-                <div class="dest-time text-end me-3">
-                    <span class="loading-spinner small text-muted"><i class="fas fa-spinner fa-spin"></i></span>
-                </div>
-                <div class="remove-dest" onclick="removeDestination(${d.id})">
-                    <i class="fas fa-times"></i>
-                </div>
-            </div>
-        `).join('');
-
-        destinations.forEach(d => updateTime(d));
-    }
-
-    function updateTime(dest) {
-        const timeEl = document.querySelector(`#dest-${dest.id} .dest-time`);
-        if (!timeEl) return;
-        
-        const coords = `${originLng},${originLat};${dest.lng},${dest.lat}`;
-        const profile = currentMode === 'driving' ? 'mapbox/driving' : (currentMode === 'walking' ? 'mapbox/walking' : 'mapbox/cycling');
-        
-        fetch(`https://api.mapbox.com/directions/v5/${profile}/${coords}?access_token=${token}`)
+    function geocodeAndInit() {
+        const addr = encodeURIComponent(`${STREET_ADDR}, ${CITY}, ${STATE}`);
+        fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${addr}.json?access_token=${MAPBOX_TOKEN}&limit=1`)
             .then(r => r.json())
             .then(data => {
-                if (data.routes && data.routes[0]) {
-                    const minutes = Math.round(data.routes[0].duration / 60);
-                    timeEl.innerHTML = `${minutes} <span class="small fw-normal">min</span>`;
+                if (data.features && data.features.length > 0) {
+                    onCoordsReady(data.features[0].center[1], data.features[0].center[0]);
                 } else {
-                    timeEl.innerHTML = '--';
+                    const el = document.getElementById('map');
+                    if (el) el.innerHTML = '<div class="alert alert-light m-3 text-center py-5"><i class="fas fa-map-marker-alt fa-2x text-muted mb-3 d-block"></i>Map coordinates unavailable.</div>';
+                    // Still initialise travel times & cost estimator without coords
+                    initTravelTimes(null, null);
                 }
             })
             .catch(() => {
-                timeEl.innerHTML = '--';
+                const el = document.getElementById('map');
+                if (el) el.innerHTML = '<div class="alert alert-light m-3 text-center py-5"><i class="fas fa-map-marker-alt fa-2x text-muted mb-3 d-block"></i>Map unavailable.</div>';
+                initTravelTimes(null, null);
             });
     }
 
-    document.addEventListener('click', (e) => {
-        if (searchInput && resultsPanel && !searchInput.contains(e.target) && !resultsPanel.contains(e.target)) {
-            resultsPanel.style.display = 'none';
+    document.addEventListener('DOMContentLoaded', function () {
+        if (originLat && originLng) {
+            onCoordsReady(originLat, originLng);
+        } else {
+            geocodeAndInit();
         }
+        initCostEstimator();
     });
-});
+
+    /* ─── Nearby POIs ────────────────────────────────────────────────── */
+    function initPOIs(lat, lng) {
+        const CATEGORIES = {
+            restaurant : 'restaurant',
+            grocery    : 'grocery store',
+            gym        : 'gym fitness',
+            transit    : 'subway station',
+            cafe       : 'coffee shop',
+        };
+        const cache = {};
+        let activeCat = 'restaurant';
+
+        document.querySelectorAll('.poi-tab-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.poi-tab-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                activeCat = this.dataset.category;
+                load(activeCat);
+            });
+        });
+        load(activeCat);
+
+        function load(cat) {
+            const container = document.getElementById('poi-results');
+            if (!container) return;
+            if (cache[cat]) { render(cache[cat], container); return; }
+            container.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin text-muted"></i><span class="ms-2 text-muted small">Finding places…</span></div>';
+            fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(CATEGORIES[cat])}.json?proximity=${lng},${lat}&access_token=${MAPBOX_TOKEN}&limit=6&types=poi`)
+                .then(r => r.json())
+                .then(d => { cache[cat] = d.features || []; render(cache[cat], container); })
+                .catch(() => { container.innerHTML = '<p class="text-muted small text-center py-3">Could not load nearby places.</p>'; });
+        }
+
+        function render(features, container) {
+            if (!features.length) { container.innerHTML = '<p class="text-muted small text-center py-3">No places found nearby.</p>'; return; }
+            container.innerHTML = features.map(f => {
+                const dist = haversineMi(lat, lng, f.center[1], f.center[0]);
+                const name = f.text || f.place_name.split(',')[0];
+                const sub  = (f.place_name.split(',')[1] || '').trim();
+                return `<div class="poi-item">
+                    <div class="poi-distance">${dist}<span> mi</span></div>
+                    <div class="poi-info">
+                        <div class="poi-name">${name}</div>
+                        ${sub ? `<div class="poi-sub">${sub}</div>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function haversineMi(la1, lo1, la2, lo2) {
+            const R = 3959, dL = (la2-la1)*Math.PI/180, dO = (lo2-lo1)*Math.PI/180;
+            const a = Math.sin(dL/2)**2 + Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dO/2)**2;
+            return (R*2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(1);
+        }
+    }
+
+    /* ─── Travel Times ───────────────────────────────────────────────── */
+    function initTravelTimes(lat, lng) {
+        let destinations = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+        let currentMode  = 'driving';
+        const listEl     = document.getElementById('destinations-list');
+        const noDestEl   = document.getElementById('no-destinations');
+        const searchEl   = document.getElementById('destination-search');
+        const resultsEl  = document.getElementById('search-results');
+
+        renderDestinations();
+
+        document.querySelectorAll('.transport-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.transport-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentMode = this.dataset.mode;
+                renderDestinations();
+            });
+        });
+
+        let debounce;
+        if (searchEl && lat && lng) {
+            searchEl.addEventListener('input', function () {
+                clearTimeout(debounce);
+                const q = this.value;
+                if (q.length < 3) { resultsEl.style.display = 'none'; return; }
+                debounce = setTimeout(() => {
+                    fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?access_token=${MAPBOX_TOKEN}&proximity=${lng},${lat}&bbox=${lng-1},${lat-1},${lng+1},${lat+1}`)
+                        .then(r => r.json())
+                        .then(data => {
+                            resultsEl.innerHTML = '';
+                            if (data.features && data.features.length) {
+                                data.features.forEach(f => {
+                                    const btn = document.createElement('button');
+                                    btn.className = 'list-group-item list-group-item-action small py-2';
+                                    btn.textContent = f.place_name;
+                                    btn.onclick = () => { addDest(f); resultsEl.style.display = 'none'; searchEl.value = ''; };
+                                    resultsEl.appendChild(btn);
+                                });
+                                resultsEl.style.display = 'block';
+                            } else { resultsEl.style.display = 'none'; }
+                        });
+                }, 300);
+            });
+        } else if (searchEl && !lat) {
+            searchEl.placeholder = 'Map unavailable — travel times disabled';
+            searchEl.disabled = true;
+        }
+
+        function addDest(f) {
+            destinations.push({ id: Date.now(), name: f.text, address: f.place_name, lng: f.center[0], lat: f.center[1] });
+            localStorage.setItem(LS_KEY, JSON.stringify(destinations));
+            renderDestinations();
+        }
+
+        window.removeDestination = function (id) {
+            destinations = destinations.filter(d => d.id !== id);
+            localStorage.setItem(LS_KEY, JSON.stringify(destinations));
+            renderDestinations();
+        };
+
+        function renderDestinations() {
+            if (!listEl) return;
+            if (!destinations.length) { listEl.innerHTML = ''; if (noDestEl) noDestEl.style.display = 'block'; return; }
+            if (noDestEl) noDestEl.style.display = 'none';
+            listEl.innerHTML = destinations.map(d => `
+                <div class="destination-item" id="dest-${d.id}">
+                    <div class="dest-icon"><i class="fas fa-location-arrow"></i></div>
+                    <div class="dest-info">
+                        <div class="fw-bold small mb-0">${d.name}</div>
+                        <div class="text-muted" style="font-size:0.7rem">${d.address.split(',')[0]}</div>
+                    </div>
+                    <div class="dest-time text-end me-3"><span class="text-muted"><i class="fas fa-spinner fa-spin"></i></span></div>
+                    <div class="remove-dest" onclick="removeDestination(${d.id})"><i class="fas fa-times"></i></div>
+                </div>`).join('');
+            destinations.forEach(d => fetchTime(d));
+        }
+
+        function fetchTime(dest) {
+            if (!lat || !lng) return;
+            const timeEl = document.querySelector(`#dest-${dest.id} .dest-time`);
+            if (!timeEl) return;
+            const profile = currentMode === 'driving' ? 'mapbox/driving' : currentMode === 'walking' ? 'mapbox/walking' : 'mapbox/cycling';
+            fetch(`https://api.mapbox.com/directions/v5/${profile}/${lng},${lat};${dest.lng},${dest.lat}?access_token=${MAPBOX_TOKEN}`)
+                .then(r => r.json())
+                .then(data => { timeEl.innerHTML = data.routes && data.routes[0] ? `${Math.round(data.routes[0].duration/60)} <span class="small fw-normal">min</span>` : '--'; })
+                .catch(() => { timeEl.innerHTML = '--'; });
+        }
+
+        document.addEventListener('click', e => {
+            if (searchEl && resultsEl && !searchEl.contains(e.target) && !resultsEl.contains(e.target))
+                resultsEl.style.display = 'none';
+        });
+    }
+
+    /* ─── Interactive Cost Estimator ─────────────────────────────────── */
+    function initCostEstimator() {
+        const card = document.getElementById('cost-estimator-card');
+        if (!card || !COST_DATA) return;
+
+        const baseRent        = COST_DATA.base_rent || 0;
+        const hasParking      = COST_DATA.parking && COST_DATA.parking.length > 0;
+        const parkingRate     = hasParking ? COST_DATA.parking[0].rate : 0;
+        const parkingType     = hasParking ? COST_DATA.parking[0].type : '';
+        const utilitiesEst    = COST_DATA.utilities_estimate || 0;
+        const allUtilIncluded = COST_DATA.all_utilities_included;
+        const utilitiesIncl   = COST_DATA.utilities_included || [];
+        const INSURANCE       = 18;
+
+        let utilToggled    = !allUtilIncluded && utilitiesEst > 0;
+        let parkingToggled = false;
+        let insureToggled  = true;
+
+        const fmt = n => Math.round(n).toLocaleString();
+
+        function getTotal() {
+            let t = baseRent;
+            if (utilToggled && utilitiesEst)  t += utilitiesEst;
+            if (parkingToggled && parkingRate) t += parkingRate;
+            if (insureToggled)                 t += INSURANCE;
+            return t;
+        }
+
+        function buildTag(cls, text) { return `<span class="ce-tag ${cls}">${text}</span>`; }
+
+        function buildUI() {
+            const utilTag = allUtilIncluded
+                ? buildTag('ce-tag-green', 'All Included')
+                : utilitiesIncl.length
+                    ? buildTag('ce-tag-yellow', 'Partially Included')
+                    : buildTag('ce-tag-gray', 'Not Included');
+
+            const utilRight = allUtilIncluded
+                ? `<div class="ce-val" style="color:#059669;font-weight:600">Included ✓</div>`
+                : utilitiesEst
+                    ? `<div class="ce-val-toggle">
+                           <span class="ce-estimate">~$${fmt(utilitiesEst)}/mo est.</span>
+                           <label class="ce-switch"><input type="checkbox" id="tog-util" ${utilToggled?'checked':''}><span class="ce-slider"></span></label>
+                       </div>`
+                    : `<div class="ce-val" style="color:#9ca3af">~$150–200/mo est.</div>`;
+
+            const parkingRow = hasParking && parkingRate ? `
+                <div class="ce-row">
+                    <div class="ce-label"><i class="fas fa-parking"></i> Parking <span class="ce-sub">${parkingType}</span></div>
+                    <div class="ce-val-toggle">
+                        <span class="ce-estimate">+$${fmt(parkingRate)}/mo</span>
+                        <label class="ce-switch"><input type="checkbox" id="tog-parking" ${parkingToggled?'checked':''}><span class="ce-slider"></span></label>
+                    </div>
+                </div>` : '';
+
+            card.innerHTML = `
+                <div class="ce-row ce-base">
+                    <div class="ce-label"><i class="fas fa-home"></i> Base Rent</div>
+                    <div class="ce-val" style="font-weight:700;font-size:1rem">$${fmt(baseRent)}/mo</div>
+                </div>
+                <div class="ce-row">
+                    <div class="ce-label"><i class="fas fa-bolt"></i> Utilities ${utilTag}</div>
+                    ${utilRight}
+                </div>
+                ${parkingRow}
+                <div class="ce-row">
+                    <div class="ce-label"><i class="fas fa-shield-alt"></i> Renter’s Insurance ${buildTag('ce-tag-gray','Recommended')}</div>
+                    <div class="ce-val-toggle">
+                        <span class="ce-estimate">~$${INSURANCE}/mo</span>
+                        <label class="ce-switch"><input type="checkbox" id="tog-insure" ${insureToggled?'checked':''}><span class="ce-slider"></span></label>
+                    </div>
+                </div>
+                <div class="ce-total-row">
+                    <div class="ce-total-label">Est. Monthly Total</div>
+                    <div class="ce-total-val" id="ce-total">$${fmt(getTotal())}<span class="ce-mo">/mo</span></div>
+                </div>
+                ${COST_DATA.deposit ? `<div class="ce-disclaimer"><i class="fas fa-info-circle me-1"></i><strong>$${fmt(COST_DATA.deposit)}</strong> security deposit due at signing.${COST_DATA.lease_duration ? ' Lease: '+COST_DATA.lease_duration+'.' : ''}</div>` : ''}
+            `;
+
+            const totalEl = () => document.getElementById('ce-total');
+            function pulse() {
+                const el = totalEl(); if (!el) return;
+                el.innerHTML = `$${fmt(getTotal())}<span class="ce-mo">/mo</span>`;
+                el.classList.add('ce-pulse'); setTimeout(() => el.classList.remove('ce-pulse'), 400);
+            }
+
+            const uChk = document.getElementById('tog-util');
+            const pChk = document.getElementById('tog-parking');
+            const iChk = document.getElementById('tog-insure');
+            if (uChk) uChk.addEventListener('change', () => { utilToggled    = uChk.checked; pulse(); });
+            if (pChk) pChk.addEventListener('change', () => { parkingToggled = pChk.checked; pulse(); });
+            if (iChk) iChk.addEventListener('change', () => { insureToggled  = iChk.checked; pulse(); });
+        }
+
+        buildUI();
+    }
+
+})();
 </script>
 {% endblock %}
