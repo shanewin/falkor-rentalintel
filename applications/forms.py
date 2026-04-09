@@ -185,17 +185,17 @@ class PersonalInfoForm(forms.ModelForm):
             'zip_code': 'Zip Code *',
             'current_address_years': 'Years at current address *',
             'current_address_months': 'Months at current address *',
-            'landlord_name': "Landlord's Name",
-            'landlord_phone': "Landlord's Phone",
-            'landlord_email': "Landlord's Email",
+            'landlord_name': "Landlord's Name *",
+            'landlord_phone': "Landlord's Phone *",
+            'landlord_email': "Landlord's Email *",
             'referral_source': 'How did you hear about us? *',
-            'has_pets': 'I have pets',
+            'has_pets': 'I have pets *',
             'reference1_name': 'Reference #1 Name *',
             'reference1_phone': 'Reference #1 Phone *',
             'reference2_name': 'Reference #2 Name',
             'reference2_phone': 'Reference #2 Phone',
-            'has_filed_bankruptcy': 'I have filed for bankruptcy',
-            'has_criminal_conviction': 'I have a criminal conviction',
+            'has_filed_bankruptcy': 'I have filed for bankruptcy *',
+            'has_criminal_conviction': 'I have a criminal conviction *',
         }
 
     def __init__(self, *args, **kwargs):

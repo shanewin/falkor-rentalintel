@@ -347,13 +347,27 @@ class PersonalInfoData(models.Model):
             parts.append(self.zip_code)
         return ', '.join(parts) if parts else None
 
+    def _check_address_history_sufficient(self):
+        """Check if current + previous addresses cover 5 years (60 months)."""
+        total_months = (self.current_address_years or 0) * 12 + (self.current_address_months or 0)
+        if self.pk:  # Only query related objects if saved
+            for addr in self.previous_addresses.all():
+                total_months += (addr.years or 0) * 12 + (addr.months or 0)
+        return total_months >= 60
+
     def get_field_status(self):
-        """Returns grouped field status for drill-down display (unweighted)"""
+        """Returns grouped field status for drill-down display.
+
+        Only REQUIRED and CONDITIONAL fields are included — truly optional
+        fields (middle_name, suffix, street_address_2, reference2_*) are
+        excluded so they don't deflate the completion percentage.
+        """
         def is_filled(val):
             if val is None: return False
             if isinstance(val, str): return bool(val.strip())
             return True
 
+        # ── Required: Core Identity ──
         groups = [
             ('Identity', [
                 ('first_name', 'First Name'),
@@ -363,40 +377,20 @@ class PersonalInfoData(models.Model):
                 ('date_of_birth', 'Date of Birth'),
                 ('ssn', 'SSN'),
             ]),
-            ('Current Address', [
-                ('street_address_1', 'Street Address'),
-                ('city', 'City'),
-                ('state', 'State'),
-                ('zip_code', 'Zip Code'),
-                ('current_address_years', 'Years at Address'),
-                ('current_address_months', 'Months at Address'),
-                ('housing_status', 'Housing Status'),
-            ]),
-            ('References & Other', [
-                ('referral_source', 'Referral Source'),
-                ('reference1_name', 'Reference 1 Name'),
-                ('reference1_phone', 'Reference 1 Phone'),
-                ('has_pets', 'Pet Information'),
-            ]),
-            ('Legal & Additional References', [
-                ('reference2_name', 'Reference 2 Name'),
-                ('reference2_phone', 'Reference 2 Phone'),
-                ('has_filed_bankruptcy', 'Bankruptcy History'),
-                ('has_criminal_conviction', 'Criminal Conviction History'),
-                ('has_been_evicted', 'Eviction History'),
-            ]),
         ]
 
-        # Conditional: explanation fields only if the boolean is True
-        legal_group = next(g for g in groups if g[0] == 'Legal & Additional References')
-        if self.has_filed_bankruptcy is True:
-            legal_group[1].append(('bankruptcy_explanation', 'Bankruptcy Explanation'))
-        if self.has_criminal_conviction is True:
-            legal_group[1].append(('conviction_explanation', 'Conviction Explanation'))
-        if self.has_been_evicted is True:
-            legal_group[1].append(('eviction_explanation', 'Eviction Explanation'))
+        # ── Required: Current Address ──
+        groups.append(('Current Address', [
+            ('street_address_1', 'Street Address'),
+            ('city', 'City'),
+            ('state', 'State'),
+            ('zip_code', 'Zip Code'),
+            ('current_address_years', 'Years at Address'),
+            ('current_address_months', 'Months at Address'),
+            ('housing_status', 'Housing Status'),
+        ]))
 
-        # Conditional: landlord fields only if renting
+        # ── Conditional: Landlord fields only if renting ──
         if self.housing_status == 'Rent':
             groups.append(('Landlord Info', [
                 ('current_monthly_rent', 'Monthly Rent'),
@@ -405,6 +399,31 @@ class PersonalInfoData(models.Model):
                 ('landlord_email', 'Landlord Email'),
             ]))
 
+        # ── Required: References & Other ──
+        groups.append(('References & Other', [
+            ('reason_for_moving', 'Reason for Moving'),
+            ('referral_source', 'Referral Source'),
+            ('reference1_name', 'Reference 1 Name'),
+            ('reference1_phone', 'Reference 1 Phone'),
+            ('has_pets', 'Pet Information'),
+        ]))
+
+        # ── Required: Legal Disclosures ──
+        legal_fields = [
+            ('has_filed_bankruptcy', 'Bankruptcy History'),
+            ('has_criminal_conviction', 'Criminal Conviction History'),
+            ('has_been_evicted', 'Eviction History'),
+        ]
+        # Conditional: explanation fields only if the boolean is True
+        if self.has_filed_bankruptcy is True:
+            legal_fields.append(('bankruptcy_explanation', 'Bankruptcy Explanation'))
+        if self.has_criminal_conviction is True:
+            legal_fields.append(('conviction_explanation', 'Conviction Explanation'))
+        if self.has_been_evicted is True:
+            legal_fields.append(('eviction_explanation', 'Eviction Explanation'))
+        groups.append(('Legal Disclosures', legal_fields))
+
+        # ── Build the result from scalar fields ──
         result = []
         for group_name, fields in groups:
             group_fields = []
@@ -415,16 +434,24 @@ class PersonalInfoData(models.Model):
                 })
             result.append({'group': group_name, 'fields': group_fields})
 
-        # Related objects
-        prev_count = self.previous_addresses.count()
-        pet_count = self.pets.count()
-        result.append({
-            'group': 'Related Records',
-            'fields': [
-                {'label': f'Previous Addresses ({prev_count} added)', 'filled': prev_count > 0},
-                {'label': f'Pets ({pet_count} added)', 'filled': self.has_pets is False or pet_count > 0},
-            ]
-        })
+        # ── Related Records (conditional) ──
+        pet_count = self.pets.count() if self.pk else 0
+        address_history_ok = self._check_address_history_sufficient()
+
+        related_fields = [
+            {
+                'label': 'Address History (5 years required)',
+                'filled': address_history_ok,
+            },
+        ]
+        # Pets: only counted if applicant said "Yes" to has_pets
+        if self.has_pets is True:
+            related_fields.append({
+                'label': f'Pets ({pet_count} added)',
+                'filled': pet_count > 0,
+            })
+
+        result.append({'group': 'Related Records', 'fields': related_fields})
 
         return result
 
@@ -558,19 +585,26 @@ class IncomeData(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def get_field_status(self):
-        """Returns grouped field status for drill-down display (unweighted)"""
+        """Returns grouped field status for drill-down display.
+
+        Only REQUIRED and CONDITIONAL fields are included.
+        Document uploads (paystubs, bank statements, supporting docs)
+        are excluded from the completion percentage — they are tracked
+        separately by the broker's document panel.
+        """
         def is_filled(val):
             if val is None: return False
             if isinstance(val, str): return bool(val.strip())
             return True
 
+        # ── Required: Employment Type (always required) ──
         groups = [
             ('Employment Basics', [
                 ('employment_type', 'Employment Type'),
-                ('currently_employed', 'Currently Employed'),
             ]),
         ]
 
+        # ── Conditional: employment-type-specific fields ──
         if self.employment_type == 'student':
             groups.append(('Student Details', [
                 ('school_name', 'School Name'),
@@ -578,8 +612,9 @@ class IncomeData(models.Model):
                 ('school_phone', 'School Phone'),
                 ('school_address', 'School Address'),
             ]))
-        else:
+        elif self.employment_type == 'employed':
             job_fields = [
+                ('currently_employed', 'Currently Employed'),
                 ('employer', 'Employer'),
                 ('job_title', 'Job Title'),
                 ('annual_income', 'Annual Income'),
@@ -592,8 +627,9 @@ class IncomeData(models.Model):
             if self.currently_employed is False:
                 job_fields.append(('end_date', 'End Date'))
             groups.append(('Job Details', job_fields))
+        # 'other' employment type: no employment/school fields required
 
-        # Identification group
+        # ── Required: Identification (always required regardless of employment) ──
         id_fields = [
             ('id_type', 'ID Type'),
             ('id_number', 'ID Number'),
@@ -605,6 +641,7 @@ class IncomeData(models.Model):
             id_fields.append(('id_back_image', 'ID Back Image'))
         groups.append(('Identification', id_fields))
 
+        # ── Build result from scalar fields ──
         result = []
         for group_name, fields in groups:
             group_fields = []
@@ -615,37 +652,39 @@ class IncomeData(models.Model):
                 })
             result.append({'group': group_name, 'fields': group_fields})
 
-        # Related objects — conditional on flags
-        jobs_count = self.additional_jobs.count()
-        income_count = self.additional_income.count()
-        assets_count = self.assets.count()
+        # ── Required: Additional Financial Toggles (Yes/No must be answered) ──
+        # The toggle itself is always required. Sub-records are only
+        # required when the toggle is True.
+        jobs_count = self.additional_jobs.count() if self.pk else 0
+        income_count = self.additional_income.count() if self.pk else 0
+        assets_count = self.assets.count() if self.pk else 0
 
-        result.append({
-            'group': 'Additional Financial Info',
-            'fields': [
-                {'label': f'Additional Jobs ({jobs_count} added)',
-                 'filled': self.has_multiple_jobs is False or jobs_count > 0},
-                {'label': f'Additional Income ({income_count} added)',
-                 'filled': self.has_additional_income is False or income_count > 0},
-                {'label': f'Assets ({assets_count} added)',
-                 'filled': self.has_assets is False or assets_count > 0},
-            ]
-        })
+        additional_fields = [
+            {'label': 'Multiple Jobs (Yes/No)',
+             'filled': self.has_multiple_jobs is not None},
+            {'label': 'Additional Income (Yes/No)',
+             'filled': self.has_additional_income is not None},
+            {'label': 'Assets (Yes/No)',
+             'filled': self.has_assets is not None},
+        ]
+        # Conditional: sub-records only if toggle is True
+        if self.has_multiple_jobs is True:
+            additional_fields.append({
+                'label': f'Additional Jobs ({jobs_count} added)',
+                'filled': jobs_count > 0,
+            })
+        if self.has_additional_income is True:
+            additional_fields.append({
+                'label': f'Additional Income ({income_count} added)',
+                'filled': income_count > 0,
+            })
+        if self.has_assets is True:
+            additional_fields.append({
+                'label': f'Assets ({assets_count} added)',
+                'filled': assets_count > 0,
+            })
 
-        # Documents & Verification
-        supporting_count = self.supporting_documents.count()
-        result.append({
-            'group': 'Documents & Verification',
-            'fields': [
-                {'label': 'Pay Stub 1 (Most Recent)', 'filled': is_filled(self.paystub_1)},
-                {'label': 'Pay Stub 2 (2nd Most Recent)', 'filled': is_filled(self.paystub_2)},
-                {'label': 'Pay Stub 3 (3rd Most Recent)', 'filled': is_filled(self.paystub_3)},
-                {'label': 'Bank Statement 1 (Most Recent)', 'filled': is_filled(self.bank_statement_1)},
-                {'label': 'Bank Statement 2 (2nd Most Recent)', 'filled': is_filled(self.bank_statement_2)},
-                {'label': f'Supporting Documents ({supporting_count} uploaded)',
-                 'filled': supporting_count > 0},
-            ]
-        })
+        result.append({'group': 'Additional Financial Info', 'fields': additional_fields})
 
         return result
 

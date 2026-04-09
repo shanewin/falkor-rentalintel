@@ -129,6 +129,7 @@ class SMSConversation(models.Model):
 # ──────────────────────────────────────────────
 # Whitelist of fields safe to collect via SMS
 # priority: 'required' = ask via SMS, 'optional' = allowed but don't ask
+#           'conditional' = ask only when a related field triggers it
 # ──────────────────────────────────────────────
 
 SMS_SAFE_FIELDS = {
@@ -145,53 +146,50 @@ SMS_SAFE_FIELDS = {
         'city':                  {'label': 'City', 'type': 'str', 'priority': 'required'},
         'state':                 {'label': 'State', 'type': 'str', 'priority': 'required'},
         'zip_code':              {'label': 'Zip Code', 'type': 'str', 'priority': 'required'},
-
-        # ── Required: housing / landlord ──
-        'housing_status':        {'label': 'Housing Status (Own/Rent)', 'type': 'str', 'priority': 'required'},
-        'current_monthly_rent':  {'label': 'Current Monthly Rent', 'type': 'decimal', 'priority': 'required'},
-        'landlord_name':         {'label': 'Landlord Name', 'type': 'str', 'priority': 'required'},
-        'landlord_phone':        {'label': 'Landlord Phone', 'type': 'str', 'priority': 'required'},
-
-        # ── Required: move-in & pets ──
-        'desired_move_in_date':  {'label': 'Desired Move-In Date', 'type': 'date', 'priority': 'required'},
-        'has_pets':              {'label': 'Do You Have Pets (Yes/No)', 'type': 'bool', 'priority': 'required'},
-
-        # ── Required: additional details ──
-        'street_address_2':      {'label': 'Apt/Unit', 'type': 'str', 'priority': 'required'},
         'current_address_years': {'label': 'Years at Current Address', 'type': 'int', 'priority': 'required'},
         'current_address_months':{'label': 'Months at Current Address', 'type': 'int', 'priority': 'required'},
-        'landlord_email':        {'label': 'Landlord Email', 'type': 'str', 'priority': 'required'},
+
+        # ── Required: housing ──
+        'housing_status':        {'label': 'Housing Status (Own/Rent)', 'type': 'str', 'priority': 'required'},
+        'has_pets':              {'label': 'Do You Have Pets (Yes/No)', 'type': 'bool', 'priority': 'required'},
+        'reason_for_moving':     {'label': 'Reason for Moving', 'type': 'str', 'priority': 'required'},
         'referral_source':       {'label': 'How Did You Hear About Us', 'type': 'str', 'priority': 'required'},
         'reference1_name':       {'label': 'Reference 1 Name', 'type': 'str', 'priority': 'required'},
         'reference1_phone':      {'label': 'Reference 1 Phone', 'type': 'str', 'priority': 'required'},
-        'reference2_name':       {'label': 'Reference 2 Name', 'type': 'str', 'priority': 'required'},
-        'reference2_phone':      {'label': 'Reference 2 Phone', 'type': 'str', 'priority': 'required'},
-        'reason_for_moving':     {'label': 'Reason for Moving', 'type': 'str', 'priority': 'required'},
+
+        # ── Conditional: landlord (only if renting) ──
+        'current_monthly_rent':  {'label': 'Current Monthly Rent', 'type': 'decimal', 'priority': 'conditional', 'condition': 'housing_status==Rent'},
+        'landlord_name':         {'label': 'Landlord Name', 'type': 'str', 'priority': 'conditional', 'condition': 'housing_status==Rent'},
+        'landlord_phone':        {'label': 'Landlord Phone', 'type': 'str', 'priority': 'conditional', 'condition': 'housing_status==Rent'},
+        'landlord_email':        {'label': 'Landlord Email', 'type': 'str', 'priority': 'conditional', 'condition': 'housing_status==Rent'},
 
         # ── Optional: not worth SMS-asking ──
         'middle_name':           {'label': 'Middle Name', 'type': 'str', 'priority': 'optional'},
         'suffix':                {'label': 'Suffix', 'type': 'str', 'priority': 'optional'},
+        'street_address_2':      {'label': 'Apt/Unit', 'type': 'str', 'priority': 'optional'},
+        'reference2_name':       {'label': 'Reference 2 Name', 'type': 'str', 'priority': 'optional'},
+        'reference2_phone':      {'label': 'Reference 2 Phone', 'type': 'str', 'priority': 'optional'},
     },
     'income_info': {
-        # ── Required: core employment & income ──
-        'currently_employed':    {'label': 'Currently Employed (Yes/No)', 'type': 'bool', 'priority': 'required'},
-        'employer':              {'label': 'Employer Name', 'type': 'str', 'priority': 'required'},
-        'job_title':             {'label': 'Job Title', 'type': 'str', 'priority': 'required'},
-        'annual_income':         {'label': 'Annual Income', 'type': 'decimal', 'priority': 'required'},
+        # ── Conditional on employed ──
+        'currently_employed':    {'label': 'Currently Employed (Yes/No)', 'type': 'bool', 'priority': 'conditional', 'condition': 'employment_type==employed'},
+        'employer':              {'label': 'Employer Name', 'type': 'str', 'priority': 'conditional', 'condition': 'employment_type==employed'},
+        'job_title':             {'label': 'Job Title', 'type': 'str', 'priority': 'conditional', 'condition': 'employment_type==employed'},
+        'annual_income':         {'label': 'Annual Income', 'type': 'decimal', 'priority': 'conditional', 'condition': 'employment_type==employed'},
+        'supervisor_name':       {'label': 'Supervisor Name', 'type': 'str', 'priority': 'conditional', 'condition': 'employment_type==employed'},
+        'supervisor_email':      {'label': 'Supervisor Email', 'type': 'str', 'priority': 'conditional', 'condition': 'employment_type==employed'},
+        'supervisor_phone':      {'label': 'Supervisor Phone', 'type': 'str', 'priority': 'conditional', 'condition': 'employment_type==employed'},
+        'start_date':            {'label': 'Employment Start Date', 'type': 'date', 'priority': 'conditional', 'condition': 'employment_type==employed'},
 
-        # ── Required: employment details ──
-        'employment_length':     {'label': 'How Long at This Job', 'type': 'str', 'priority': 'required'},
-        'supervisor_name':       {'label': 'Supervisor Name', 'type': 'str', 'priority': 'required'},
-        'supervisor_email':      {'label': 'Supervisor Email', 'type': 'str', 'priority': 'required'},
-        'supervisor_phone':      {'label': 'Supervisor Phone', 'type': 'str', 'priority': 'required'},
-        'start_date':            {'label': 'Employment Start Date', 'type': 'date', 'priority': 'required'},
-        'end_date':              {'label': 'Employment End Date', 'type': 'date', 'priority': 'required'},
+        # ── Conditional on student ──
+        'school_name':           {'label': 'School Name', 'type': 'str', 'priority': 'conditional', 'condition': 'employment_type==student'},
+        'year_of_graduation':    {'label': 'Graduation Year', 'type': 'str', 'priority': 'conditional', 'condition': 'employment_type==student'},
+        'school_address':        {'label': 'School Address', 'type': 'str', 'priority': 'conditional', 'condition': 'employment_type==student'},
+        'school_phone':          {'label': 'School Phone', 'type': 'str', 'priority': 'conditional', 'condition': 'employment_type==student'},
 
         # ── Optional: not worth SMS-asking ──
-        'school_name':           {'label': 'School Name', 'type': 'str', 'priority': 'optional'},
-        'year_of_graduation':    {'label': 'Graduation Year', 'type': 'str', 'priority': 'optional'},
-        'school_address':        {'label': 'School Address', 'type': 'str', 'priority': 'optional'},
-        'school_phone':          {'label': 'School Phone', 'type': 'str', 'priority': 'optional'},
+        'end_date':              {'label': 'Employment End Date', 'type': 'date', 'priority': 'optional'},
+        'employment_length':     {'label': 'How Long at This Job', 'type': 'str', 'priority': 'optional'},
         'additional_income_source': {'label': 'Additional Income Source', 'type': 'str', 'priority': 'optional'},
         'additional_income_amount': {'label': 'Additional Income Amount', 'type': 'decimal', 'priority': 'optional'},
     },
@@ -201,8 +199,13 @@ SMS_SAFE_FIELDS = {
 def get_missing_safe_fields(application):
     """
     Inspects an application's PersonalInfoData and IncomeData,
-    returns a list of missing fields that are REQUIRED and safe to collect via SMS.
-    Optional fields (middle_name, suffix, school info, etc.) are skipped.
+    returns a list of missing fields that are REQUIRED (or active CONDITIONAL)
+    and safe to collect via SMS.
+
+    Conditionals are evaluated against the current model state:
+    - Landlord fields only asked if housing_status == 'Rent'
+    - Employment fields only asked if employment_type == 'employed'
+    - Student fields only asked if employment_type == 'student'
 
     Returns: [{'model': 'personal_info', 'field': 'employer', 'label': 'Employer Name', 'type': 'str'}, ...]
     """
@@ -215,12 +218,26 @@ def get_missing_safe_fields(application):
             return True
         return False
 
+    def _check_condition(condition_str, model_instance):
+        """Evaluate a simple 'field==value' condition against a model instance."""
+        if not condition_str:
+            return True
+        field, expected = condition_str.split('==', 1)
+        actual = getattr(model_instance, field, None)
+        return str(actual).lower() == expected.lower()
+
     # Check PersonalInfoData
     personal_info = getattr(application, 'personal_info', None)
     if personal_info:
         for field_name, meta in SMS_SAFE_FIELDS['personal_info'].items():
-            if meta.get('priority') != 'required':
+            priority = meta.get('priority')
+            if priority == 'optional':
                 continue
+            # For conditional fields, check if the condition is met
+            if priority == 'conditional':
+                condition = meta.get('condition', '')
+                if not _check_condition(condition, personal_info):
+                    continue
             val = getattr(personal_info, field_name, None)
             if _is_empty(val):
                 missing.append({
@@ -234,8 +251,14 @@ def get_missing_safe_fields(application):
     income_info = getattr(application, 'income_info', None)
     if income_info:
         for field_name, meta in SMS_SAFE_FIELDS['income_info'].items():
-            if meta.get('priority') != 'required':
+            priority = meta.get('priority')
+            if priority == 'optional':
                 continue
+            # For conditional fields, check if the condition is met
+            if priority == 'conditional':
+                condition = meta.get('condition', '')
+                if not _check_condition(condition, income_info):
+                    continue
             val = getattr(income_info, field_name, None)
             if _is_empty(val):
                 missing.append({
