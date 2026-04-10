@@ -279,20 +279,21 @@
                 </div>
                 {% endif %}
 
-                <!-- What's Nearby — tabbed POI browser via Google Places API (New) -->
+                <!-- What's Nearby — tabbed POI map + list via Google Places API (New) -->
                 {% if google_places_key %}
                 <h6 class="text-uppercase fw-bold text-muted mb-3 small" style="letter-spacing:.06em">What's Nearby</h6>
                 <div class="poi-tabs mb-3" id="nl-poi-tabs">
-                    <button class="poi-tab-btn active" data-nl-cat="transit"  data-nl-types='["subway_station","train_station","bus_station","transit_station"]' data-nl-radius="1000"><i class="fas fa-subway me-1"></i>Transit</button>
-                    <button class="poi-tab-btn" data-nl-cat="restaurant" data-nl-types='["restaurant"]' data-nl-radius="800"><i class="fas fa-utensils me-1"></i>Restaurants</button>
-                    <button class="poi-tab-btn" data-nl-cat="grocery"    data-nl-types='["grocery_store","supermarket"]' data-nl-radius="1000"><i class="fas fa-shopping-basket me-1"></i>Grocery</button>
-                    <button class="poi-tab-btn" data-nl-cat="cafe"       data-nl-types='["cafe","coffee_shop"]' data-nl-radius="800"><i class="fas fa-coffee me-1"></i>Coffee</button>
-                    <button class="poi-tab-btn" data-nl-cat="park"       data-nl-types='["park"]' data-nl-radius="1200"><i class="fas fa-tree me-1"></i>Parks</button>
-                    <button class="poi-tab-btn" data-nl-cat="gym"        data-nl-types='["gym","fitness_center"]' data-nl-radius="1200"><i class="fas fa-dumbbell me-1"></i>Gyms</button>
+                    <button class="poi-tab-btn active" data-nl-cat="transit"    data-nl-types='["subway_station","train_station","bus_station","transit_station"]' data-nl-radius="1000" data-nl-color="#3b82f6" data-nl-ratings="false"><i class="fas fa-subway me-1"></i>Transit</button>
+                    <button class="poi-tab-btn"        data-nl-cat="restaurant" data-nl-types='["restaurant"]' data-nl-radius="800"  data-nl-color="#f97316" data-nl-ratings="true"><i class="fas fa-utensils me-1"></i>Restaurants</button>
+                    <button class="poi-tab-btn"        data-nl-cat="grocery"    data-nl-types='["grocery_store","supermarket"]' data-nl-radius="1000" data-nl-color="#22c55e" data-nl-ratings="true"><i class="fas fa-shopping-basket me-1"></i>Grocery</button>
+                    <button class="poi-tab-btn"        data-nl-cat="cafe"       data-nl-types='["cafe","coffee_shop"]' data-nl-radius="800"  data-nl-color="#92400e" data-nl-ratings="true"><i class="fas fa-coffee me-1"></i>Coffee</button>
+                    <button class="poi-tab-btn"        data-nl-cat="park"       data-nl-types='["park"]' data-nl-radius="1200" data-nl-color="#10b981" data-nl-ratings="false"><i class="fas fa-tree me-1"></i>Parks</button>
+                    <button class="poi-tab-btn"        data-nl-cat="gym"        data-nl-types='["gym","fitness_center"]' data-nl-radius="1200" data-nl-color="#8b5cf6" data-nl-ratings="true"><i class="fas fa-dumbbell me-1"></i>Gyms</button>
                 </div>
-                <div id="nl-poi-results">
-                    <div class="text-center py-4"><i class="fas fa-spinner fa-spin text-muted"></i></div>
-                </div>
+                <!-- Interactive POI map — apartment pin + category markers -->
+                <div id="nl-poi-map" style="height:340px;border-radius:12px;overflow:hidden;margin-bottom:16px;border:1px solid #e5e7eb;"></div>
+                <!-- Compact list below map -->
+                <div id="nl-poi-results"></div>
                 {% endif %}
 
                 <!-- Nearby Schools -->
@@ -352,17 +353,7 @@
                 {% endif %}
             </div>
 
-            <!-- Location Map -->
-            <div class="mb-5">
-                <hr class="my-5">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h4 class="fw-bold mb-0">Location</h4>
-                    <span class="text-muted small"><i class="fas fa-map-marker-alt me-1"></i>{{ apartment.building.street_address_1 }}</span>
-                </div>
-                <div class="shadow-sm rounded-3 overflow-hidden border">
-                    <div id="map"></div>
-                </div>
-            </div>
+
 
             <!-- Travel Times -->
             <div class="mb-5" id="travel-times-section">
@@ -723,36 +714,216 @@ function copyToClipboard(text) {
     if (!MAPBOX_TOKEN) return;
     mapboxgl.accessToken = MAPBOX_TOKEN;
 
-    /* ─── Map helpers ────────────────────────────────────────────────── */
-    function initMainMap(lat, lng) {
-        const el = document.getElementById('map');
-        if (!el) return;
-        try {
-            const map = new mapboxgl.Map({ container: 'map', style: 'mapbox://styles/mapbox/light-v11', center: [lng, lat], zoom: 15 });
-            map.addControl(new mapboxgl.NavigationControl(), 'bottom-right');
-            const marker = document.createElement('div');
-            marker.className = 'map-marker';
-            marker.innerHTML = `<div class="badge bg-dark shadow-sm border border-white p-2">$${Math.floor(RENT_PRICE).toLocaleString()}</div>`;
-            new mapboxgl.Marker(marker).setLngLat([lng, lat]).addTo(map);
-        } catch (e) { console.error('Map error:', e); }
+    /* ─── Unified Neighbourhood Map + POI engine ─────────────────────── */
+    let   nlMap         = null;   // Mapbox GL map instance
+    let   poiMarkers    = [];     // current POI marker objects
+    let   homeMarker    = null;   // apartment pin marker
+
+    const CAT_ICONS = {
+        transit    : '🚇',
+        restaurant : '🍽',
+        grocery    : '🛒',
+        cafe       : '☕',
+        park       : '🌳',
+        gym        : '💪',
+    };
+
+    function buildMarkerEl(emoji, color) {
+        const el = document.createElement('div');
+        el.style.cssText = [
+            'width:32px','height:32px','border-radius:50%',
+            `background:${color}`,'display:flex','align-items:center',
+            'justify-content:center','font-size:15px','box-shadow:0 2px 8px rgba(0,0,0,.25)',
+            'border:2px solid #fff','cursor:pointer',
+        ].join(';');
+        el.textContent = emoji;
+        return el;
     }
 
-    function initNeighborhoodMap(lat, lng) {
-        const el = document.getElementById('neighborhood-mini-map');
+    function initNeighbourhoodMap(lat, lng) {
+        const el = document.getElementById('nl-poi-map');
         if (!el) return;
         try {
-            const map = new mapboxgl.Map({ container: 'neighborhood-mini-map', style: 'mapbox://styles/mapbox/streets-v12', center: [lng, lat], zoom: 13.5, interactive: false });
-            const m = document.createElement('div');
-            m.className = 'map-marker';
-            m.innerHTML = `<div class="badge bg-dark shadow-sm border border-white p-2"><i class="fas fa-home"></i></div>`;
-            new mapboxgl.Marker(m).setLngLat([lng, lat]).addTo(map);
-        } catch (e) { console.error('Neighborhood map error:', e); }
+            nlMap = new mapboxgl.Map({
+                container : 'nl-poi-map',
+                style     : 'mapbox://styles/mapbox/light-v11',
+                center    : [lng, lat],
+                zoom      : 14.5,
+            });
+            nlMap.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
+
+            // Apartment home pin
+            const homeEl = document.createElement('div');
+            homeEl.style.cssText = [
+                'width:42px','height:42px','border-radius:50%',
+                'background:#111827','display:flex','align-items:center',
+                'justify-content:center','font-size:18px','box-shadow:0 3px 10px rgba(0,0,0,.4)',
+                'border:3px solid #ffe502',
+            ].join(';');
+            homeEl.textContent = '🏠';
+            homeMarker = new mapboxgl.Marker(homeEl).setLngLat([lng, lat]).addTo(nlMap);
+
+            // Load the default active tab once the map style is ready
+            nlMap.on('load', function () {
+                const activeBtn = document.querySelector('#nl-poi-tabs .poi-tab-btn.active');
+                if (activeBtn) loadPOIs(activeBtn, lat, lng);
+            });
+        } catch (e) { console.error('NL map error:', e); }
+    }
+
+    function clearPOIMarkers() {
+        poiMarkers.forEach(m => m.remove());
+        poiMarkers = [];
+    }
+
+    function plotPOIMarkers(places, cat, color, lat, lng) {
+        clearPOIMarkers();
+        if (!nlMap || !places.length) return;
+
+        const bounds = new mapboxgl.LngLatBounds([lng, lat], [lng, lat]);
+
+        places.slice(0, 8).forEach(p => {
+            const plat = p.location?.latitude;
+            const plng = p.location?.longitude;
+            if (!plat || !plng) return;
+
+            const el = buildMarkerEl(CAT_ICONS[cat] || '📍', color);
+            const name = p.displayName?.text || 'Unknown';
+            const popup = new mapboxgl.Popup({ offset: 18, closeButton: false })
+                .setHTML(`<div style="font-size:.8rem;font-weight:600;max-width:160px">${name}</div>`);
+
+            const marker = new mapboxgl.Marker(el)
+                .setLngLat([plng, plat])
+                .setPopup(popup)
+                .addTo(nlMap);
+            poiMarkers.push(marker);
+            bounds.extend([plng, plat]);
+        });
+
+        nlMap.fitBounds(bounds, { padding: 60, maxZoom: 15.5, duration: 600 });
+    }
+
+    /* ─── POI data fetch + render ─────────────────────────────────────── */
+    function initNeighbourhoodPOIs(lat, lng) {
+        const GKEY       = '{{ google_places_key }}';
+        const PLACES_URL = 'https://places.googleapis.com/v1/places:searchNearby';
+        const FIELD_MASK = 'places.displayName,places.location,places.rating,places.userRatingCount,places.primaryType';
+        const sessKey    = cat => `nl_poi_${lat.toFixed(4)}_${lng.toFixed(4)}_${cat}`;
+        const listEl     = document.getElementById('nl-poi-results');
+        const tabs       = document.querySelectorAll('#nl-poi-tabs .poi-tab-btn');
+
+        if (!GKEY) return;
+
+        function haversineMi(la1, lo1, la2, lo2) {
+            const R = 3959, dL = (la2-la1)*Math.PI/180, dO = (lo2-lo1)*Math.PI/180;
+            const a = Math.sin(dL/2)**2 + Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dO/2)**2;
+            return (R*2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(1);
+        }
+
+        function starBar(rating) {
+            if (!rating) return '';
+            const filled = Math.round(rating);
+            return Array.from({length:5}, (_,i) =>
+                `<i class="${i < filled ? 'fas' : 'far'} fa-star" style="color:${i < filled ? '#f59e0b' : '#d1d5db'};font-size:.62rem"></i>`
+            ).join('');
+        }
+
+        function renderList(places, showRatings) {
+            if (!listEl) return;
+            if (!places || !places.length) {
+                listEl.innerHTML = '<p class="text-muted small text-center py-3">No places found nearby.</p>';
+                return;
+            }
+            listEl.innerHTML = '<div class="poi-list">' + places.slice(0, 8).map(p => {
+                const name   = p.displayName?.text || 'Unknown';
+                const plat   = p.location?.latitude;
+                const plng   = p.location?.longitude;
+                const dist   = (plat && plng) ? haversineMi(lat, lng, plat, plng) : '—';
+                const rating = showRatings && p.rating ? p.rating.toFixed(1) : null;
+                const count  = p.userRatingCount || 0;
+                const type   = (p.primaryType || '').replace(/_/g,' ');
+                return `<div class="poi-item">
+                    <div class="poi-distance">${dist}<span> mi</span></div>
+                    <div class="poi-info">
+                        <div class="poi-name">${name}</div>
+                        <div class="poi-sub d-flex align-items-center gap-2 flex-wrap">
+                            ${type ? `<span style="text-transform:capitalize;color:#6b7280">${type}</span>` : ''}
+                            ${rating ? `<span class="d-flex align-items-center gap-1">${starBar(rating)}<span style="font-size:.72rem;font-weight:600;color:#374151">${rating}</span>${count ? `<span style="color:#9ca3af;font-size:.68rem">(${count})</span>` : ''}</span>` : ''}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('') + '</div>';
+        }
+
+        function loadPOIs(btn, _lat, _lng) {
+            _lat = _lat || lat;
+            _lng = _lng || lng;
+            const cat        = btn.dataset.nlCat;
+            const types      = JSON.parse(btn.dataset.nlTypes);
+            const radius     = parseInt(btn.dataset.nlRadius, 10) || 800;
+            const color      = btn.dataset.nlColor || '#3b82f6';
+            const showRating = btn.dataset.nlRatings === 'true';
+            const key        = sessKey(cat);
+
+            const cached = sessionStorage.getItem(key);
+            if (cached) {
+                const places = JSON.parse(cached);
+                renderList(places, showRating);
+                plotPOIMarkers(places, cat, color, _lat, _lng);
+                return;
+            }
+
+            if (listEl) listEl.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin text-muted"></i><span class="ms-2 text-muted small">Finding places…</span></div>';
+            clearPOIMarkers();
+
+            fetch(PLACES_URL, {
+                method  : 'POST',
+                headers : {
+                    'Content-Type'    : 'application/json',
+                    'X-Goog-Api-Key'  : GKEY,
+                    'X-Goog-FieldMask': FIELD_MASK,
+                },
+                body: JSON.stringify({
+                    includedTypes : types,
+                    maxResultCount: 10,
+                    locationRestriction: {
+                        circle: { center: { latitude: _lat, longitude: _lng }, radius }
+                    }
+                })
+            })
+            .then(r => r.json())
+            .then(d => {
+                const places = (d.places || []).sort((a,b) => {
+                    const da = parseFloat(haversineMi(_lat, _lng, a.location?.latitude, a.location?.longitude));
+                    const db = parseFloat(haversineMi(_lat, _lng, b.location?.latitude, b.location?.longitude));
+                    return da - db;
+                });
+                sessionStorage.setItem(key, JSON.stringify(places));
+                renderList(places, showRating);
+                plotPOIMarkers(places, cat, color, _lat, _lng);
+            })
+            .catch(() => {
+                if (listEl) listEl.innerHTML = '<p class="text-muted small text-center py-3">Could not load nearby places.</p>';
+            });
+        }
+
+        // Tab click handler
+        tabs.forEach(btn => {
+            btn.addEventListener('click', function () {
+                tabs.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                // If map already ready, load immediately; else it loads on map 'load' event
+                if (nlMap) loadPOIs(this, lat, lng);
+            });
+        });
+
+        // Expose loadPOIs so the map 'load' callback can call it
+        window._nlLoadPOIs = loadPOIs;
     }
 
     function onCoordsReady(lat, lng) {
         originLat = lat; originLng = lng;
-        initMainMap(lat, lng);
-        initNeighborhoodMap(lat, lng);
+        initNeighbourhoodMap(lat, lng);
         initNeighbourhoodPOIs(lat, lng);
         initTravelTimes(lat, lng);
     }
@@ -765,17 +936,12 @@ function copyToClipboard(text) {
                 if (data.features && data.features.length > 0) {
                     onCoordsReady(data.features[0].center[1], data.features[0].center[0]);
                 } else {
-                    const el = document.getElementById('map');
+                    const el = document.getElementById('nl-poi-map');
                     if (el) el.innerHTML = '<div class="alert alert-light m-3 text-center py-5"><i class="fas fa-map-marker-alt fa-2x text-muted mb-3 d-block"></i>Map coordinates unavailable.</div>';
-                    // Still initialise travel times & cost estimator without coords
                     initTravelTimes(null, null);
                 }
             })
-            .catch(() => {
-                const el = document.getElementById('map');
-                if (el) el.innerHTML = '<div class="alert alert-light m-3 text-center py-5"><i class="fas fa-map-marker-alt fa-2x text-muted mb-3 d-block"></i>Map unavailable.</div>';
-                initTravelTimes(null, null);
-            });
+            .catch(() => { initTravelTimes(null, null); });
     }
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -787,6 +953,7 @@ function copyToClipboard(text) {
         initCostEstimator();
         initScoreRings();
     });
+
 
     /* ─── Score ring animations ──────────────────────────────────────── */
     function initScoreRings() {
