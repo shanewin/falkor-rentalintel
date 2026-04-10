@@ -297,6 +297,9 @@ SITE_URL = config('SITE_URL', default='http://localhost:8000')
 # Mapbox (for map-based apartment search)
 MAPBOX_API_TOKEN = config('MAPBOX_API_TOKEN', default='')
 
+# Google Places API (for neighborhood schools & POI data)
+GOOGLE_PLACES_API_KEY = config('GOOGLE_PLACES_API_KEY', default='')
+
 # Celery Configuration
 CELERY_BROKER_URL = config('REDIS_URL', default='redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = config('REDIS_URL', default='redis://localhost:6379/0')

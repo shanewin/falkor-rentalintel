@@ -185,53 +185,145 @@
     padding: 0.5rem 1rem;
     border-radius: 50px;
 }
-/* Neighborhood Scores */
-.score-circle {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 800;
-    font-size: 1.2rem;
-    background: var(--brand-yellow);
-    color: var(--brand-black);
-    box-shadow: var(--shadow-sm);
-    margin-bottom: 0.5rem;
-}
+/* ======================================================
+   NEIGHBOURHOOD SCORES  (color-coded arc rings)
+   ====================================================== */
 .score-item {
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    min-width: 100px;
+    min-width: 110px;
+    gap: 4px;
 }
-.score-label {
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--text-muted);
+
+/* SVG ring container */
+.score-ring-wrap {
+    position: relative;
+    width: 76px;
+    height: 76px;
+    margin-bottom: 6px;
 }
-.score-desc {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--brand-black);
+.score-ring-wrap svg {
+    transform: rotate(-90deg);
+    display: block;
 }
-/* School Ratings */
-.school-rating {
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
+/* Prevent default black fill on all SVG children */
+.score-ring-wrap svg circle {
+    fill: none;
+}
+.score-ring-bg {
+    stroke: #f1f3f5;
+    stroke-width: 7;
+}
+.score-ring-fill {
+    stroke-width: 7;
+    stroke-linecap: round;
+    /* stroke-dasharray / stroke-dashoffset set by JS */
+    transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.score-ring-fill.ring-walk    { stroke: #10b981; }
+.score-ring-fill.ring-transit { stroke: #3b82f6; }
+.score-ring-fill.ring-bike    { stroke: #f59e0b; }
+
+.score-ring-num {
+    position: absolute;
+    inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 700;
-    color: white;
+    font-size: 1.15rem;
+    font-weight: 900;
+    color: #111;
+    letter-spacing: -0.03em;
 }
-.rating-high { background-color: #00a651; }
-.rating-mid { background-color: #ffc107; color: #212529; }
-.rating-low { background-color: #ff4d4d; }
+
+.score-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #9ca3af;
+    margin-top: 2px;
+}
+.score-desc {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #111;
+    white-space: nowrap;
+}
+
+/* Lifestyle character tags */
+.lifestyle-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+}
+.lifestyle-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 13px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: #f3f4f6;
+    color: #374151;
+    border: 1.5px solid #e5e7eb;
+    transition: background 0.15s, border-color 0.15s;
+}
+.lifestyle-tag:hover {
+    background: #e5e7eb;
+    border-color: #d1d5db;
+}
+.lifestyle-tag i { font-size: 0.72rem; opacity: 0.75; }
+
+/* Data attribution strip */
+.neighbourhood-attribution {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    color: #9ca3af;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #f3f4f6;
+}
+.neighbourhood-attribution i { font-size: 0.65rem; }
+
+/* ======================================================
+   SCHOOL RATINGS  (refined for Google Places data)
+   ====================================================== */
+.school-rating {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+/* Color tiers */
+.rating-high  { background: #d1fae5; color: #065f46; }
+.rating-mid   { background: #fef3c7; color: #92400e; }
+.rating-low   { background: #fee2e2; color: #991b1b; }
+.rating-none  { background: #f3f4f6; color: #9ca3af; font-size: 0.75rem; font-weight: 600; }
+
+/* School type badge */
+.school-type-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.stb-public  { background: #eff6ff; color: #1d4ed8; }
+.stb-private { background: #fdf4ff; color: #7e22ce; }
+.stb-charter { background: #fff7ed; color: #c2410c; }
 
 /* Map Styling */
 #map {

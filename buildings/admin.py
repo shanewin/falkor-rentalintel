@@ -72,18 +72,39 @@ class BuildingAdmin(admin.ModelAdmin):
     get_broker_count.short_description = 'Assigned Brokers'
 
     def refresh_neighborhood_data(self, request, queryset):
-        """Action to manually trigger an update of Walk Score and School data."""
-        success_count = 0
+        """
+        Queues a background Celery task to refresh walk/transit/bike scores
+        and nearby schools for the selected buildings via Google Places API.
+
+        Requires buildings to have latitude + longitude set and
+        GOOGLE_PLACES_API_KEY to be configured in settings.
+        """
+        from buildings.tasks import refresh_neighbourhood_data as refresh_task
+
+        queued = 0
+        skipped = 0
         for building in queryset:
-            if NeighborhoodService.update_building_data(building.id):
-                success_count += 1
-        
-        if success_count:
-            self.message_user(request, f"Successfully updated neighborhood data for {success_count} buildings.", messages.SUCCESS)
-        if success_count < queryset.count():
-            self.message_user(request, f"Failed to update data for {queryset.count() - success_count} buildings. Check coordinates.", messages.ERROR)
-    
-    refresh_neighborhood_data.short_description = "Refresh Neighborhood Data (Walk Score/Schools)"
+            if not building.latitude or not building.longitude:
+                skipped += 1
+                continue
+            refresh_task.apply_async(args=[building.id], countdown=0)
+            queued += 1
+
+        if queued:
+            self.message_user(
+                request,
+                f"Queued neighbourhood refresh for {queued} building(s). "
+                "Data will appear within a few seconds once the worker completes.",
+                messages.SUCCESS,
+            )
+        if skipped:
+            self.message_user(
+                request,
+                f"{skipped} building(s) skipped — missing latitude/longitude coordinates.",
+                messages.WARNING,
+            )
+
+    refresh_neighborhood_data.short_description = "Refresh Neighbourhood Data (Google Places API)"
 
 
 @admin.register(Amenity)

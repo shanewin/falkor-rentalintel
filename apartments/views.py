@@ -360,6 +360,7 @@ def apartment_overview(request, apartment_id):
     return render(request, 'apartments/apartment_overview.html', {
         'apartment': apartment,
         'mapbox_token': getattr(settings, 'MAPBOX_API_TOKEN', ''),
+        'google_places_key': getattr(settings, 'GOOGLE_PLACES_API_KEY', ''),
         'smart_matches': smart_matches,
         'is_saved': is_saved,
         'has_contacted': has_contacted,
