@@ -763,10 +763,13 @@ function copyToClipboard(text) {
             homeEl.textContent = '🏠';
             homeMarker = new mapboxgl.Marker(homeEl).setLngLat([lng, lat]).addTo(nlMap);
 
-            // Load the default active tab once the map style is ready
+            // Load the default active tab once the map style is ready.
+            // window._nlLoadPOIs is set synchronously by initNeighbourhoodPOIs()
+            // which runs right after this function, so it is always available
+            // by the time the async 'load' event fires.
             nlMap.on('load', function () {
                 const activeBtn = document.querySelector('#nl-poi-tabs .poi-tab-btn.active');
-                if (activeBtn) loadPOIs(activeBtn, lat, lng);
+                if (activeBtn && window._nlLoadPOIs) window._nlLoadPOIs(activeBtn, lat, lng);
             });
         } catch (e) { console.error('NL map error:', e); }
     }
